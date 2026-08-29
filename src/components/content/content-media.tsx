@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, FileWarning } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, FileWarning } from "lucide-react";
 
 import { IconButton } from "@/components/ui/button";
+import { LINK_FILE_TYPE, linkProviderLabel } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import type { ContentType } from "@/types/database";
 
@@ -23,8 +24,44 @@ function Missing() {
   );
 }
 
+/**
+ * Arquivo hospedado fora do portal. Nao ha player: o cliente abre o link e
+ * baixa na origem. `noopener noreferrer` porque o destino e digitado por
+ * quem cadastra o conteudo.
+ */
+function ExternalCard({ url }: { url: string }) {
+  return (
+    <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 bg-ink-50 px-6 text-center">
+      <span className="flex size-12 items-center justify-center rounded-full bg-surface text-ink-500 shadow-sm">
+        <ExternalLink className="size-5" aria-hidden />
+      </span>
+
+      <div>
+        <p className="text-sm font-medium text-ink-900">{linkProviderLabel(url)}</p>
+        <p className="mt-1 text-xs text-ink-500">
+          O arquivo esta hospedado fora do portal.
+        </p>
+      </div>
+
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="focus-ring inline-flex items-center gap-1.5 rounded-lg bg-ink-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-ink-800"
+      >
+        <ExternalLink className="size-4" aria-hidden />
+        Abrir link
+      </a>
+
+      <p className="max-w-full truncate text-[11px] text-ink-400">{url}</p>
+    </div>
+  );
+}
+
 function Slide({ file, title }: { file: MediaFile; title: string }) {
   if (!file.url) return <Missing />;
+
+  if (file.fileType === LINK_FILE_TYPE) return <ExternalCard url={file.url} />;
 
   if (file.fileType.startsWith("video/")) {
     return (

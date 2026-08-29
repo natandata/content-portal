@@ -45,9 +45,12 @@ export async function loadContentPreviews(
     .map((file) => file.thumbnail_path)
     .filter((path): path is string => Boolean(path));
 
+  // Link externo nao tem o que assinar: a capa fica vazia e a lista mostra o
+  // placeholder do tipo.
   const imagePaths = files
     .filter((file) => !file.thumbnail_path && file.file_type.startsWith("image/"))
-    .map((file) => file.file_path);
+    .map((file) => file.file_path)
+    .filter((path): path is string => Boolean(path));
 
   const [thumbUrls, imageUrls] = await Promise.all([
     signedUrlMap(supabase, BUCKETS.thumbnails, thumbPaths),
@@ -57,7 +60,9 @@ export async function loadContentPreviews(
   for (const file of files) {
     const url = file.thumbnail_path
       ? (thumbUrls.get(file.thumbnail_path) ?? null)
-      : (imageUrls.get(file.file_path) ?? null);
+      : file.file_path
+        ? (imageUrls.get(file.file_path) ?? null)
+        : null;
     previews.set(file.content_id, url);
   }
 
@@ -111,7 +116,8 @@ export async function loadContentFiles(
 
   return files.map((file) => ({
     ...file,
-    url: fileUrls.get(file.file_path) ?? null,
+    // O link externo e a propria URL; nao passa pelo Storage.
+    url: file.external_url ?? (file.file_path ? (fileUrls.get(file.file_path) ?? null) : null),
     thumbnailUrl: file.thumbnail_path ? (thumbUrls.get(file.thumbnail_path) ?? null) : null,
   }));
 }

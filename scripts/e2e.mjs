@@ -243,6 +243,62 @@ async function main() {
       }),
     );
 
+    // ---------------------------------------------------------------------
+    // Arquivo por link externo (Drive, WeTransfer, OneDrive...)
+    // ---------------------------------------------------------------------
+    const linked = await prof
+      .from("contents")
+      .insert({
+        client_id: alfa.id,
+        professional_id: profAuth.user.id,
+        title: "Video por link E2E",
+        type: "video",
+        status: "draft",
+      })
+      .select("*")
+      .single();
+
+    const { error: linkError } = await prof.from("content_files").insert({
+      content_id: linked.data.id,
+      file_path: null,
+      external_url: "https://drive.google.com/file/d/e2e-teste/view",
+      position: 1,
+      file_type: "link",
+    });
+    check("aceita arquivo como link externo", !linkError, linkError?.message ?? "");
+
+    await denied(
+      "recusa link com esquema perigoso",
+      prof.from("content_files").insert({
+        content_id: linked.data.id,
+        external_url: "javascript:alert(1)",
+        position: 2,
+        file_type: "link",
+      }),
+    );
+
+    await denied(
+      "recusa arquivo sem origem (nem caminho nem link)",
+      prof.from("content_files").insert({
+        content_id: linked.data.id,
+        position: 3,
+        file_type: "link",
+      }),
+    );
+
+    await denied(
+      "recusa caminho e link ao mesmo tempo",
+      prof.from("content_files").insert({
+        content_id: linked.data.id,
+        file_path: "x/1.jpg",
+        external_url: "https://exemplo.com/a.mp4",
+        position: 4,
+        file_type: "image/jpeg",
+      }),
+    );
+
+    await prof.from("contents").update({ status: "awaiting_approval" }).eq("id", linked.data.id);
+
     const draft = await prof
       .from("contents")
       .insert({
@@ -260,9 +316,13 @@ async function main() {
     // ---------------------------------------------------------------------
     const { data: alfaSees } = await clientA.from("contents").select("id, title, status");
     check(
-      "cliente A ve os 3 conteudos enviados",
-      alfaSees?.length === 3,
+      "cliente A ve os 4 conteudos enviados",
+      alfaSees?.length === 4,
       `viu ${alfaSees?.length}`,
+    );
+    check(
+      "cliente A ve o conteudo por link externo",
+      alfaSees?.some((c) => c.title === "Video por link E2E"),
     );
     check(
       "cliente A nao ve o rascunho",

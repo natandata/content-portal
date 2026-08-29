@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
-import { MAX_CAROUSEL_SLIDES } from "@/lib/domain";
+import { LINK_FILE_TYPE, MAX_CAROUSEL_SLIDES, normalizeExternalUrl } from "@/lib/domain";
 import { BUCKETS } from "@/lib/paths";
 import { createClient } from "@/lib/supabase/server";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
@@ -20,12 +20,38 @@ const metadataSchema = z.object({
   internalNotes: z.string().trim().max(2000).optional(),
 });
 
-const fileSchema = z.object({
+/** Arquivo enviado ao Storage. */
+const uploadedFileSchema = z.object({
   filePath: z.string().min(1),
   thumbnailPath: z.string().nullable().optional(),
   position: z.number().int().min(1).max(MAX_CAROUSEL_SLIDES),
   fileType: z.string().min(1),
 });
+
+/**
+ * Arquivo que mora fora do portal. A normalizacao roda de novo aqui — o cliente
+ * ja validou, mas server action e endpoint publico.
+ */
+const linkFileSchema = z.object({
+  externalUrl: z
+    .string()
+    .min(1, "Informe o link")
+    .transform((value) => normalizeExternalUrl(value))
+    .refine((value): value is string => value !== null, "Link invalido: use um endereco http(s)."),
+  position: z.number().int().min(1).max(MAX_CAROUSEL_SLIDES),
+});
+
+const fileSchema = z.union([linkFileSchema, uploadedFileSchema]);
+
+type FileInput = z.infer<typeof fileSchema>;
+
+function isLink(file: FileInput): file is z.infer<typeof linkFileSchema> {
+  return "externalUrl" in file;
+}
+
+function isUpload(file: FileInput): file is z.infer<typeof uploadedFileSchema> {
+  return !isLink(file);
+}
 
 function revalidateContents(clientId?: string, contentId?: string) {
   revalidatePath("/admin/content");
@@ -169,12 +195,16 @@ export async function replaceContentFilesAction(
     .select("file_path, thumbnail_path")
     .eq("content_id", contentId);
 
-  const keptPaths = new Set(parsed.data.map((file) => file.filePath));
+  const keptPaths = new Set(
+    parsed.data.filter(isUpload).map((file) => file.filePath),
+  );
   const orphanFiles = (previous ?? [])
-    .filter((file) => !keptPaths.has(file.file_path))
-    .map((file) => file.file_path);
+    .map((file) => file.file_path)
+    .filter((path): path is string => Boolean(path) && !keptPaths.has(path as string));
   const keptThumbs = new Set(
-    parsed.data.map((file) => file.thumbnailPath).filter((path): path is string => Boolean(path)),
+    parsed.data
+      .map((file) => (isLink(file) ? null : file.thumbnailPath))
+      .filter((path): path is string => Boolean(path)),
   );
   const orphanThumbs = (previous ?? [])
     .map((file) => file.thumbnail_path)
@@ -190,13 +220,25 @@ export async function replaceContentFilesAction(
   }
 
   const { error: insertError } = await supabase.from("content_files").insert(
-    parsed.data.map((file) => ({
-      content_id: contentId,
-      file_path: file.filePath,
-      thumbnail_path: file.thumbnailPath ?? null,
-      position: file.position,
-      file_type: file.fileType,
-    })),
+    parsed.data.map((file) =>
+      isLink(file)
+        ? {
+            content_id: contentId,
+            file_path: null,
+            external_url: file.externalUrl,
+            thumbnail_path: null,
+            position: file.position,
+            file_type: LINK_FILE_TYPE,
+          }
+        : {
+            content_id: contentId,
+            file_path: file.filePath,
+            external_url: null,
+            thumbnail_path: file.thumbnailPath ?? null,
+            position: file.position,
+            file_type: file.fileType,
+          },
+    ),
   );
 
   if (insertError) {
@@ -283,7 +325,9 @@ export async function deleteContentAction(contentId: string): Promise<ActionResu
     .select("file_path, thumbnail_path")
     .eq("content_id", contentId);
 
-  const filePaths = (files ?? []).map((file) => file.file_path);
+  const filePaths = (files ?? [])
+    .map((file) => file.file_path)
+    .filter((path): path is string => Boolean(path));
   const thumbPaths = (files ?? [])
     .map((file) => file.thumbnail_path)
     .filter((path): path is string => Boolean(path));

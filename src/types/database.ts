@@ -88,7 +88,10 @@ export type ContentRow = {
 export type ContentFileRow = {
   id: string;
   content_id: string;
-  file_path: string;
+  /** Caminho no Storage. Nulo quando o arquivo mora atras de `external_url`. */
+  file_path: string | null;
+  /** Link externo (Drive, WeTransfer, OneDrive...). Exclusivo com `file_path`. */
+  external_url: string | null;
   thumbnail_path: string | null;
   position: number;
   file_type: string;
@@ -150,10 +153,7 @@ export type Database = {
       >;
       contracts: Table<ContractRow, 'client_id' | 'title'>;
       contents: Table<ContentRow, 'client_id' | 'title' | 'type'>;
-      content_files: Table<
-        ContentFileRow,
-        'content_id' | 'file_path' | 'position' | 'file_type'
-      >;
+      content_files: Table<ContentFileRow, 'content_id' | 'position' | 'file_type'>;
       approvals: Table<ApprovalRow, 'content_id' | 'client_id' | 'status'>;
       approval_history: Table<ApprovalHistoryRow, 'content_id' | 'action'>;
       feed_items: Table<FeedItemRow, 'client_id' | 'content_id' | 'position'>;

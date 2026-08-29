@@ -57,6 +57,16 @@ export async function ContentEdit({ contentId }: { contentId: string }) {
 
   if (!content) notFound();
 
+  // Se o conteudo ja usa link externo, o formulario abre na aba de link.
+  const { data: externalFile } = await supabase
+    .from("content_files")
+    .select("external_url")
+    .eq("content_id", contentId)
+    .not("external_url", "is", null)
+    .order("position")
+    .limit(1)
+    .maybeSingle();
+
   const clients = await clientOptions();
 
   return (
@@ -75,7 +85,12 @@ export async function ContentEdit({ contentId }: { contentId: string }) {
         description="Atualize os dados ou substitua os arquivos antes de reenviar."
       />
 
-      <ContentForm basePath={base} clients={clients} content={content} />
+      <ContentForm
+        basePath={base}
+        clients={clients}
+        content={content}
+        currentLink={externalFile?.external_url ?? null}
+      />
     </>
   );
 }

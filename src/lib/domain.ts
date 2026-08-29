@@ -90,3 +90,71 @@ export const ACCESS_CODE_PATTERN = /^[A-Z]{3}\d{4}$/;
 export function isValidAccessCode(value: string): boolean {
   return ACCESS_CODE_PATTERN.test(value.trim().toUpperCase());
 }
+
+// ---------------------------------------------------------------------------
+// Arquivos por link externo
+// ---------------------------------------------------------------------------
+
+/**
+ * `file_type` gravado quando o arquivo nao esta no Storage e sim atras de um
+ * link. Serve de sentinela para a UI escolher o card de link.
+ */
+export const LINK_FILE_TYPE = "link";
+
+/** Provedores comuns, so para dar nome ao card em vez de mostrar o dominio cru. */
+const LINK_PROVIDERS: [RegExp, string][] = [
+  [/(^|\.)drive\.google\.com$/i, "Google Drive"],
+  [/(^|\.)docs\.google\.com$/i, "Google Drive"],
+  [/(^|\.)wetransfer\.com$/i, "WeTransfer"],
+  [/(^|\.)we\.tl$/i, "WeTransfer"],
+  [/(^|\.)1drv\.ms$/i, "OneDrive"],
+  [/(^|\.)onedrive\.live\.com$/i, "OneDrive"],
+  [/(^|\.)sharepoint\.com$/i, "OneDrive"],
+  [/(^|\.)dropbox\.com$/i, "Dropbox"],
+  [/(^|\.)youtube\.com$/i, "YouTube"],
+  [/(^|\.)youtu\.be$/i, "YouTube"],
+  [/(^|\.)vimeo\.com$/i, "Vimeo"],
+  [/(^|\.)mega\.nz$/i, "MEGA"],
+];
+
+/**
+ * Aceita apenas http(s) e devolve a URL normalizada — ou null.
+ *
+ * O filtro de protocolo e o ponto critico: esta string vira `href`, entao
+ * `javascript:` e `data:` nao podem passar daqui (nem do CHECK no banco).
+ */
+export function normalizeExternalUrl(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Sem esquema, assume https — colar "drive.google.com/..." e comum.
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  let url: URL;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return null;
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+  if (!url.hostname.includes(".")) return null;
+
+  return url.toString();
+}
+
+/** Nome amigavel do destino do link ("Google Drive", "meusite.com"...). */
+export function linkProviderLabel(url: string): string {
+  let host: string;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    return "Link externo";
+  }
+
+  for (const [pattern, label] of LINK_PROVIDERS) {
+    if (pattern.test(host)) return label;
+  }
+
+  return host.replace(/^www\./i, "");
+}

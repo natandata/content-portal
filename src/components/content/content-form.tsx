@@ -4,13 +4,15 @@ import { useRouter } from "next/navigation";
 import { useState, type SyntheticEvent } from "react";
 import { toast } from "sonner";
 
+import { LinkPicker } from "@/components/content/link-picker";
 import { MediaPicker, type PickedFile } from "@/components/content/media-picker";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select, Textarea } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout";
-import { CONTENT_TYPE_LABEL } from "@/lib/domain";
+import { CONTENT_TYPE_LABEL, normalizeExternalUrl } from "@/lib/domain";
 import { BUCKETS, contentFilePath, thumbnailPath } from "@/lib/paths";
 import { createThumbnail, uploadToBucket } from "@/lib/upload";
+import { cn } from "@/lib/utils";
 import {
   createContentDraftAction,
   replaceContentFilesAction,
@@ -29,6 +31,8 @@ interface Props {
   clients: ClientOption[];
   defaultClientId?: string;
   content?: ContentRow;
+  /** Link ja cadastrado, quando o conteudo em edicao usa arquivo externo. */
+  currentLink?: string | null;
 }
 
 interface UploadedFile {
@@ -82,7 +86,15 @@ async function uploadPickedFiles(
   return { uploaded, error: null };
 }
 
-export function ContentForm({ basePath, clients, defaultClientId, content }: Props) {
+type Source = "upload" | "link";
+
+export function ContentForm({
+  basePath,
+  clients,
+  defaultClientId,
+  content,
+  currentLink,
+}: Props) {
   const router = useRouter();
   const isEdit = Boolean(content);
 
@@ -94,6 +106,8 @@ export function ContentForm({ basePath, clients, defaultClientId, content }: Pro
   const [caption, setCaption] = useState(content?.caption ?? "");
   const [internalNotes, setInternalNotes] = useState(content?.internal_notes ?? "");
   const [files, setFiles] = useState<PickedFile[]>([]);
+  const [source, setSource] = useState<Source>(currentLink ? "link" : "upload");
+  const [link, setLink] = useState(currentLink ?? "");
 
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
@@ -110,6 +124,17 @@ export function ContentForm({ basePath, clients, defaultClientId, content }: Pro
   };
 
   async function persistFiles(targetClientId: string, contentId: string): Promise<string | null> {
+    if (source === "link") {
+      const normalized = normalizeExternalUrl(link);
+      // Link vazio na edicao significa "mantem o que ja esta la".
+      if (!normalized) return null;
+
+      const result = await replaceContentFilesAction(contentId, [
+        { externalUrl: normalized, position: 1 },
+      ]);
+      return result.ok ? null : result.error;
+    }
+
     if (files.length === 0) return null;
 
     setProgress(`Enviando 0 de ${files.length} arquivo(s)...`);
@@ -139,7 +164,13 @@ export function ContentForm({ basePath, clients, defaultClientId, content }: Pro
       setError("Informe o titulo do conteudo.");
       return;
     }
-    if (!isEdit && files.length === 0) {
+    if (source === "link") {
+      const normalized = normalizeExternalUrl(link);
+      if (!normalized && (!isEdit || link.trim().length > 0)) {
+        setError("Informe um link valido, comecando com https://");
+        return;
+      }
+    } else if (!isEdit && files.length === 0) {
       setError("Adicione ao menos um arquivo.");
       return;
     }
@@ -314,14 +345,50 @@ export function ContentForm({ basePath, clients, defaultClientId, content }: Pro
           {isEdit ? "Substituir arquivos" : "Arquivos"}
         </h2>
         <p className="mb-4 text-sm text-ink-500">
-          {isEdit
-            ? "Selecione novos arquivos apenas se quiser substituir os atuais."
-            : type === "carousel"
-              ? "Ate 10 slides. A ordem escolhida aqui e a ordem publicada."
-              : "Um arquivo por conteudo."}
+          {source === "link"
+            ? isEdit
+              ? "Cole um novo link apenas se quiser substituir o atual."
+              : "O arquivo fica hospedado fora do portal e o cliente abre pelo link."
+            : isEdit
+              ? "Selecione novos arquivos apenas se quiser substituir os atuais."
+              : type === "carousel"
+                ? "Ate 10 slides. A ordem escolhida aqui e a ordem publicada."
+                : "Um arquivo por conteudo."}
         </p>
 
-        <MediaPicker type={type} items={files} onChange={setFiles} disabled={busy} />
+        {/* Video grande nao precisa passar pelo Storage: link resolve. */}
+        <div className="mb-4 grid max-w-sm grid-cols-2 gap-1.5 rounded-xl bg-ink-50 p-1.5">
+          {(
+            [
+              ["upload", "Enviar arquivo"],
+              ["link", "Usar link"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                setSource(value);
+                setError(null);
+              }}
+              className={cn(
+                "focus-ring rounded-lg py-2 text-sm font-medium transition",
+                source === value
+                  ? "bg-surface text-ink-900 shadow-sm"
+                  : "text-ink-500 hover:text-ink-800",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {source === "link" ? (
+          <LinkPicker value={link} onChange={setLink} disabled={busy} />
+        ) : (
+          <MediaPicker type={type} items={files} onChange={setFiles} disabled={busy} />
+        )}
       </Card>
 
       <FormError>{error}</FormError>
