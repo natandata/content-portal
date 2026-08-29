@@ -21,10 +21,16 @@ npm install
 ## 2. Configuração do Supabase
 
 1. Crie um projeto em <https://supabase.com/dashboard>.
-2. Em **Project Settings → API**, copie:
-   - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
-   - `anon public` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `service_role` → `SUPABASE_SERVICE_ROLE_KEY` (nunca no cliente)
+2. Em **Settings → API Keys**, aba **Publishable and secret API keys**, copie:
+   - `Project URL` (em **Settings → General**) → `NEXT_PUBLIC_SUPABASE_URL`
+   - a chave `sb_publishable_…` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - a chave `sb_secret_…` → `SUPABASE_SERVICE_ROLE_KEY` (nunca no cliente)
+
+   Ignore a aba **Legacy anon, service_role API keys**. As chaves legadas
+   (`eyJ…`) derivam do JWT secret do projeto e **não podem ser rotacionadas**
+   individualmente; as novas podem ser criadas e revogadas uma a uma. Os nomes
+   das variáveis foram mantidos para não quebrar deploys existentes — o que
+   mudou é o valor.
 3. Em **Authentication → Providers → Email**, mantenha e-mail/senha habilitado e
    **desative "Confirm email"** (os usuários são criados já confirmados pela API
    administrativa).
