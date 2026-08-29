@@ -79,9 +79,18 @@ export async function POST(request: Request) {
     .eq("id", data.user.id)
     .maybeSingle();
 
-  if (profile?.status === "inactive") {
+  // Quem se cadastrou sozinho nasce 'pending' e so entra depois da aprovacao.
+  if (profile && profile.status !== "active") {
     await supabase.auth.signOut();
-    return NextResponse.json({ error: "Acesso desativado. Fale com o administrador." }, { status: 403 });
+    return NextResponse.json(
+      {
+        error:
+          profile.status === "pending"
+            ? "Seu acesso ainda esta aguardando aprovacao do administrador."
+            : "Acesso desativado. Fale com o administrador.",
+      },
+      { status: 403 },
+    );
   }
 
   return NextResponse.json({ redirect: HOME_BY_ROLE[role] });

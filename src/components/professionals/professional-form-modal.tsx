@@ -22,7 +22,11 @@ export function ProfessionalFormModal({ professional }: { professional?: UserRow
   const [name, setName] = useState(professional?.name ?? "");
   const [email, setEmail] = useState(professional?.email ?? "");
   const [password, setPassword] = useState("");
-  const [status, setStatus] = useState<"active" | "inactive">(professional?.status ?? "active");
+  // O modal so edita profissionais ja resolvidos; 'pending' é tratado na
+  // secao de solicitacoes, com aprovar/recusar.
+  const [status, setStatus] = useState<"active" | "inactive">(
+    professional?.status === "inactive" ? "inactive" : "active",
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

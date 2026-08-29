@@ -4,17 +4,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
+import { AccessRequestForm } from "@/components/auth/access-request-form";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input } from "@/components/ui/form";
 import { ACCESS_CODE_PATTERN } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 
 type Tab = "staff" | "client";
+type Mode = "login" | "request";
 
 function LoginFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("staff");
+  const [mode, setMode] = useState<Mode>("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -80,7 +83,12 @@ function LoginFormInner() {
     void submit("/api/auth/client", { code: normalized });
   }
 
+  if (mode === "request") {
+    return <AccessRequestForm onBack={() => setMode("login")} />;
+  }
+
   return (
+    <>
     <div className="card overflow-hidden">
       <div className="grid grid-cols-2 border-b border-line bg-ink-50 p-1.5">
         {(
@@ -174,6 +182,21 @@ function LoginFormInner() {
         )}
       </div>
     </div>
+
+    {/* Discreto de proposito: a porta de entrada normal e o convite do admin. */}
+    {tab === "staff" ? (
+      <p className="mt-4 text-center text-sm text-ink-400">
+        Ainda nao tem acesso?{" "}
+        <button
+          type="button"
+          onClick={() => setMode("request")}
+          className="focus-ring rounded font-medium text-ink-600 underline underline-offset-2 transition hover:text-ink-900"
+        >
+          Solicitar
+        </button>
+      </p>
+    ) : null}
+    </>
   );
 }
 

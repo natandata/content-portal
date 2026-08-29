@@ -60,6 +60,10 @@ export async function getActor(): Promise<Actor | null> {
     .eq("id", user.id)
     .maybeSingle();
 
+  // Defesa em profundidade: o login ja barra quem nao esta ativo, mas uma
+  // sessao emitida antes de uma desativacao nao pode continuar valendo.
+  if (profile && profile.status !== "active") return null;
+
   return {
     authUser: user,
     role,

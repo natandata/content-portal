@@ -67,6 +67,62 @@ export async function createProfessionalAction(
   return ok(profile);
 }
 
+/** Admin aprova uma solicitacao de acesso: o usuario passa a poder entrar. */
+export async function approveAccessRequestAction(
+  userId: string,
+): Promise<ActionResult<null>> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("users")
+    .update({ status: "active" })
+    .eq("id", userId)
+    .eq("status", "pending");
+
+  if (error) {
+    return fail(describeError(error, "Nao foi possivel aprovar o acesso."));
+  }
+
+  revalidatePath("/admin/professionals");
+  revalidatePath("/admin/dashboard");
+  return done();
+}
+
+/**
+ * Admin recusa uma solicitacao. Remove o perfil e o usuario de autenticacao —
+ * deixar a conta orfa ocuparia o email e nao serviria para nada.
+ */
+export async function rejectAccessRequestAction(
+  userId: string,
+): Promise<ActionResult<null>> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { data: target } = await supabase
+    .from("users")
+    .select("id, status")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!target) return fail("Solicitacao nao encontrada.");
+  if (target.status !== "pending") {
+    return fail("Esta solicitacao ja foi resolvida.");
+  }
+
+  const { error } = await supabase.from("users").delete().eq("id", userId);
+  if (error) {
+    return fail(describeError(error, "Nao foi possivel recusar a solicitacao."));
+  }
+
+  const admin = createAdminClient();
+  await admin.auth.admin.deleteUser(userId);
+
+  revalidatePath("/admin/professionals");
+  revalidatePath("/admin/dashboard");
+  return done();
+}
+
 export async function updateProfessionalAction(
   input: z.input<typeof updateSchema>,
 ): Promise<ActionResult<null>> {

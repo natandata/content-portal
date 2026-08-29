@@ -7,7 +7,7 @@
  */
 
 export type UserRole = "admin" | "professional" | "client";
-export type UserStatus = "active" | "inactive";
+export type UserStatus = "active" | "inactive" | "pending";
 export type ClientStatus = "active" | "inactive";
 
 export type ContractStatus =
@@ -36,6 +36,7 @@ export type UserRow = {
   email: string;
   role: UserRole;
   status: UserStatus;
+  requested_at: string | null;
   created_at: string;
   updated_at: string;
 };
