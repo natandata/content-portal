@@ -147,7 +147,10 @@ contra um projeto de desenvolvimento se não quiser tráfego no principal.
 
 ## 8. Deploy na Vercel
 
-1. Suba o repositório para o GitHub/GitLab.
+Em producao: **https://content-portal-seven.vercel.app**
+
+
+1. Suba o repositório para o GitHub/GitLab (ou publique pelo CLI: `vercel deploy --prod`).
 2. Importe o projeto na Vercel (o preset Next.js é detectado automaticamente).
 3. Cadastre `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
    `SUPABASE_SERVICE_ROLE_KEY` e `ADMIN_EMAIL`. A senha do seed não entra aqui.

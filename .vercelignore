@@ -1,0 +1,8 @@
+# Padroes ancorados na raiz com "/": sem a barra, "supabase" tambem casaria
+# com src/lib/supabase e o build quebra.
+/supabase
+/scripts
+/.claude
+/.mcp.json
+/README.md
+/.env.example
