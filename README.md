@@ -151,11 +151,41 @@ contra um projeto de desenvolvimento se não quiser tráfego no principal.
 Em producao: **https://content-portal-seven.vercel.app**
 
 
-1. Suba o repositório para o GitHub/GitLab (ou publique pelo CLI: `vercel deploy --prod`).
-2. Importe o projeto na Vercel (o preset Next.js é detectado automaticamente).
-3. Cadastre `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+Cada push na `main` publica em produção pelo workflow
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml): instala, checa
+tipos, roda o lint e só então publica pela CLI da Vercel.
+
+### Por que não é a integração nativa da Vercel
+
+A conta Vercel deste projeto **não tem namespace GitHub vinculado** —
+`/v1/integrations/git-namespaces` devolve zero, e ligar o repositório ao projeto
+falha com `repo_no_access`. Essa vinculação só é criada por fluxo OAuth no
+navegador; nenhuma API a cria. Sem ela, o "push → deploy" nativo não existe, e o
+workflow cobre esse papel.
+
+Para migrar para a integração nativa (mais simples, sem token): conecte a conta
+GitHub em **Vercel → Settings → Login Connections**, rode `vercel git connect` e
+apague o workflow.
+
+### O token do CI
+
+O workflow usa `secrets.VERCEL_TOKEN`. Se os deploys começarem a falhar com erro
+de autenticação, o token expirou — gere outro em
+<https://vercel.com/account/tokens>, **sem expiração**, e grave:
+
+```bash
+gh secret set VERCEL_TOKEN --repo natandata/content-portal
+```
+
+Os ids de organização e projeto ficam no próprio workflow: não são segredo.
+
+### Configuração inicial (projeto novo)
+
+1. Importe o repositório na Vercel (o preset Next.js é detectado automaticamente).
+2. Cadastre `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
    `SUPABASE_SERVICE_ROLE_KEY` e `ADMIN_EMAIL`. A senha do seed não entra aqui.
-4. Deploy. Não há dependência de ambiente local nem de arquivos fora do repo.
+3. Em **Settings → Deployment Protection**, desative a Vercel Authentication se
+   a aplicação precisar ser acessível publicamente.
 
 ---
 
