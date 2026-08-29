@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -30,7 +30,9 @@ import { cn } from "@/lib/utils";
 import { addFeedItemAction, removeFeedItemAction, reorderFeedAction } from "@/server/actions/feed";
 import type { ContentType } from "@/types/database";
 
-import type { FeedEntry } from "./feed-grid";
+import { FeedGrid, type FeedEntry } from "./feed-grid";
+import { FeedTabs } from "./feed-tabs";
+import { InstagramHeader, type ProfileView } from "./instagram-profile";
 
 export interface AvailableContent {
   id: string;
@@ -121,10 +123,16 @@ export function FeedEditor({
   clientId,
   initialEntries,
   available,
+  profile,
+  fallbackName,
+  profileEditor,
 }: {
   clientId: string;
   initialEntries: FeedEntry[];
   available: AvailableContent[];
+  profile: ProfileView;
+  fallbackName: string;
+  profileEditor: ReactNode;
 }) {
   const router = useRouter();
   const [entries, setEntries] = useState(initialEntries);
@@ -143,6 +151,7 @@ export function FeedEditor({
   const ids = useMemo(() => entries.map((entry) => entry.feedItemId), [entries]);
   const emptySlots = Math.max(0, MAX_FEED_ITEMS - entries.length);
   const full = entries.length >= MAX_FEED_ITEMS;
+  const reels = useMemo(() => entries.filter((entry) => entry.type === "video"), [entries]);
 
   function onDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -205,45 +214,70 @@ export function FeedEditor({
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
       <div>
-        <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-ink-500 tabular-nums">
             {entries.length} de {MAX_FEED_ITEMS} posicoes
           </p>
-          <Button size="sm" disabled={full || pending} onClick={() => setPickerOpen(true)}>
-            <Plus className="size-4" aria-hidden />
-            Adicionar
-          </Button>
+          <div className="flex gap-2">
+            {profileEditor}
+            <Button size="sm" disabled={full || pending} onClick={() => setPickerOpen(true)}>
+              <Plus className="size-4" aria-hidden />
+              Adicionar
+            </Button>
+          </div>
         </div>
 
-        <div className="rounded-xl border border-line bg-surface p-1.5">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={onDragEnd}
-          >
-            <SortableContext items={ids} strategy={rectSortingStrategy}>
-              <div className="grid grid-cols-3 gap-1">
-                {entries.map((entry, index) => (
-                  <SortableCell
-                    key={entry.feedItemId}
-                    entry={entry}
-                    index={index}
-                    onRemove={remove}
-                    disabled={pending}
-                  />
-                ))}
+        <div className="overflow-hidden rounded-xl border border-line bg-surface">
+          {/* Mesma moldura que o cliente enxerga — o que muda e poder arrastar. */}
+          <InstagramHeader
+            profile={{ ...profile, postsCount: profile.postsCountIsAuto ? entries.length : profile.postsCount }}
+            fallbackName={fallbackName}
+          />
 
-                {Array.from({ length: emptySlots }).map((_, index) => (
-                  <div
-                    key={`empty-${index}`}
-                    className="flex aspect-square items-center justify-center border border-dashed border-line bg-ink-50/60 text-[11px] text-ink-300 tabular-nums"
-                  >
-                    {entries.length + index + 1}
-                  </div>
-                ))}
+          <FeedTabs
+            showReels={profile.showReelsTab}
+            posts={
+              <div className="p-1.5">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={onDragEnd}
+                >
+                  <SortableContext items={ids} strategy={rectSortingStrategy}>
+                    <div className="grid grid-cols-3 gap-1">
+                      {entries.map((entry, index) => (
+                        <SortableCell
+                          key={entry.feedItemId}
+                          entry={entry}
+                          index={index}
+                          onRemove={remove}
+                          disabled={pending}
+                        />
+                      ))}
+
+                      {Array.from({ length: emptySlots }).map((_, index) => (
+                        <div
+                          key={`empty-${index}`}
+                          className="flex aspect-square items-center justify-center border border-dashed border-line bg-ink-50/60 text-[11px] text-ink-300 tabular-nums"
+                        >
+                          {entries.length + index + 1}
+                        </div>
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               </div>
-            </SortableContext>
-          </DndContext>
+            }
+            reels={
+              <div className="p-1.5">
+                <FeedGrid
+                  entries={reels}
+                  fill={false}
+                  emptyLabel="Nenhum conteudo de video no feed."
+                />
+              </div>
+            }
+          />
         </div>
 
         <p className="mt-3 text-xs text-ink-500">
@@ -258,6 +292,8 @@ export function FeedEditor({
             <li>A grade reproduz o feed do Instagram: 3 colunas por 10 linhas.</li>
             <li>Videos usam a miniatura do primeiro frame; carrosseis usam o slide 1.</li>
             <li>O cliente ve a mesma composicao, sem poder reorganizar.</li>
+            <li>Foto, nome, @, bio e destaques saem de &ldquo;Editar perfil&rdquo;.</li>
+            <li>A aba de reels lista os videos que estao no feed.</li>
           </ul>
         </div>
       </div>

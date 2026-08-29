@@ -78,6 +78,22 @@ export const MAX_CAROUSEL_SLIDES = 10;
 export const FEED_COLUMNS = 3;
 export const FEED_ROWS = 10;
 export const MAX_FEED_ITEMS = FEED_COLUMNS * FEED_ROWS;
+export const MAX_HIGHLIGHTS = 10;
+
+/** Abreviacao no estilo do Instagram: 1.2 mil, 34,5 mil, 1,2 mi. */
+export function formatCount(value: number): string {
+  if (value < 1000) return String(value);
+
+  if (value < 1_000_000) {
+    const thousands = value / 1000;
+    const label = thousands >= 100 ? Math.round(thousands) : Number(thousands.toFixed(1));
+    return `${String(label).replace(".", ",")} mil`;
+  }
+
+  const millions = value / 1_000_000;
+  const label = millions >= 100 ? Math.round(millions) : Number(millions.toFixed(1));
+  return `${String(label).replace(".", ",")} mi`;
+}
 
 export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];

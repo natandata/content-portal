@@ -98,6 +98,30 @@ export type ContentFileRow = {
   created_at: string;
 }
 
+export type ClientProfileRow = {
+  client_id: string;
+  display_name: string | null;
+  username: string | null;
+  bio: string | null;
+  avatar_path: string | null;
+  /** Numero exibido no cabecalho; nulo usa a contagem real do feed. */
+  posts_count: number | null;
+  followers_count: number;
+  following_count: number;
+  show_reels_tab: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProfileHighlightRow = {
+  id: string;
+  client_id: string;
+  title: string;
+  cover_path: string | null;
+  position: number;
+  created_at: string;
+}
+
 export type ApprovalRow = {
   id: string;
   content_id: string;
@@ -154,6 +178,8 @@ export type Database = {
       contracts: Table<ContractRow, 'client_id' | 'title'>;
       contents: Table<ContentRow, 'client_id' | 'title' | 'type'>;
       content_files: Table<ContentFileRow, 'content_id' | 'position' | 'file_type'>;
+      client_profiles: Table<ClientProfileRow, 'client_id'>;
+      profile_highlights: Table<ProfileHighlightRow, 'client_id' | 'title' | 'position'>;
       approvals: Table<ApprovalRow, 'content_id' | 'client_id' | 'status'>;
       approval_history: Table<ApprovalHistoryRow, 'content_id' | 'action'>;
       feed_items: Table<FeedItemRow, 'client_id' | 'content_id' | 'position'>;

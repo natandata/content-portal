@@ -525,7 +525,81 @@ async function main() {
     );
 
     // ---------------------------------------------------------------------
-    console.log("\n  [8] Limpeza");
+    console.log("\n  [8] Perfil do Instagram");
+    // ---------------------------------------------------------------------
+    const { error: profileError } = await prof.from("client_profiles").upsert({
+      client_id: alfa.id,
+      display_name: "Alfa Marcas",
+      username: "alfa.marcas",
+      bio: "Estrategia e conteudo.",
+      followers_count: 12400,
+      following_count: 312,
+      show_reels_tab: true,
+    });
+    check("profissional salva o perfil", !profileError, profileError?.message ?? "");
+
+    await denied(
+      "recusa @ com caractere invalido",
+      prof.from("client_profiles").upsert({
+        client_id: alfa.id,
+        username: "alfa marcas!",
+      }),
+    );
+
+    const { error: highlightsError } = await prof.from("profile_highlights").insert(
+      Array.from({ length: 10 }, (_, i) => ({
+        client_id: alfa.id,
+        title: `Destaque ${i + 1}`,
+        position: i + 1,
+      })),
+    );
+    check("perfil aceita 10 destaques", !highlightsError, highlightsError?.message ?? "");
+
+    await denied(
+      "perfil recusa o 11o destaque",
+      prof.from("profile_highlights").insert({
+        client_id: alfa.id,
+        title: "Excedente",
+        position: 10,
+      }),
+    );
+
+    const { data: seenProfile } = await clientA
+      .from("client_profiles")
+      .select("username, followers_count")
+      .maybeSingle();
+    check(
+      "cliente le o proprio perfil",
+      seenProfile?.username === "alfa.marcas" && seenProfile?.followers_count === 12400,
+    );
+
+    const { data: seenHighlights } = await clientA.from("profile_highlights").select("id");
+    check("cliente le os destaques", seenHighlights?.length === 10);
+
+    await denied(
+      "cliente nao edita o proprio perfil",
+      clientA
+        .from("client_profiles")
+        .update({ followers_count: 999999 })
+        .eq("client_id", alfa.id)
+        .select("client_id")
+        .single(),
+    );
+
+    await denied(
+      "cliente nao cria destaque",
+      clientA.from("profile_highlights").insert({
+        client_id: alfa.id,
+        title: "Invasao",
+        position: 1,
+      }),
+    );
+
+    const { data: crossProfile } = await clientB.from("client_profiles").select("client_id");
+    check("cliente B nao ve o perfil do cliente A", (crossProfile ?? []).length === 0);
+
+    // ---------------------------------------------------------------------
+    console.log("\n  [9] Limpeza");
     // ---------------------------------------------------------------------
   } finally {
     for (const id of created.clients) {

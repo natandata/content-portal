@@ -1,13 +1,15 @@
 import { Grid3x3 } from "lucide-react";
 
 import { FeedGrid, type FeedEntry } from "@/components/feed/feed-grid";
+import { FeedTabs } from "@/components/feed/feed-tabs";
+import { InstagramHeader } from "@/components/feed/instagram-profile";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireClientActor } from "@/lib/auth";
 import { MAX_FEED_ITEMS } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
-import { loadContentPreviews } from "@/server/queries";
+import { loadContentPreviews, loadProfileView } from "@/server/queries";
 
 export async function ClientFeed() {
   const actor = await requireClientActor();
@@ -46,10 +48,19 @@ export async function ClientFeed() {
     ];
   });
 
+  const profile = await loadProfileView(
+    supabase,
+    actor.client.id,
+    actor.client.company_name,
+    entries.length,
+  );
+
   const lastUpdate = items.reduce<string | null>((latest, item) => {
     if (!latest || item.updated_at > latest) return item.updated_at;
     return latest;
   }, null);
+
+  const reels = entries.filter((entry) => entry.type === "video");
 
   return (
     <>
@@ -66,8 +77,26 @@ export async function ClientFeed() {
         />
       ) : (
         <div className="mx-auto max-w-md">
-          <div className="rounded-xl border border-line bg-surface p-1.5">
-            <FeedGrid entries={entries} />
+          <div className="overflow-hidden rounded-xl border border-line bg-surface">
+            <InstagramHeader profile={profile} fallbackName={actor.client.company_name} />
+
+            <FeedTabs
+              showReels={profile.showReelsTab}
+              posts={
+                <div className="p-1.5">
+                  <FeedGrid entries={entries} />
+                </div>
+              }
+              reels={
+                <div className="p-1.5">
+                  <FeedGrid
+                    entries={reels}
+                    fill={false}
+                    emptyLabel="Nenhum reels na composicao ainda."
+                  />
+                </div>
+              }
+            />
           </div>
 
           <p className="mt-3 text-center text-xs text-ink-500 tabular-nums">

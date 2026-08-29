@@ -2,8 +2,9 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { ProfileView } from "@/components/feed/instagram-profile";
 import { BUCKETS } from "@/lib/paths";
-import { signedUrlMap } from "@/lib/storage";
+import { signedUrl, signedUrlMap } from "@/lib/storage";
 import type {
   ContentFileRow,
   ContentRow,
@@ -181,4 +182,84 @@ export async function loadClientNames(
 
   for (const row of data ?? []) names.set(row.id, row.company_name);
   return names;
+}
+
+/**
+ * Cabecalho do perfil para a simulacao do feed. Devolve valores prontos para
+ * exibir mesmo quando o cliente ainda nao tem perfil salvo.
+ */
+export async function loadProfileView(
+  supabase: Client,
+  clientId: string,
+  fallbackName: string,
+  realPostCount: number,
+): Promise<ProfileView> {
+  const [{ data: profile }, { data: highlights }] = await Promise.all([
+    supabase.from("client_profiles").select("*").eq("client_id", clientId).maybeSingle(),
+    supabase
+      .from("profile_highlights")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("position"),
+  ]);
+
+  const rows = highlights ?? [];
+
+  const [avatarUrl, coverUrls] = await Promise.all([
+    signedUrl(supabase, BUCKETS.profiles, profile?.avatar_path),
+    signedUrlMap(
+      supabase,
+      BUCKETS.profiles,
+      rows.map((row) => row.cover_path),
+    ),
+  ]);
+
+  return {
+    displayName: profile?.display_name ?? "",
+    username: profile?.username ?? "",
+    bio: profile?.bio ?? "",
+    avatarUrl,
+    // posts_count nulo = espelha a composicao real do feed.
+    postsCount: profile?.posts_count ?? realPostCount,
+    postsCountIsAuto: profile?.posts_count === null || profile?.posts_count === undefined,
+    followersCount: profile?.followers_count ?? 0,
+    followingCount: profile?.following_count ?? 0,
+    showReelsTab: profile?.show_reels_tab ?? true,
+    highlights: rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      coverUrl: row.cover_path ? (coverUrls.get(row.cover_path) ?? null) : null,
+    })),
+  };
+}
+
+/** Dados crus do perfil, para preencher o editor da equipe. */
+export async function loadProfileForm(supabase: Client, clientId: string) {
+  const [{ data: profile }, { data: highlights }] = await Promise.all([
+    supabase.from("client_profiles").select("*").eq("client_id", clientId).maybeSingle(),
+    supabase
+      .from("profile_highlights")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("position"),
+  ]);
+
+  const rows = highlights ?? [];
+  const coverUrls = await signedUrlMap(
+    supabase,
+    BUCKETS.profiles,
+    rows.map((row) => row.cover_path),
+  );
+  const avatarUrl = await signedUrl(supabase, BUCKETS.profiles, profile?.avatar_path);
+
+  return {
+    profile: profile ?? null,
+    avatarUrl,
+    highlights: rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      coverPath: row.cover_path,
+      coverUrl: row.cover_path ? (coverUrls.get(row.cover_path) ?? null) : null,
+    })),
+  };
 }

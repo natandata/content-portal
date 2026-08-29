@@ -1,4 +1,4 @@
-import { Grid3x3, Layers, Play } from "lucide-react";
+import { Clapperboard, Grid3x3, Layers, Play } from "lucide-react";
 
 import { MAX_FEED_ITEMS } from "@/lib/domain";
 import { cn } from "@/lib/utils";
@@ -13,9 +13,30 @@ export interface FeedEntry {
   position: number;
 }
 
-/** Grade 3x10 somente leitura — usada na area do cliente. */
-export function FeedGrid({ entries }: { entries: FeedEntry[] }) {
-  const emptySlots = Math.max(0, MAX_FEED_ITEMS - entries.length);
+/**
+ * Grade 3x10 somente leitura. `fill` completa as 30 posicoes com celulas vazias
+ * (visao de composicao do feed); a aba de reels usa `fill={false}`, ja que ali
+ * so existe o que existe.
+ */
+export function FeedGrid({
+  entries,
+  fill = true,
+  emptyLabel,
+}: {
+  entries: FeedEntry[];
+  fill?: boolean;
+  emptyLabel?: string;
+}) {
+  const emptySlots = fill ? Math.max(0, MAX_FEED_ITEMS - entries.length) : 0;
+
+  if (entries.length === 0 && !fill) {
+    return (
+      <div className="flex flex-col items-center gap-2 px-6 py-12 text-center text-ink-400">
+        <Clapperboard className="size-6" aria-hidden />
+        <p className="text-sm">{emptyLabel ?? "Nada por aqui ainda."}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-3 gap-1 sm:gap-1.5">

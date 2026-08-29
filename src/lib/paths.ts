@@ -9,6 +9,7 @@ export const BUCKETS = {
   signedContracts: "signed-contracts",
   content: "content",
   thumbnails: "thumbnails",
+  profiles: "profiles",
 } as const;
 
 export type BucketName = (typeof BUCKETS)[keyof typeof BUCKETS];
@@ -37,4 +38,17 @@ export function contentFilePath(
 
 export function thumbnailPath(clientId: string, contentId: string, position: number): string {
   return `${clientId}/${contentId}/${String(position).padStart(2, "0")}-${Date.now()}.jpg`;
+}
+
+export function avatarPath(clientId: string, fileName: string): string {
+  return `${clientId}/avatar-${Date.now()}.${fileExtension(fileName)}`;
+}
+
+export function highlightCoverPath(
+  clientId: string,
+  position: number,
+  fileName: string,
+): string {
+  const slot = String(position).padStart(2, "0");
+  return `${clientId}/destaque-${slot}-${Date.now()}.${fileExtension(fileName)}`;
 }

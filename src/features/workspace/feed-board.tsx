@@ -2,11 +2,12 @@ import { Grid3x3 } from "lucide-react";
 
 import { FeedEditor, type AvailableContent } from "@/components/feed/feed-editor";
 import type { FeedEntry } from "@/components/feed/feed-grid";
+import { ProfileEditor } from "@/components/feed/profile-editor";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { basePath, requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { loadContentPreviews } from "@/server/queries";
+import { loadContentPreviews, loadProfileForm, loadProfileView } from "@/server/queries";
 
 import { ClientSwitcher } from "./client-switcher";
 
@@ -85,6 +86,12 @@ export async function FeedBoard({ clientId }: { clientId?: string }) {
     }));
 
   const selectedClient = options.find((option) => option.id === selectedId);
+  const fallbackName = selectedClient?.companyName ?? "Cliente";
+
+  const [profile, profileForm] = await Promise.all([
+    loadProfileView(supabase, selectedId, fallbackName, entries.length),
+    loadProfileForm(supabase, selectedId),
+  ]);
 
   return (
     <>
@@ -101,7 +108,27 @@ export async function FeedBoard({ clientId }: { clientId?: string }) {
         />
       </div>
 
-      <FeedEditor clientId={selectedId} initialEntries={entries} available={available} />
+      <FeedEditor
+        clientId={selectedId}
+        initialEntries={entries}
+        available={available}
+        profile={profile}
+        fallbackName={fallbackName}
+        profileEditor={
+          <ProfileEditor
+            clientId={selectedId}
+            fallbackName={fallbackName}
+            profile={profileForm.profile}
+            avatarUrl={profileForm.avatarUrl}
+            highlights={profileForm.highlights.map((highlight) => ({
+              id: highlight.id,
+              title: highlight.title,
+              coverPath: highlight.coverPath,
+              coverUrl: highlight.coverUrl,
+            }))}
+          />
+        }
+      />
     </>
   );
 }
