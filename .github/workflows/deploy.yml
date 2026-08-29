@@ -1,0 +1,44 @@
+name: Deploy para producao
+
+# A conta Vercel deste projeto nao tem namespace GitHub vinculado, entao a
+# integracao nativa (push -> deploy) nao esta disponivel. Este workflow faz o
+# mesmo papel: a cada push na main, valida e publica pela CLI da Vercel.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Nunca dois deploys de producao ao mesmo tempo.
+concurrency:
+  group: producao
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_AO791y0ADeA4inftfL9WjJkn
+      VERCEL_PROJECT_ID: prj_yk3dQmj4PfCKgsFW8hpcDs8Slocp
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Barra o deploy antes de gastar build na Vercel se algo obvio quebrou.
+      - name: Checar tipos
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Publicar em producao
+        run: npx --yes vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
