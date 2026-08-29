@@ -69,6 +69,7 @@ As migrations estão em `supabase/migrations/`, na ordem:
 | `20260829000300_storage.sql` | Buckets privados e policies de Storage |
 | `20260829000400_hardening.sql` | `search_path` fixo em todas as funções e `EXECUTE` revogado do papel `anon` |
 | `20260829000500_hide_drafts_from_client.sql` | Rascunho invisível para o cliente também no banco e no Storage |
+| `20260829000600_access_requests.sql` | Status `pending` para solicitações de acesso aguardando aprovação do admin |
 
 **Opção A — Supabase CLI (recomendado):**
 
@@ -80,9 +81,9 @@ npx supabase link --project-ref SEU_REF
 npx supabase db push
 ```
 
-**Opção B — SQL Editor:** cole o conteúdo dos cinco arquivos, na ordem, e execute.
+**Opção B — SQL Editor:** cole o conteúdo dos seis arquivos, na ordem, e execute.
 
-As cinco já estão aplicadas no projeto `oocewkuseaiguxfcvlwz`.
+As seis já estão aplicadas no projeto `oocewkuseaiguxfcvlwz`.
 
 ## 5. Seed do administrador
 
