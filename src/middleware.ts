@@ -74,9 +74,11 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Todas as rotas exceto assets estaticos e a API (protegida por sessao
-     * dentro de cada handler).
+     * Todas as rotas exceto assets estaticos, arquivos do PWA e a API
+     * (protegida por sessao dentro de cada handler). O service worker e o
+     * manifest precisam ficar de fora: sao publicos e nao devem custar uma
+     * verificacao de sessao a cada requisicao.
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|icons/|api/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

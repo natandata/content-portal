@@ -45,14 +45,18 @@ Copie `.env.example` para `.env.local` e preencha:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://SEU-PROJETO.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 ADMIN_EMAIL=admin@contentportal.local
-ADMIN_INITIAL_PASSWORD=dawn
+ADMIN_INITIAL_PASSWORD=escolha-uma-senha-forte
 ```
 
+`ADMIN_INITIAL_PASSWORD` é lida apenas pelo `npm run seed`, nunca em runtime —
+não precisa existir na Vercel. Escolha uma senha forte: com a aplicação publicada,
+qualquer pessoa pode tentar entrar como `Admin`.
+
 `.env.local` está no `.gitignore` e nunca deve ser versionado. Na Vercel, cadastre
-as mesmas quatro variáveis em **Settings → Environment Variables**.
+as três primeiras em **Settings → Environment Variables** (a senha do seed não é usada em runtime).
 
 ## 4. Migrations
 
@@ -145,7 +149,8 @@ contra um projeto de desenvolvimento se não quiser tráfego no principal.
 
 1. Suba o repositório para o GitHub/GitLab.
 2. Importe o projeto na Vercel (o preset Next.js é detectado automaticamente).
-3. Cadastre as quatro variáveis de ambiente.
+3. Cadastre `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY` e `ADMIN_EMAIL`. A senha do seed não entra aqui.
 4. Deploy. Não há dependência de ambiente local nem de arquivos fora do repo.
 
 ---
@@ -213,6 +218,33 @@ mesmas policies), o que evita passar arquivos grandes pelo servidor Next.
 
 As miniaturas são geradas no navegador — `canvas` para imagens e o primeiro frame
 do `<video>` para vídeos —, então não há dependência de ffmpeg no servidor.
+
+## PWA
+
+A aplicação é instalável no celular: no Android, "Adicionar à tela inicial" no
+Chrome; no iPhone, Compartilhar → "Adicionar à Tela de Início" no Safari. Aberta
+assim, roda em tela cheia, sem barra do navegador — o que importa para a área do
+cliente, que é onde o uso mobile acontece.
+
+| Peça | Arquivo |
+| --- | --- |
+| Manifest | `src/app/manifest.ts` |
+| Ícones (192, 512, apple-touch) | `public/icons/`, gerados por `scripts/generate-icons.mjs` |
+| Service worker | `public/sw.js` |
+| Registro | `src/components/pwa/service-worker.tsx` (só em produção) |
+| Tela offline | `src/app/offline/page.tsx` |
+
+O service worker é **deliberadamente conservador**. Esta é uma aplicação
+autenticada: HTML de página e resposta de API nunca entram em cache, porque
+servir a página de um cliente para outro seria pior do que não ter offline. Ele
+guarda apenas assets imutáveis (`/_next/static`, `/icons`) e a tela de offline,
+usada como fallback quando a navegação falha por falta de rede.
+
+Para regenerar os ícones depois de mudar a identidade visual:
+
+```bash
+node scripts/generate-icons.mjs
+```
 
 ## Estrutura
 
