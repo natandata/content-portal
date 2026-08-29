@@ -1,0 +1,10 @@
+# Normaliza fim de linha: o repositorio guarda LF, o checkout usa o padrao do SO.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.mp4 binary
+*.mov binary
+*.pdf binary

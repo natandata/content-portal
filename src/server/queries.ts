@@ -1,0 +1,178 @@
+import "server-only";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { BUCKETS } from "@/lib/paths";
+import { signedUrlMap } from "@/lib/storage";
+import type {
+  ContentFileRow,
+  ContentRow,
+  ContentStatus,
+  Database,
+} from "@/types/database";
+
+type Client = SupabaseClient<Database>;
+
+export interface ContentCardData {
+  content: ContentRow;
+  clientName: string;
+  fileCount: number;
+  previewUrl: string | null;
+}
+
+export interface ContentFileWithUrl extends ContentFileRow {
+  url: string | null;
+  thumbnailUrl: string | null;
+}
+
+/** Primeiro arquivo de cada conteudo, usado como capa nas listagens e no feed. */
+export async function loadContentPreviews(
+  supabase: Client,
+  contentIds: string[],
+): Promise<Map<string, string | null>> {
+  const previews = new Map<string, string | null>();
+  if (contentIds.length === 0) return previews;
+
+  const { data: files } = await supabase
+    .from("content_files")
+    .select("content_id, file_path, thumbnail_path, file_type, position")
+    .in("content_id", contentIds)
+    .eq("position", 1);
+
+  if (!files || files.length === 0) return previews;
+
+  const thumbPaths = files
+    .map((file) => file.thumbnail_path)
+    .filter((path): path is string => Boolean(path));
+
+  const imagePaths = files
+    .filter((file) => !file.thumbnail_path && file.file_type.startsWith("image/"))
+    .map((file) => file.file_path);
+
+  const [thumbUrls, imageUrls] = await Promise.all([
+    signedUrlMap(supabase, BUCKETS.thumbnails, thumbPaths),
+    signedUrlMap(supabase, BUCKETS.content, imagePaths),
+  ]);
+
+  for (const file of files) {
+    const url = file.thumbnail_path
+      ? (thumbUrls.get(file.thumbnail_path) ?? null)
+      : (imageUrls.get(file.file_path) ?? null);
+    previews.set(file.content_id, url);
+  }
+
+  return previews;
+}
+
+export async function loadContentFileCounts(
+  supabase: Client,
+  contentIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (contentIds.length === 0) return counts;
+
+  const { data } = await supabase
+    .from("content_files")
+    .select("content_id")
+    .in("content_id", contentIds);
+
+  for (const row of data ?? []) {
+    counts.set(row.content_id, (counts.get(row.content_id) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
+/** Todos os arquivos de um conteudo, com URLs assinadas prontas para exibicao. */
+export async function loadContentFiles(
+  supabase: Client,
+  contentId: string,
+): Promise<ContentFileWithUrl[]> {
+  const { data: files } = await supabase
+    .from("content_files")
+    .select("*")
+    .eq("content_id", contentId)
+    .order("position");
+
+  if (!files || files.length === 0) return [];
+
+  const [fileUrls, thumbUrls] = await Promise.all([
+    signedUrlMap(
+      supabase,
+      BUCKETS.content,
+      files.map((file) => file.file_path),
+    ),
+    signedUrlMap(
+      supabase,
+      BUCKETS.thumbnails,
+      files.map((file) => file.thumbnail_path),
+    ),
+  ]);
+
+  return files.map((file) => ({
+    ...file,
+    url: fileUrls.get(file.file_path) ?? null,
+    thumbnailUrl: file.thumbnail_path ? (thumbUrls.get(file.thumbnail_path) ?? null) : null,
+  }));
+}
+
+export interface DashboardStats {
+  activeClients: number;
+  pendingContents: number;
+  awaitingClient: number;
+  approved: number;
+}
+
+export async function loadDashboardStats(supabase: Client): Promise<DashboardStats> {
+  const awaitingClientStatuses: ContentStatus[] = ["submitted", "awaiting_approval"];
+  const pendingStatuses: ContentStatus[] = [
+    "draft",
+    "submitted",
+    "awaiting_approval",
+    "revision_requested",
+    "rejected",
+  ];
+
+  const [clients, pending, awaiting, approved] = await Promise.all([
+    supabase
+      .from("clients")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active"),
+    supabase
+      .from("contents")
+      .select("id", { count: "exact", head: true })
+      .in("status", pendingStatuses),
+    supabase
+      .from("contents")
+      .select("id", { count: "exact", head: true })
+      .in("status", awaitingClientStatuses),
+    supabase
+      .from("contents")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["approved", "published"] satisfies ContentStatus[]),
+  ]);
+
+  return {
+    activeClients: clients.count ?? 0,
+    pendingContents: pending.count ?? 0,
+    awaitingClient: awaiting.count ?? 0,
+    approved: approved.count ?? 0,
+  };
+}
+
+/** Mapa id -> nome de empresa, para as listagens que cruzam clientes. */
+export async function loadClientNames(
+  supabase: Client,
+  clientIds: string[],
+): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  if (clientIds.length === 0) return names;
+
+  const { data } = await supabase
+    .from("clients")
+    .select("id, company_name")
+    .in("id", Array.from(new Set(clientIds)));
+
+  for (const row of data ?? []) names.set(row.id, row.company_name);
+  return names;
+}

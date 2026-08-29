@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-50: #f7f7f8;
+  --color-ink-100: #ededf0;
+  --color-ink-200: #e2e2e7;
+  --color-ink-300: #c9c9d1;
+  --color-ink-400: #9a9aa6;
+  --color-ink-500: #6f6f7c;
+  --color-ink-600: #4d4d59;
+  --color-ink-700: #34343d;
+  --color-ink-800: #1f1f26;
+  --color-ink-900: #121217;
+
+  --color-canvas: #f6f6f7;
+  --color-surface: #ffffff;
+  --color-line: #e6e6ea;
+  --color-accent: #2f5bea;
+  --color-accent-soft: #eef2fe;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans", sans-serif;
+
+  --radius-card: 14px;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-soft);
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .field-label {
+    @apply mb-1.5 block text-sm font-medium text-ink-700;
+  }
+
+  .field-input {
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-900
+      outline-none transition placeholder:text-ink-400
+      focus:border-accent focus:ring-4 focus:ring-accent/10
+      disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400;
+  }
+
+  .field-hint {
+    @apply mt-1.5 text-xs text-ink-500;
+  }
+
+  .card {
+    @apply rounded-[14px] border border-line bg-surface;
+  }
+
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15;
+  }
+}
+
+/* Scrollbar discreta nas listas internas */
+.scroll-slim::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-slim::-webkit-scrollbar-thumb {
+  background-color: var(--color-ink-200);
+  border-radius: 999px;
+}
+.scroll-slim::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

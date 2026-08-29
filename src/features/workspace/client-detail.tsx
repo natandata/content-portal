@@ -1,0 +1,233 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, ArrowRight, FileText, Grid3x3, Images } from "lucide-react";
+
+import { ClientFormModal } from "@/components/clients/client-form-modal";
+import { CopyCode } from "@/components/clients/copy-code";
+import { ContentCard } from "@/components/content/content-card";
+import { StaffContentActions } from "@/components/content/staff-content-actions";
+import { ContractUploadModal } from "@/components/contracts/contract-upload-modal";
+import { Badge, ContractStatusBadge } from "@/components/ui/badge";
+import { LinkButton } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/feedback";
+import { Card, CardHeader, PageHeader, StatCard } from "@/components/ui/layout";
+import { basePath, requireStaff } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
+import { loadContentFileCounts, loadContentPreviews } from "@/server/queries";
+import type { ContentStatus } from "@/types/database";
+
+export async function ClientDetail({ clientId }: { clientId: string }) {
+  const actor = await requireStaff();
+  const base = basePath(actor.role);
+  const supabase = await createClient();
+
+  const { data: client } = await supabase
+    .from("clients")
+    .select("*")
+    .eq("id", clientId)
+    .maybeSingle();
+
+  if (!client) notFound();
+
+  const [{ data: contents }, { data: contracts }, { count: feedCount }] = await Promise.all([
+    supabase
+      .from("contents")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("updated_at", { ascending: false })
+      .limit(6),
+    supabase
+      .from("contracts")
+      .select("*")
+      .eq("client_id", clientId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("feed_items")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", clientId),
+  ]);
+
+  const professionals =
+    actor.role === "admin"
+      ? ((
+          await supabase
+            .from("users")
+            .select("id, name")
+            .eq("role", "professional")
+            .order("name")
+        ).data ?? [])
+      : [];
+
+  const { data: statusRows } = await supabase
+    .from("contents")
+    .select("status")
+    .eq("client_id", clientId);
+
+  const tally = (statuses: ContentStatus[]) =>
+    (statusRows ?? []).filter((row) => statuses.includes(row.status)).length;
+
+  const rows = contents ?? [];
+  const ids = rows.map((row) => row.id);
+  const [previews, counts] = await Promise.all([
+    loadContentPreviews(supabase, ids),
+    loadContentFileCounts(supabase, ids),
+  ]);
+
+  const activeContract = (contracts ?? [])[0];
+
+  return (
+    <>
+      <PageHeader
+        breadcrumb={
+          <Link
+            href={`${base}/clients`}
+            className="focus-ring inline-flex items-center gap-1.5 rounded text-sm text-ink-500 hover:text-ink-900"
+          >
+            <ArrowLeft className="size-4" aria-hidden />
+            Clientes
+          </Link>
+        }
+        title={client.company_name}
+        description={client.name}
+        actions={
+          <>
+            <ClientFormModal
+              role={actor.role}
+              professionals={professionals.map((professional) => ({
+                id: professional.id,
+                name: professional.name,
+              }))}
+              client={client}
+            />
+            <LinkButton href={`${base}/content/new?client=${client.id}`}>Novo conteudo</LinkButton>
+          </>
+        }
+      />
+
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <CopyCode code={client.access_code} />
+        {client.status === "inactive" ? <Badge tone="neutral">Inativo</Badge> : null}
+        {client.email ? <span className="text-sm text-ink-500">{client.email}</span> : null}
+        {client.phone ? <span className="text-sm text-ink-500">{client.phone}</span> : null}
+      </div>
+
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Conteudos enviados" value={statusRows?.length ?? 0} />
+        <StatCard
+          label="Aguardando aprovacao"
+          value={tally(["submitted", "awaiting_approval"])}
+          tone="info"
+        />
+        <StatCard
+          label="Alteracao / reprovado"
+          value={tally(["revision_requested", "rejected"])}
+          tone="warning"
+        />
+        <StatCard label="Aprovados" value={tally(["approved", "published"])} tone="success" />
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-5">
+          <Card padded={false}>
+            <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
+              <h2 className="text-sm font-semibold text-ink-900">Conteudos recentes</h2>
+              <Link
+                href={`${base}/content?client=${client.id}`}
+                className="focus-ring inline-flex items-center gap-1 rounded text-sm font-medium text-accent"
+              >
+                Ver todos
+                <ArrowRight className="size-3.5" aria-hidden />
+              </Link>
+            </div>
+
+            <div className="p-4">
+              {rows.length === 0 ? (
+                <EmptyState
+                  icon={<Images className="size-5" />}
+                  title="Nenhum conteudo ainda"
+                  description="Envie o primeiro conteudo para este cliente."
+                  action={
+                    <LinkButton href={`${base}/content/new?client=${client.id}`}>
+                      Novo conteudo
+                    </LinkButton>
+                  }
+                />
+              ) : (
+                <div className="space-y-3">
+                  {rows.map((content) => (
+                    <ContentCard
+                      key={content.id}
+                      content={content}
+                      previewUrl={previews.get(content.id) ?? null}
+                      fileCount={counts.get(content.id) ?? 0}
+                      href={`${base}/content/${content.id}`}
+                      actions={
+                        <StaffContentActions
+                          contentId={content.id}
+                          status={content.status}
+                          basePath={base}
+                        />
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        <div className="space-y-5">
+          <Card>
+            <CardHeader
+              title="Contrato"
+              actions={
+                <ContractUploadModal
+                  clients={[{ id: client.id, companyName: client.company_name }]}
+                  defaultClientId={client.id}
+                  label="Enviar"
+                />
+              }
+            />
+
+            {activeContract ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-ink-900">{activeContract.title}</p>
+                  <p className="text-xs text-ink-500">
+                    Enviado em {formatDate(activeContract.uploaded_at ?? activeContract.created_at)}
+                  </p>
+                </div>
+                <ContractStatusBadge status={activeContract.status} />
+                <Link
+                  href={`${base}/contracts`}
+                  className="focus-ring flex items-center gap-1.5 rounded text-sm font-medium text-accent"
+                >
+                  <FileText className="size-4" aria-hidden />
+                  Abrir contratos
+                </Link>
+              </div>
+            ) : (
+              <p className="text-sm text-ink-500">Nenhum contrato enviado ate agora.</p>
+            )}
+          </Card>
+
+          <Card>
+            <CardHeader title="Feed" />
+            <p className="text-sm text-ink-600">
+              <strong className="text-ink-900 tabular-nums">{feedCount ?? 0}</strong> de 30
+              posicoes preenchidas.
+            </p>
+            <Link
+              href={`${base}/feed?client=${client.id}`}
+              className="focus-ring mt-3 flex items-center gap-1.5 rounded text-sm font-medium text-accent"
+            >
+              <Grid3x3 className="size-4" aria-hidden />
+              Organizar feed
+            </Link>
+          </Card>
+        </div>
+      </div>
+    </>
+  );
+}

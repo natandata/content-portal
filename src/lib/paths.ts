@@ -1,0 +1,40 @@
+import { fileExtension, safeFileName } from "@/lib/utils";
+
+/**
+ * Convencao de caminhos no Storage. O primeiro segmento e sempre o client_id —
+ * as policies de `storage.objects` dependem disso.
+ */
+export const BUCKETS = {
+  contracts: "contracts",
+  signedContracts: "signed-contracts",
+  content: "content",
+  thumbnails: "thumbnails",
+} as const;
+
+export type BucketName = (typeof BUCKETS)[keyof typeof BUCKETS];
+
+export function contractPath(clientId: string, contractId: string, fileName: string): string {
+  return `${clientId}/${contractId}/${Date.now()}-${safeFileName(fileName)}`;
+}
+
+export function signedContractPath(
+  clientId: string,
+  contractId: string,
+  fileName: string,
+): string {
+  return `${clientId}/${contractId}/${Date.now()}-assinado-${safeFileName(fileName)}`;
+}
+
+export function contentFilePath(
+  clientId: string,
+  contentId: string,
+  position: number,
+  fileName: string,
+): string {
+  const extension = fileExtension(fileName);
+  return `${clientId}/${contentId}/${String(position).padStart(2, "0")}-${Date.now()}.${extension}`;
+}
+
+export function thumbnailPath(clientId: string, contentId: string, position: number): string {
+  return `${clientId}/${contentId}/${String(position).padStart(2, "0")}-${Date.now()}.jpg`;
+}
