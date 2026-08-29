@@ -22,10 +22,13 @@ export function FeedGrid({
   entries,
   fill = true,
   emptyLabel,
+  highlightId,
 }: {
   entries: FeedEntry[];
   fill?: boolean;
   emptyLabel?: string;
+  /** Marca uma celula como "novo" — usado na previa de publicacao. */
+  highlightId?: string;
 }) {
   const emptySlots = fill ? Math.max(0, MAX_FEED_ITEMS - entries.length) : 0;
 
@@ -43,7 +46,10 @@ export function FeedGrid({
       {entries.map((entry) => (
         <figure
           key={entry.feedItemId}
-          className="relative aspect-square overflow-hidden bg-ink-100"
+          className={cn(
+            "relative aspect-square overflow-hidden bg-ink-100",
+            entry.contentId === highlightId && "ring-2 ring-accent ring-inset",
+          )}
         >
           {entry.previewUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -58,6 +64,12 @@ export function FeedGrid({
               <Grid3x3 className="size-5" aria-hidden />
             </div>
           )}
+
+          {entry.contentId === highlightId ? (
+            <span className="absolute top-1 left-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              novo
+            </span>
+          ) : null}
 
           {entry.type !== "image" ? (
             <span className="absolute top-1.5 right-1.5 text-white drop-shadow">

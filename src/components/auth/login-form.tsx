@@ -3,9 +3,9 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
 
 import { AccessRequestForm } from "@/components/auth/access-request-form";
+import { LoadingCurtain } from "@/components/auth/loading-curtain";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input } from "@/components/ui/form";
 import { ACCESS_CODE_PATTERN } from "@/lib/domain";
@@ -25,6 +25,7 @@ function LoginFormInner() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [destination, setDestination] = useState<string | null>(null);
 
   const nextPath = searchParams.get("next");
 
@@ -49,19 +50,17 @@ function LoginFormInner() {
         return;
       }
 
-      toast.success("Acesso liberado");
-
       // So respeitamos ?next= se ele pertencer a area da role autenticada.
       const fallback = payload.redirect ?? "/";
       const area = fallback.split("/")[1];
-      const destination =
+      const target =
         nextPath && area && nextPath.startsWith(`/${area}/`) ? nextPath : fallback;
 
-      router.replace(destination);
-      router.refresh();
+      // A cortina cobre a tela por 5s; aproveitamos para carregar o destino.
+      router.prefetch(target);
+      setDestination(target);
     } catch {
       setError("Falha de conexao. Verifique sua internet e tente novamente.");
-    } finally {
       setLoading(false);
     }
   }
@@ -93,6 +92,17 @@ function LoginFormInner() {
       return;
     }
     void submit("/api/auth/login", { identifier: "Admin", password: adminPassword });
+  }
+
+  if (destination) {
+    return (
+      <LoadingCurtain
+        onDone={() => {
+          router.replace(destination);
+          router.refresh();
+        }}
+      />
+    );
   }
 
   function voltar() {

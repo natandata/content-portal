@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { FeedEntry } from "@/components/feed/feed-grid";
 import type { ProfileView } from "@/components/feed/instagram-profile";
 import { BUCKETS } from "@/lib/paths";
 import { signedUrl, signedUrlMap } from "@/lib/storage";
@@ -9,6 +10,7 @@ import type {
   ContentFileRow,
   ContentRow,
   ContentStatus,
+  ContractStatus,
   Database,
 } from "@/types/database";
 
@@ -262,4 +264,95 @@ export async function loadProfileForm(supabase: Client, clientId: string) {
       coverUrl: row.cover_path ? (coverUrls.get(row.cover_path) ?? null) : null,
     })),
   };
+}
+
+/**
+ * Contadores do menu. Sao pendencias reais, nao "nao lidos": cada numero conta
+ * itens que ainda esperam uma acao de quem esta olhando, entao ele zera sozinho
+ * quando a pessoa faz o que tem que ser feito — sem tabela de leitura.
+ */
+export interface NavBadges {
+  approvals: number;
+  contracts: number;
+}
+
+/** Equipe: o cliente respondeu (ou devolveu o contrato) e a bola voltou. */
+export async function loadStaffBadges(supabase: Client): Promise<NavBadges> {
+  const answered: ContentStatus[] = ["approved", "revision_requested", "rejected"];
+  const returned: ContractStatus[] = ["signed", "under_review"];
+
+  const [contents, contracts] = await Promise.all([
+    supabase
+      .from("contents")
+      .select("id", { count: "exact", head: true })
+      .in("status", answered),
+    supabase
+      .from("contracts")
+      .select("id", { count: "exact", head: true })
+      .in("status", returned),
+  ]);
+
+  return { approvals: contents.count ?? 0, contracts: contracts.count ?? 0 };
+}
+
+/** Cliente: o que chegou para ele decidir ou assinar. */
+export async function loadClientBadges(supabase: Client): Promise<NavBadges> {
+  const waiting: ContentStatus[] = ["submitted", "awaiting_approval"];
+
+  const [contents, contracts] = await Promise.all([
+    supabase
+      .from("contents")
+      .select("id", { count: "exact", head: true })
+      .in("status", waiting),
+    supabase
+      .from("contracts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "awaiting_signature" satisfies ContractStatus),
+  ]);
+
+  return { approvals: contents.count ?? 0, contracts: contracts.count ?? 0 };
+}
+
+/** Itens do feed de um cliente, ja com capa assinada, na ordem publicada. */
+export async function loadFeedEntries(
+  supabase: Client,
+  clientId: string,
+): Promise<FeedEntry[]> {
+  const { data: items } = await supabase
+    .from("feed_items")
+    .select("id, content_id, position")
+    .eq("client_id", clientId)
+    .order("position");
+
+  const rows = items ?? [];
+  if (rows.length === 0) return [];
+
+  const { data: contents } = await supabase
+    .from("contents")
+    .select("id, title, type")
+    .in(
+      "id",
+      rows.map((row) => row.content_id),
+    );
+
+  const byId = new Map((contents ?? []).map((content) => [content.id, content]));
+  const previews = await loadContentPreviews(
+    supabase,
+    rows.map((row) => row.content_id),
+  );
+
+  return rows.flatMap((row) => {
+    const content = byId.get(row.content_id);
+    if (!content) return [];
+    return [
+      {
+        feedItemId: row.id,
+        contentId: row.content_id,
+        title: content.title,
+        type: content.type,
+        previewUrl: previews.get(row.content_id) ?? null,
+        position: row.position,
+      },
+    ];
+  });
 }

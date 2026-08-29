@@ -10,12 +10,16 @@ import {
 import { cn } from "@/lib/utils";
 import type { ContentStatus, ContractStatus } from "@/types/database";
 
+// No escuro os tons pastel viram manchas claras: cada um ganha um par proprio.
 const TONES: Record<BadgeTone, string> = {
   neutral: "bg-ink-100 text-ink-600 ring-ink-200",
   info: "bg-accent-soft text-accent ring-accent/20",
-  warning: "bg-amber-50 text-amber-700 ring-amber-200",
-  success: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  danger: "bg-red-50 text-red-700 ring-red-200",
+  warning:
+    "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-400/12 dark:text-amber-300 dark:ring-amber-400/25",
+  success:
+    "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-400/12 dark:text-emerald-300 dark:ring-emerald-400/25",
+  danger:
+    "bg-red-50 text-red-700 ring-red-200 dark:bg-red-400/12 dark:text-red-300 dark:ring-red-400/25",
 };
 
 export function Badge({

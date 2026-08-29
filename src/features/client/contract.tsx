@@ -1,5 +1,6 @@
 import { Download, FileCheck2, FileText } from "lucide-react";
 
+import { ContractPreview } from "@/components/contracts/contract-preview";
 import { SignedContractUpload } from "@/components/contracts/signed-contract-upload";
 import { ContractStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
@@ -25,6 +26,13 @@ export async function ClientContract() {
     supabase,
     BUCKETS.signedContracts,
     rows.map((row) => row.signed_file_path),
+  );
+
+  // Para ler na tela precisamos da URL sem "download" forcado.
+  const inlineUrls = await signedUrlMap(
+    supabase,
+    BUCKETS.contracts,
+    rows.map((row) => row.original_file_path),
   );
 
   const downloadUrls = await Promise.all(
@@ -55,6 +63,9 @@ export async function ClientContract() {
         <div className="space-y-4">
           {rows.map((contract, index) => {
             const downloadUrl = downloadUrls[index] ?? null;
+            const inlineUrl = contract.original_file_path
+              ? (inlineUrls.get(contract.original_file_path) ?? null)
+              : null;
             const signedUrl = contract.signed_file_path
               ? (signedUrls.get(contract.signed_file_path) ?? null)
               : null;
@@ -78,10 +89,19 @@ export async function ClientContract() {
                 </div>
 
                 <div className="space-y-3">
+                  {inlineUrl ? (
+                    <ContractPreview
+                      url={inlineUrl}
+                      title={contract.title}
+                      label="Pre-visualizar contrato"
+                      fullWidth
+                    />
+                  ) : null}
+
                   {downloadUrl ? (
                     <a
                       href={downloadUrl}
-                      className="focus-ring flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-ink-900 px-4 text-sm font-medium text-white transition hover:bg-ink-800"
+                      className="focus-ring flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-ink-900 px-4 text-sm font-medium text-on-ink transition hover:bg-ink-800"
                     >
                       <Download className="size-4" aria-hidden />
                       Baixar contrato

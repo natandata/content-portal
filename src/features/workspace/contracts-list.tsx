@@ -1,5 +1,6 @@
 import { Download, FileText } from "lucide-react";
 
+import { ContractPreview } from "@/components/contracts/contract-preview";
 import { ContractStaffActions } from "@/components/contracts/contract-staff-actions";
 import { ContractUploadModal } from "@/components/contracts/contract-upload-modal";
 import { ContractStatusBadge } from "@/components/ui/badge";
@@ -98,6 +99,14 @@ export async function ContractsList({ clientId }: { clientId?: string } = {}) {
 
                 <div className="flex flex-wrap gap-2 border-t border-line px-5 py-3">
                   {originalUrl ? (
+                    <ContractPreview
+                      url={originalUrl}
+                      title={`${contract.title} — original`}
+                      label="Ver original"
+                    />
+                  ) : null}
+
+                  {originalUrl ? (
                     <a
                       href={originalUrl}
                       target="_blank"
@@ -110,6 +119,14 @@ export async function ContractsList({ clientId }: { clientId?: string } = {}) {
                   ) : (
                     <span className="text-[13px] text-ink-400">PDF original indisponivel</span>
                   )}
+
+                  {signedUrl ? (
+                    <ContractPreview
+                      url={signedUrl}
+                      title={`${contract.title} — assinado`}
+                      label="Ver assinado"
+                    />
+                  ) : null}
 
                   {signedUrl ? (
                     <a

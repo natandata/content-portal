@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { ContentMedia } from "@/components/content/content-media";
+import { FeedPreviewModal } from "@/components/feed/feed-preview-modal";
 import { HistoryTimeline } from "@/components/content/history-timeline";
 import { StaffContentActions } from "@/components/content/staff-content-actions";
 import { ContentStatusBadge } from "@/components/ui/badge";
@@ -11,7 +12,12 @@ import { basePath, requireStaff } from "@/lib/auth";
 import { CONTENT_TYPE_LABEL } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
-import { loadContentFiles } from "@/server/queries";
+import {
+  loadContentFiles,
+  loadContentPreviews,
+  loadFeedEntries,
+  loadProfileView,
+} from "@/server/queries";
 
 import { FeedQuickAdd } from "./feed-quick-add";
 
@@ -42,6 +48,28 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
       .eq("content_id", contentId)
       .maybeSingle(),
   ]);
+
+  const [feedEntries, ownPreviews] = await Promise.all([
+    loadFeedEntries(supabase, content.client_id),
+    loadContentPreviews(supabase, [contentId]),
+  ]);
+
+  const clientName = client?.company_name ?? "Cliente";
+  const profile = await loadProfileView(
+    supabase,
+    content.client_id,
+    clientName,
+    feedEntries.length,
+  );
+
+  const candidate = {
+    feedItemId: feedItem?.id ?? `preview-${contentId}`,
+    contentId,
+    title: content.title,
+    type: content.type,
+    previewUrl: ownPreviews.get(contentId) ?? null,
+    position: 1,
+  };
 
   return (
     <>
@@ -81,6 +109,16 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
               basePath={base}
               onDeletedHref={`${base}/content`}
             />
+
+            <div className="mt-3">
+              <FeedPreviewModal
+                entries={feedEntries}
+                candidate={candidate}
+                profile={profile}
+                fallbackName={clientName}
+                alreadyInFeed={Boolean(feedItem)}
+              />
+            </div>
             <div className="mt-4 border-t border-line pt-4">
               <FeedQuickAdd
                 clientId={content.client_id}

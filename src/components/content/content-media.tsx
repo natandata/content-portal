@@ -47,7 +47,7 @@ function ExternalCard({ url }: { url: string }) {
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className="focus-ring inline-flex items-center gap-1.5 rounded-lg bg-ink-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-ink-800"
+        className="focus-ring inline-flex items-center gap-1.5 rounded-lg bg-ink-900 px-4 py-2 text-sm font-medium text-on-ink transition hover:bg-ink-800"
       >
         <ExternalLink className="size-4" aria-hidden />
         Abrir link

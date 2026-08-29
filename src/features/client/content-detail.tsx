@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { ApprovalActions } from "@/components/content/approval-actions";
 import { ContentMedia } from "@/components/content/content-media";
+import { FeedPreviewModal } from "@/components/feed/feed-preview-modal";
 import { HistoryTimeline } from "@/components/content/history-timeline";
 import { ContentStatusBadge } from "@/components/ui/badge";
 import { Card, CardHeader, PageHeader } from "@/components/ui/layout";
@@ -11,10 +12,15 @@ import { requireClientActor } from "@/lib/auth";
 import { CONTENT_TYPE_LABEL } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
-import { loadContentFiles } from "@/server/queries";
+import {
+  loadContentFiles,
+  loadContentPreviews,
+  loadFeedEntries,
+  loadProfileView,
+} from "@/server/queries";
 
 export async function ClientContentDetail({ contentId }: { contentId: string }) {
-  await requireClientActor();
+  const actor = await requireClientActor();
   const supabase = await createClient();
 
   const { data: content } = await supabase
@@ -25,14 +31,29 @@ export async function ClientContentDetail({ contentId }: { contentId: string }) 
 
   if (!content || content.status === "draft") notFound();
 
-  const [files, { data: history }] = await Promise.all([
-    loadContentFiles(supabase, contentId),
-    supabase
-      .from("approval_history")
-      .select("*")
-      .eq("content_id", contentId)
-      .order("created_at", { ascending: false }),
-  ]);
+  const [files, { data: history }, feedEntries, ownPreviews, { data: feedItem }] =
+    await Promise.all([
+      loadContentFiles(supabase, contentId),
+      supabase
+        .from("approval_history")
+        .select("*")
+        .eq("content_id", contentId)
+        .order("created_at", { ascending: false }),
+      loadFeedEntries(supabase, actor.client.id),
+      loadContentPreviews(supabase, [contentId]),
+      supabase
+        .from("feed_items")
+        .select("id")
+        .eq("content_id", contentId)
+        .maybeSingle(),
+    ]);
+
+  const profile = await loadProfileView(
+    supabase,
+    actor.client.id,
+    actor.client.company_name,
+    feedEntries.length,
+  );
 
   return (
     <>
@@ -66,6 +87,23 @@ export async function ClientContentDetail({ contentId }: { contentId: string }) 
         <Card>
           <CardHeader title="O que voce quer fazer?" />
           <ApprovalActions contentId={content.id} status={content.status} />
+
+          <div className="mt-3 border-t border-line pt-3">
+            <FeedPreviewModal
+              entries={feedEntries}
+              candidate={{
+                feedItemId: feedItem?.id ?? `preview-${contentId}`,
+                contentId,
+                title: content.title,
+                type: content.type,
+                previewUrl: ownPreviews.get(contentId) ?? null,
+                position: 1,
+              }}
+              profile={profile}
+              fallbackName={actor.client.company_name}
+              alreadyInFeed={Boolean(feedItem)}
+            />
+          </div>
         </Card>
 
         {content.caption ? (

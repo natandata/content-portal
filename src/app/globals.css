@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/*
+ * Tema escuro por atributo, nao por media query: a escolha do usuario tem que
+ * vencer a do sistema. O script inline no <head> resolve "system" antes da
+ * primeira pintura, entao aqui basta olhar o atributo.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
   --color-ink-50: #f7f7f8;
   --color-ink-100: #ededf0;
@@ -17,12 +24,41 @@
   --color-line: #e6e6ea;
   --color-accent: #2f5bea;
   --color-accent-soft: #eef2fe;
+  /* Texto e marcas sobre uma superficie ink-900 (nao sobre foto). */
+  --color-on-ink: #ffffff;
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, "Noto Sans", sans-serif;
 
   --radius-card: 14px;
+}
+
+/*
+ * Escala "ink" e semantica, nao literal: ink-900 e sempre o texto mais forte
+ * sobre o fundo, e ink-50 a superficie mais sutil. Inverter os valores aqui
+ * escurece o app inteiro sem tocar em nenhum componente.
+ */
+[data-theme="dark"] {
+  --color-ink-50: #191920;
+  --color-ink-100: #21212a;
+  --color-ink-200: #2c2c37;
+  --color-ink-300: #3f3f4c;
+  --color-ink-400: #71717f;
+  --color-ink-500: #9c9caa;
+  --color-ink-600: #bcbcc6;
+  --color-ink-700: #d5d5dc;
+  --color-ink-800: #eaeaef;
+  --color-ink-900: #f6f6f9;
+
+  --color-canvas: #0e0e12;
+  --color-surface: #16161c;
+  --color-line: #2b2b35;
+  --color-accent: #7b97ff;
+  --color-accent-soft: #1c2440;
+  --color-on-ink: #0e0e12;
+
+  color-scheme: dark;
 }
 
 @layer base {
@@ -76,6 +112,15 @@
   .focus-ring {
     @apply focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15;
   }
+}
+
+/*
+ * O sonner define --width: 100% no mobile e ainda aplica left/right de 16px,
+ * o que estoura o viewport em 16px e desloca a pagina inteira no iPhone.
+ */
+[data-sonner-toaster] {
+  --width: min(356px, calc(100vw - 2rem)) !important;
+  max-width: calc(100vw - 2rem);
 }
 
 /* Scrollbar discreta nas listas internas */

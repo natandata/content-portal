@@ -11,10 +11,10 @@ export default function LoginPage() {
       <div className="w-full max-w-[420px]">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-5 grid size-11 grid-cols-2 gap-[3px] rounded-xl bg-ink-900 p-[7px]">
-            <span className="rounded-[3px] bg-white" />
-            <span className="rounded-[3px] bg-white/55" />
-            <span className="rounded-[3px] bg-white/55" />
-            <span className="rounded-[3px] bg-white" />
+            <span className="rounded-[3px] bg-on-ink" />
+            <span className="rounded-[3px] bg-on-ink/55" />
+            <span className="rounded-[3px] bg-on-ink/55" />
+            <span className="rounded-[3px] bg-on-ink" />
           </div>
           <h1 className="text-lg font-semibold tracking-tight text-ink-900">Content Portal</h1>
           <p className="mt-1.5 text-sm text-ink-500">Acesse sua conta</p>

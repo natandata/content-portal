@@ -51,7 +51,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-900/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-ink-900/40 p-0 backdrop-blur-[2px] dark:bg-black/60 sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={title}

@@ -111,13 +111,13 @@ export function SignedContractUpload({
           onClick={() => inputRef.current?.click()}
         >
           <Upload className="size-4" aria-hidden />
-          {alreadySent ? "Enviar novo arquivo assinado" : "Selecionar contrato assinado"}
+          {alreadySent ? "Enviar novo arquivo assinado" : "Enviar contrato assinado"}
         </Button>
       )}
 
       {file ? (
         <Button fullWidth size="lg" loading={busy} onClick={() => void send()}>
-          Enviar contrato assinado
+          Confirmar envio
         </Button>
       ) : null}
 

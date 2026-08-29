@@ -16,6 +16,8 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Qual contador do menu aparece neste item, quando houver pendencia. */
+  badge?: "approvals" | "contracts";
 }
 
 export function staffNavItems(role: UserRole): NavItem[] {
@@ -25,8 +27,8 @@ export function staffNavItems(role: UserRole): NavItem[] {
     { href: `${base}/dashboard`, label: "Dashboard", icon: LayoutDashboard },
     { href: `${base}/clients`, label: "Clientes", icon: Users },
     { href: `${base}/content`, label: "Conteudos", icon: Images },
-    { href: `${base}/approvals`, label: "Aprovacoes", icon: CheckCircle2 },
-    { href: `${base}/contracts`, label: "Contratos", icon: FileText },
+    { href: `${base}/approvals`, label: "Aprovacoes", icon: CheckCircle2, badge: "approvals" },
+    { href: `${base}/contracts`, label: "Contratos", icon: FileText, badge: "contracts" },
     { href: `${base}/feed`, label: "Feed", icon: Grid3x3 },
   ];
 
@@ -41,7 +43,7 @@ export function staffNavItems(role: UserRole): NavItem[] {
 
 export const clientNavItems: NavItem[] = [
   { href: "/client/dashboard", label: "Inicio", icon: LayoutDashboard },
-  { href: "/client/content", label: "Conteudos", icon: Images },
+  { href: "/client/content", label: "Conteudos", icon: Images, badge: "approvals" },
   { href: "/client/feed", label: "Feed", icon: Grid3x3 },
-  { href: "/client/contract", label: "Contrato", icon: FileText },
+  { href: "/client/contract", label: "Contrato", icon: FileText, badge: "contracts" },
 ];
