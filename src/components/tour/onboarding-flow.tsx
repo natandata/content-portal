@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { NotificationPrompt } from "@/components/notifications/notification-prompt";
 import { AppTour } from "@/components/tour/app-tour";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 import type { UserRole } from "@/types/database";
 
 type Step = "tour" | "notifications" | "done";
@@ -15,10 +16,12 @@ type Step = "tour" | "notifications" | "done";
  */
 export function OnboardingFlow({
   role,
+  locale = DEFAULT_LOCALE,
   showTour,
   showNotificationPrompt,
 }: {
   role: UserRole;
+  locale?: Locale;
   showTour: boolean;
   showNotificationPrompt: boolean;
 }) {
@@ -32,13 +35,14 @@ export function OnboardingFlow({
     return (
       <AppTour
         role={role}
+        locale={locale}
         onDone={() => setStep(showNotificationPrompt ? "notifications" : "done")}
       />
     );
   }
 
   if (step === "notifications") {
-    return <NotificationPrompt onDone={() => setStep("done")} />;
+    return <NotificationPrompt locale={locale} onDone={() => setStep("done")} />;
   }
 
   return null;

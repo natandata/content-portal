@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 
 import { LoginForm } from "@/components/auth/login-form";
+import { LanguageToggle } from "@/components/ui/language-toggle";
 import { isSupabaseConfigured } from "@/lib/env";
+import { getServerDictionary } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "Acesso" };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const { locale, dict } = await getServerDictionary();
+
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-5 py-10">
       <div className="w-full max-w-[420px]">
@@ -16,12 +20,16 @@ export default function LoginPage() {
             <span className="rounded-[3px] bg-on-ink/55" />
             <span className="rounded-[3px] bg-on-ink" />
           </div>
-          <h1 className="text-lg font-semibold tracking-tight text-ink-900">Content Portal</h1>
-          <p className="mt-1.5 text-sm text-ink-500">Acesse sua conta</p>
+          <h1 className="text-lg font-semibold tracking-tight text-ink-900">{dict.login.title}</h1>
+          <p className="mt-1.5 text-sm text-ink-500">{dict.login.subtitle}</p>
+        </div>
+
+        <div className="mb-4">
+          <LanguageToggle locale={locale} />
         </div>
 
         {isSupabaseConfigured ? (
-          <LoginForm />
+          <LoginForm locale={locale} />
         ) : (
           <div className="card p-5 text-sm text-ink-600">
             <h2 className="mb-2 text-sm font-semibold text-ink-900">Configuracao pendente</h2>
@@ -35,9 +43,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <p className="mt-6 text-center text-xs text-ink-400">
-          Plataforma privada. O acesso e individual e monitorado.
-        </p>
+        <p className="mt-6 text-center text-xs text-ink-400">{dict.login.footer}</p>
       </div>
     </main>
   );

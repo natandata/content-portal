@@ -1,6 +1,8 @@
 import { ChevronDown, Lock, Plus, User } from "lucide-react";
 
 import { formatCount } from "@/lib/domain";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 
 export interface ProfileHighlightView {
   id: string;
@@ -22,11 +24,11 @@ export interface ProfileView {
   highlights: ProfileHighlightView[];
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
+function Stat({ value, label, locale }: { value: number; label: string; locale: Locale }) {
   return (
     <div className="flex flex-col items-center">
       <span className="text-sm font-semibold text-ink-900 tabular-nums">
-        {formatCount(value)}
+        {formatCount(value, locale)}
       </span>
       <span className="text-xs text-ink-500">{label}</span>
     </div>
@@ -55,12 +57,15 @@ function Avatar({ url, name }: { url: string | null; name: string }) {
 export function InstagramHeader({
   profile,
   fallbackName,
+  locale = DEFAULT_LOCALE,
 }: {
   profile: ProfileView;
   fallbackName: string;
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale);
   const name = profile.displayName || fallbackName;
-  const handle = profile.username || "usuario";
+  const handle = profile.username || (locale === "en" ? "user" : "usuario");
 
   return (
     <header>
@@ -76,9 +81,9 @@ export function InstagramHeader({
           <Avatar url={profile.avatarUrl} name={name} />
 
           <div className="grid flex-1 grid-cols-3 gap-1">
-            <Stat value={profile.postsCount} label="publicacoes" />
-            <Stat value={profile.followersCount} label="seguidores" />
-            <Stat value={profile.followingCount} label="seguindo" />
+            <Stat value={profile.postsCount} label={dict.feed.posts} locale={locale} />
+            <Stat value={profile.followersCount} label={dict.feed.followers} locale={locale} />
+            <Stat value={profile.followingCount} label={dict.feed.following} locale={locale} />
           </div>
         </div>
 
@@ -92,10 +97,10 @@ export function InstagramHeader({
         {/* Botoes do perfil — decorativos, so para completar a moldura. */}
         <div className="mt-3 grid grid-cols-2 gap-2">
           <span className="rounded-lg bg-ink-100 py-1.5 text-center text-xs font-semibold text-ink-800">
-            Seguir
+            {dict.feed.follow}
           </span>
           <span className="rounded-lg bg-ink-100 py-1.5 text-center text-xs font-semibold text-ink-800">
-            Mensagem
+            {dict.feed.message}
           </span>
         </div>
       </div>

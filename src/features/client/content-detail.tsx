@@ -10,6 +10,8 @@ import { ContentStatusBadge } from "@/components/ui/badge";
 import { Card, CardHeader, PageHeader } from "@/components/ui/layout";
 import { requireClientActor } from "@/lib/auth";
 import { CONTENT_TYPE_LABEL } from "@/lib/domain";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/locale";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import {
@@ -22,6 +24,7 @@ import {
 export async function ClientContentDetail({ contentId }: { contentId: string }) {
   const actor = await requireClientActor();
   const supabase = await createClient();
+  const { locale, dict } = await getServerDictionary();
 
   const { data: content } = await supabase
     .from("contents")
@@ -55,6 +58,8 @@ export async function ClientContentDetail({ contentId }: { contentId: string }) 
     feedEntries.length,
   );
 
+  const typeLabel = locale === "en" ? dict.contentType[content.type] : CONTENT_TYPE_LABEL[content.type];
+
   return (
     <>
       <PageHeader
@@ -64,18 +69,19 @@ export async function ClientContentDetail({ contentId }: { contentId: string }) 
             className="focus-ring inline-flex items-center gap-1.5 rounded text-sm text-ink-500 hover:text-ink-900"
           >
             <ArrowLeft className="size-4" aria-hidden />
-            Conteudos
+            {dict.nav.content}
           </Link>
         }
         title={content.title}
-        description={`${CONTENT_TYPE_LABEL[content.type]} · ${formatDate(content.scheduled_date)}`}
-        actions={<ContentStatusBadge status={content.status} />}
+        description={`${typeLabel} · ${formatDate(content.scheduled_date, intlLocale(locale))}`}
+        actions={<ContentStatusBadge status={content.status} locale={locale} />}
       />
 
       <div className="space-y-5">
         <ContentMedia
           type={content.type}
           title={content.title}
+          locale={locale}
           files={files.map((file) => ({
             id: file.id,
             url: file.url,
@@ -85,8 +91,12 @@ export async function ClientContentDetail({ contentId }: { contentId: string }) 
         />
 
         <Card>
-          <CardHeader title="O que voce quer fazer?" />
-          <ApprovalActions contentId={content.id} status={content.status} />
+          <CardHeader title={dict.content.whatToDo} />
+          <ApprovalActions
+            contentId={content.id}
+            status={content.status}
+            locale={locale}
+          />
 
           <div className="mt-3 border-t border-line pt-3">
             <FeedPreviewModal
@@ -102,27 +112,28 @@ export async function ClientContentDetail({ contentId }: { contentId: string }) 
               profile={profile}
               fallbackName={actor.client.company_name}
               alreadyInFeed={Boolean(feedItem)}
+              locale={locale}
             />
           </div>
         </Card>
 
         {content.caption ? (
           <Card>
-            <CardHeader title="Legenda" />
+            <CardHeader title={dict.content.caption} />
             <p className="whitespace-pre-wrap text-sm text-ink-700">{content.caption}</p>
           </Card>
         ) : null}
 
         {content.description ? (
           <Card>
-            <CardHeader title="Descricao" />
+            <CardHeader title={dict.content.description} />
             <p className="whitespace-pre-wrap text-sm text-ink-700">{content.description}</p>
           </Card>
         ) : null}
 
         <Card>
-          <CardHeader title="Historico" />
-          <HistoryTimeline entries={history ?? []} />
+          <CardHeader title={dict.content.history} />
+          <HistoryTimeline entries={history ?? []} locale={locale} />
         </Card>
       </div>
     </>

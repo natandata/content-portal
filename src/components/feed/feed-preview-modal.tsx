@@ -8,6 +8,8 @@ import { InstagramHeader, type ProfileView } from "@/components/feed/instagram-p
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { MAX_FEED_ITEMS } from "@/lib/domain";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 
 /**
  * "Ver no feed": mostra o perfil como ficaria se este conteudo fosse publicado
@@ -20,13 +22,16 @@ export function FeedPreviewModal({
   profile,
   fallbackName,
   alreadyInFeed,
+  locale = DEFAULT_LOCALE,
 }: {
   entries: FeedEntry[];
   candidate: FeedEntry;
   profile: ProfileView;
   fallbackName: string;
   alreadyInFeed: boolean;
+  locale?: Locale;
 }) {
+  const dict = getDictionary(locale).feedPreview;
   const [open, setOpen] = useState(false);
 
   // Ja estando no feed, mostramos a composicao como ela e hoje.
@@ -40,22 +45,18 @@ export function FeedPreviewModal({
     <>
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
         <Grid3x3 className="size-4" aria-hidden />
-        Ver no feed
+        {dict.button}
       </Button>
 
       <Modal
         open={open}
         onClose={() => setOpen(false)}
-        title="Ver no feed"
-        description={
-          alreadyInFeed
-            ? "Este conteudo ja esta na composicao do feed."
-            : "Previa de como o perfil ficaria com este post publicado agora."
-        }
+        title={dict.title}
+        description={alreadyInFeed ? dict.alreadyIn : dict.preview}
         size="sm"
         footer={
           <Button variant="secondary" onClick={() => setOpen(false)}>
-            Fechar
+            {dict.close}
           </Button>
         }
       >
@@ -63,14 +64,16 @@ export function FeedPreviewModal({
           <InstagramHeader
             profile={{ ...profile, postsCount: postCount }}
             fallbackName={fallbackName}
+            locale={locale}
           />
 
           <div className="border-t border-line p-1.5">
             <FeedGrid
               entries={composition}
               fill={false}
-              emptyLabel="Nada no feed ainda."
+              emptyLabel={dict.empty}
               highlightId={alreadyInFeed ? undefined : candidate.contentId}
+              newLabel={dict.newBadge}
             />
           </div>
         </div>

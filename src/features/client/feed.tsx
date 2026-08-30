@@ -7,6 +7,8 @@ import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireClientActor } from "@/lib/auth";
 import { MAX_FEED_ITEMS } from "@/lib/domain";
+import { getServerDictionary } from "@/lib/i18n/server";
+import { intlLocale } from "@/lib/i18n/locale";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { loadContentPreviews, loadProfileView } from "@/server/queries";
@@ -14,6 +16,7 @@ import { loadContentPreviews, loadProfileView } from "@/server/queries";
 export async function ClientFeed() {
   const actor = await requireClientActor();
   const supabase = await createClient();
+  const { locale, dict } = await getServerDictionary();
 
   const { data: feedItems } = await supabase
     .from("feed_items")
@@ -65,20 +68,24 @@ export async function ClientFeed() {
   return (
     <>
       <PageHeader
-        title="Feed"
-        description={`Previa de como o perfil de ${actor.client.company_name} vai ficar.`}
+        title={dict.feed.title}
+        description={dict.feed.subtitle(actor.client.company_name)}
       />
 
       {entries.length === 0 ? (
         <EmptyState
           icon={<Grid3x3 className="size-5" />}
-          title="Feed ainda vazio"
-          description="Seu gestor de conteudo esta montando a composicao do perfil."
+          title={dict.feed.empty}
+          description={dict.feed.emptyBody}
         />
       ) : (
         <div className="mx-auto max-w-md">
           <div className="overflow-hidden rounded-xl border border-line bg-surface">
-            <InstagramHeader profile={profile} fallbackName={actor.client.company_name} />
+            <InstagramHeader
+              profile={profile}
+              fallbackName={actor.client.company_name}
+              locale={locale}
+            />
 
             <FeedTabs
               showReels={profile.showReelsTab}
@@ -89,19 +96,17 @@ export async function ClientFeed() {
               }
               reels={
                 <div className="p-1.5">
-                  <FeedGrid
-                    entries={reels}
-                    fill={false}
-                    emptyLabel="Nenhum reels na composicao ainda."
-                  />
+                  <FeedGrid entries={reels} fill={false} emptyLabel={dict.feed.noReels} />
                 </div>
               }
             />
           </div>
 
           <p className="mt-3 text-center text-xs text-ink-500 tabular-nums">
-            {entries.length} de {MAX_FEED_ITEMS} posicoes
-            {lastUpdate ? ` · atualizado em ${formatDate(lastUpdate)}` : null}
+            {dict.feed.positions(entries.length, MAX_FEED_ITEMS)}
+            {lastUpdate
+              ? ` · ${dict.feed.updatedOn} ${formatDate(lastUpdate, intlLocale(locale))}`
+              : null}
           </p>
         </div>
       )}

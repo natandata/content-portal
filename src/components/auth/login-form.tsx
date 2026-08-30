@@ -9,12 +9,22 @@ import { LoadingCurtain } from "@/components/auth/loading-curtain";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input } from "@/components/ui/form";
 import { ACCESS_CODE_PATTERN } from "@/lib/domain";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import type { Locale } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 
 type Tab = "staff" | "client";
 type Mode = "login" | "request" | "admin";
 
-function LoginFormInner() {
+interface Props {
+  locale: Locale;
+}
+
+// So `locale` cruza a fronteira Server -> Client Component. O dicionario
+// inteiro tem campos com funcao (textos com variavel) e o RSC nao serializa
+// funcao como prop — cada Client Component busca o proprio dicionario aqui.
+function LoginFormInner({ locale }: Props) {
+  const dict = getDictionary(locale);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("staff");
@@ -46,7 +56,7 @@ function LoginFormInner() {
       };
 
       if (!response.ok) {
-        setError(payload.error ?? "Nao foi possivel entrar. Tente novamente.");
+        setError(payload.error ?? dict.login.connectionError);
         return;
       }
 
@@ -60,7 +70,7 @@ function LoginFormInner() {
       router.prefetch(target);
       setDestination(target);
     } catch {
-      setError("Falha de conexao. Verifique sua internet e tente novamente.");
+      setError(dict.login.connectionError);
       setLoading(false);
     }
   }
@@ -68,7 +78,7 @@ function LoginFormInner() {
   function onStaffSubmit(event: FormEvent) {
     event.preventDefault();
     if (!identifier.trim() || !password) {
-      setError("Preencha usuario e senha.");
+      setError(dict.login.fillStaff);
       return;
     }
     void submit("/api/auth/login", { identifier: identifier.trim(), password });
@@ -78,7 +88,7 @@ function LoginFormInner() {
     event.preventDefault();
     const normalized = code.trim().toUpperCase();
     if (!ACCESS_CODE_PATTERN.test(normalized)) {
-      setError("O codigo tem 3 letras e 4 numeros. Exemplo: ABC1234.");
+      setError(dict.login.invalidCode);
       return;
     }
     void submit("/api/auth/client", { code: normalized });
@@ -88,7 +98,7 @@ function LoginFormInner() {
   function onAdminSubmit(event: FormEvent) {
     event.preventDefault();
     if (!adminPassword) {
-      setError("Informe a senha do administrador.");
+      setError(dict.login.fillPassword);
       return;
     }
     void submit("/api/auth/login", { identifier: "Admin", password: adminPassword });
@@ -97,6 +107,7 @@ function LoginFormInner() {
   if (destination) {
     return (
       <LoadingCurtain
+        message={dict.curtain.message}
         onDone={() => {
           router.replace(destination);
           router.refresh();
@@ -111,7 +122,7 @@ function LoginFormInner() {
   }
 
   if (mode === "request") {
-    return <AccessRequestForm onBack={voltar} />;
+    return <AccessRequestForm locale={locale} onBack={voltar} />;
   }
 
   if (mode === "admin") {
@@ -123,19 +134,17 @@ function LoginFormInner() {
           className="focus-ring mb-4 inline-flex items-center gap-1.5 rounded text-sm text-ink-500 transition hover:text-ink-900"
         >
           <ArrowLeft className="size-4" aria-hidden />
-          Voltar
+          {dict.login.back}
         </button>
 
         <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
           <ShieldCheck className="size-4 text-ink-400" aria-hidden />
-          Acesso administrador
+          {dict.login.adminAccess}
         </h2>
-        <p className="mt-1 mb-4 text-sm text-ink-500">
-          O usuario e sempre <strong className="text-ink-700">Admin</strong>. Informe a senha.
-        </p>
+        <p className="mt-1 mb-4 text-sm text-ink-500">{dict.login.adminOnlyUser}</p>
 
         <form onSubmit={onAdminSubmit} className="space-y-4">
-          <Field label="Senha" htmlFor="admin-password" required>
+          <Field label={dict.login.password} htmlFor="admin-password" required>
             <Input
               id="admin-password"
               type="password"
@@ -151,7 +160,7 @@ function LoginFormInner() {
           <FormError>{error}</FormError>
 
           <Button type="submit" size="lg" fullWidth loading={loading}>
-            Entrar como administrador
+            {dict.login.adminEnter}
           </Button>
         </form>
       </div>
@@ -164,8 +173,8 @@ function LoginFormInner() {
         <div className="grid grid-cols-2 border-b border-line bg-ink-50 p-1.5">
           {(
             [
-              ["staff", "Sou Profissional"],
-              ["client", "Sou Cliente"],
+              ["staff", dict.login.tabStaff],
+              ["client", dict.login.tabClient],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -190,19 +199,19 @@ function LoginFormInner() {
         <div className="p-5">
           {tab === "staff" ? (
             <form onSubmit={onStaffSubmit} className="space-y-4">
-              <Field label="Usuario ou email" htmlFor="identifier">
+              <Field label={dict.login.identifier} htmlFor="identifier">
                 <Input
                   id="identifier"
                   name="identifier"
                   autoComplete="username"
-                  placeholder="voce@empresa.com"
+                  placeholder={dict.login.identifierPlaceholder}
                   value={identifier}
                   onChange={(event) => setIdentifier(event.target.value)}
                   disabled={loading}
                 />
               </Field>
 
-              <Field label="Senha" htmlFor="password">
+              <Field label={dict.login.password} htmlFor="password">
                 <Input
                   id="password"
                   name="password"
@@ -218,16 +227,12 @@ function LoginFormInner() {
               <FormError>{error}</FormError>
 
               <Button type="submit" size="lg" fullWidth loading={loading}>
-                Entrar
+                {dict.login.enter}
               </Button>
             </form>
           ) : (
             <form onSubmit={onClientSubmit} className="space-y-4">
-              <Field
-                label="Codigo de acesso"
-                htmlFor="code"
-                hint="Seu gestor de conteudo enviou um codigo com 3 letras e 4 numeros."
-              >
+              <Field label={dict.login.accessCode} htmlFor="code" hint={dict.login.accessCodeHint}>
                 <Input
                   id="code"
                   name="code"
@@ -247,7 +252,7 @@ function LoginFormInner() {
               <FormError>{error}</FormError>
 
               <Button type="submit" size="lg" fullWidth loading={loading}>
-                Entrar
+                {dict.login.enter}
               </Button>
             </form>
           )}
@@ -267,12 +272,12 @@ function LoginFormInner() {
           }}
         >
           <ShieldCheck className="size-4" aria-hidden />
-          Acesso administrador
+          {dict.login.adminAccess}
         </Button>
 
         {tab === "staff" ? (
           <p className="text-center text-sm text-ink-400">
-            Ainda nao tem acesso?{" "}
+            {dict.login.noAccess}{" "}
             <button
               type="button"
               onClick={() => {
@@ -281,7 +286,7 @@ function LoginFormInner() {
               }}
               className="focus-ring rounded font-medium text-ink-600 underline underline-offset-2 transition hover:text-ink-900"
             >
-              Solicitar
+              {dict.login.request}
             </button>
           </p>
         ) : null}
@@ -290,10 +295,10 @@ function LoginFormInner() {
   );
 }
 
-export function LoginForm() {
+export function LoginForm({ locale }: Props) {
   return (
     <Suspense fallback={<div className="card h-[320px] animate-pulse" />}>
-      <LoginFormInner />
+      <LoginFormInner locale={locale} />
     </Suspense>
   );
 }

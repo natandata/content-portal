@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 import { tourSteps, type TourStep } from "@/lib/tour";
 import { cn } from "@/lib/utils";
 import { completeTourAction } from "@/server/actions/tour";
@@ -41,8 +43,17 @@ const ICONS: Record<TourStep["icon"], LucideIcon> = {
  * mesmo assim nesta sessao — bloquear a entrada de alguem por causa de um
  * tutorial seria pior que mostra-lo de novo depois.
  */
-export function AppTour({ role, onDone }: { role: UserRole; onDone?: () => void }) {
-  const steps = tourSteps(role);
+export function AppTour({
+  role,
+  locale = DEFAULT_LOCALE,
+  onDone,
+}: {
+  role: UserRole;
+  locale?: Locale;
+  onDone?: () => void;
+}) {
+  const resolvedDict = getDictionary(locale);
+  const steps = tourSteps(role, resolvedDict);
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(true);
 
@@ -97,7 +108,7 @@ export function AppTour({ role, onDone }: { role: UserRole; onDone?: () => void 
           </span>
 
           <span className="text-xs text-ink-400 tabular-nums">
-            {index + 1} de {steps.length}
+            {resolvedDict.tour.step1of(index + 1, steps.length)}
           </span>
         </div>
 
@@ -124,20 +135,20 @@ export function AppTour({ role, onDone }: { role: UserRole; onDone?: () => void 
             onClick={() => void finish()}
             className="focus-ring rounded text-sm text-ink-500 transition hover:text-ink-900"
           >
-            {isLast ? "Fechar" : "Pular tour"}
+            {isLast ? resolvedDict.tour.close : resolvedDict.tour.skip}
           </button>
 
           <div className="flex gap-2">
             {index > 0 ? (
               <Button variant="secondary" onClick={() => setIndex(index - 1)}>
-                Voltar
+                {resolvedDict.tour.back}
               </Button>
             ) : null}
 
             {isLast ? (
-              <Button onClick={() => void finish()}>Comecar a usar</Button>
+              <Button onClick={() => void finish()}>{resolvedDict.tour.start}</Button>
             ) : (
-              <Button onClick={() => setIndex(index + 1)}>Proximo</Button>
+              <Button onClick={() => setIndex(index + 1)}>{resolvedDict.tour.next}</Button>
             )}
           </div>
         </div>

@@ -13,23 +13,45 @@ export function cn(...inputs: ClassValue[]) {
  */
 export const APP_TIME_ZONE = "America/Sao_Paulo";
 
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  timeZone: APP_TIME_ZONE,
-});
+/*
+ * `locale` aqui e opcional e default "pt-BR" de proposito: toda chamada ja
+ * existente na area da equipe continua igual sem tocar em nenhum arquivo. So
+ * a area do cliente passa "en" quando o visitante escolheu ingles.
+ */
+const dateFormatterCache = new Map<string, Intl.DateTimeFormat>();
+const dateTimeFormatterCache = new Map<string, Intl.DateTimeFormat>();
 
-const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: APP_TIME_ZONE,
-});
+function dateFormatterFor(locale: string): Intl.DateTimeFormat {
+  let formatter = dateFormatterCache.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: APP_TIME_ZONE,
+    });
+    dateFormatterCache.set(locale, formatter);
+  }
+  return formatter;
+}
 
-/** AAAA-MM-DD no fuso do app, para comparar dias de calendario. */
+function dateTimeFormatterFor(locale: string): Intl.DateTimeFormat {
+  let formatter = dateTimeFormatterCache.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: APP_TIME_ZONE,
+    });
+    dateTimeFormatterCache.set(locale, formatter);
+  }
+  return formatter;
+}
+
+/** AAAA-MM-DD no fuso do app, para comparar dias de calendario — independe de locale. */
 const isoDayFormatter = new Intl.DateTimeFormat("en-CA", {
   year: "numeric",
   month: "2-digit",
@@ -43,24 +65,32 @@ function calendarDay(date: Date): number {
 }
 
 /** Datas puras (`date` do Postgres) nao devem sofrer conversao de fuso. */
-export function formatDate(value: string | null | undefined): string {
+export function formatDate(value: string | null | undefined, locale = "pt-BR"): string {
   if (!value) return "—";
   const isPlainDate = /^\d{4}-\d{2}-\d{2}$/.test(value);
   // Meio-dia UTC como ancora: longe o bastante das bordas para nenhum fuso
   // empurrar a data para o dia anterior ou seguinte.
   const date = isPlainDate ? new Date(`${value}T12:00:00Z`) : new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return dateFormatter.format(date);
+  return dateFormatterFor(locale).format(date);
 }
 
-export function formatDateTime(value: string | null | undefined): string {
+export function formatDateTime(value: string | null | undefined, locale = "pt-BR"): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return dateTimeFormatter.format(date);
+  return dateTimeFormatterFor(locale).format(date);
 }
 
-export function formatRelativeDay(value: string | null | undefined): string {
+export function formatRelativeDay(
+  value: string | null | undefined,
+  locale = "pt-BR",
+  labels: { today: string; yesterday: string; daysAgo: (n: number) => string } = {
+    today: "Hoje",
+    yesterday: "Ontem",
+    daysAgo: (n) => `Ha ${n} dias`,
+  },
+): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
@@ -68,10 +98,10 @@ export function formatRelativeDay(value: string | null | undefined): string {
   // Diferenca em dias de calendario no fuso do app — nao em blocos de 24h.
   const diffDays = calendarDay(new Date()) - calendarDay(date);
 
-  if (diffDays <= 0) return "Hoje";
-  if (diffDays === 1) return "Ontem";
-  if (diffDays < 7) return `Ha ${diffDays} dias`;
-  return formatDate(value);
+  if (diffDays <= 0) return labels.today;
+  if (diffDays === 1) return labels.yesterday;
+  if (diffDays < 7) return labels.daysAgo(diffDays);
+  return formatDate(value, locale);
 }
 
 export function formatBytes(bytes: number): string {

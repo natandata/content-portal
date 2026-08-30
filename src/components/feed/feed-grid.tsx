@@ -23,12 +23,14 @@ export function FeedGrid({
   fill = true,
   emptyLabel,
   highlightId,
+  newLabel = "novo",
 }: {
   entries: FeedEntry[];
   fill?: boolean;
   emptyLabel?: string;
   /** Marca uma celula como "novo" — usado na previa de publicacao. */
   highlightId?: string;
+  newLabel?: string;
 }) {
   const emptySlots = fill ? Math.max(0, MAX_FEED_ITEMS - entries.length) : 0;
 
@@ -67,7 +69,7 @@ export function FeedGrid({
 
           {entry.contentId === highlightId ? (
             <span className="absolute top-1 left-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-white">
-              novo
+              {newLabel}
             </span>
           ) : null}
 

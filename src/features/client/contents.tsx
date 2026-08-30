@@ -5,12 +5,14 @@ import { ContentCard } from "@/components/content/content-card";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireClientActor } from "@/lib/auth";
+import { getServerDictionary } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { loadContentFileCounts, loadContentPreviews } from "@/server/queries";
 
 export async function ClientContents() {
   await requireClientActor();
   const supabase = await createClient();
+  const { locale, dict } = await getServerDictionary();
 
   // O cliente nunca ve rascunhos: eles ainda estao em producao.
   const { data: contents } = await supabase
@@ -29,16 +31,13 @@ export async function ClientContents() {
 
   return (
     <>
-      <PageHeader
-        title="Conteudos"
-        description="Toque em visualizar para ver em tela cheia antes de decidir."
-      />
+      <PageHeader title={dict.content.title} description={dict.content.subtitle} />
 
       {rows.length === 0 ? (
         <EmptyState
           icon={<Images className="size-5" />}
-          title="Nenhum conteudo enviado ainda"
-          description="Assim que a sua equipe enviar um conteudo, ele aparece aqui."
+          title={dict.content.empty}
+          description={dict.content.emptyBody}
         />
       ) : (
         <div className="space-y-3">
@@ -49,11 +48,13 @@ export async function ClientContents() {
               previewUrl={previews.get(content.id) ?? null}
               fileCount={counts.get(content.id) ?? 0}
               href={`/client/content/${content.id}`}
+              locale={locale}
               actions={
                 <ApprovalActions
                   contentId={content.id}
                   status={content.status}
                   viewHref={`/client/content/${content.id}`}
+                  locale={locale}
                 />
               }
             />

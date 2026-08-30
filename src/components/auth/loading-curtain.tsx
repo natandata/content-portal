@@ -9,7 +9,13 @@ const DURATION_MS = 5000;
  * tempo decorrido em vez de animar por CSS, entao o numero corresponde ao que
  * a pessoa ve.
  */
-export function LoadingCurtain({ onDone }: { onDone: () => void }) {
+export function LoadingCurtain({
+  onDone,
+  message = "Estamos organizando seus conteudos",
+}: {
+  onDone: () => void;
+  message?: string;
+}) {
   const [progress, setProgress] = useState(0);
   const done = useRef(onDone);
   done.current = onDone;
@@ -46,9 +52,7 @@ export function LoadingCurtain({ onDone }: { onDone: () => void }) {
         <span className="rounded-[3px] bg-on-ink" />
       </span>
 
-      <p className="text-center text-base font-medium text-ink-900 sm:text-lg">
-        Estamos organizando seus conteúdos
-      </p>
+      <p className="text-center text-base font-medium text-ink-900 sm:text-lg">{message}</p>
 
       <div className="w-full max-w-xs">
         <div

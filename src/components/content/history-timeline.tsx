@@ -1,14 +1,24 @@
 import { History } from "lucide-react";
 
+import { getDictionary } from "@/lib/i18n/dictionary";
+import { DEFAULT_LOCALE, intlLocale, type Locale } from "@/lib/i18n/locale";
 import { formatDateTime } from "@/lib/utils";
 import type { ApprovalHistoryRow } from "@/types/database";
 
-export function HistoryTimeline({ entries }: { entries: ApprovalHistoryRow[] }) {
+export function HistoryTimeline({
+  entries,
+  locale = DEFAULT_LOCALE,
+}: {
+  entries: ApprovalHistoryRow[];
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale);
+
   if (entries.length === 0) {
     return (
       <p className="flex items-center gap-2 text-sm text-ink-500">
         <History className="size-4" aria-hidden />
-        Nenhum movimento registrado ate agora.
+        {dict.history.empty}
       </p>
     );
   }
@@ -18,8 +28,10 @@ export function HistoryTimeline({ entries }: { entries: ApprovalHistoryRow[] }) 
       {entries.map((entry) => (
         <li key={entry.id} className="relative">
           <span className="absolute top-1.5 -left-[23px] size-2 rounded-full bg-ink-300 ring-4 ring-surface" />
-          <p className="text-xs text-ink-400">{formatDateTime(entry.created_at)}</p>
-          <p className="mt-0.5 text-sm font-medium text-ink-900">{entry.action}</p>
+          <p className="text-xs text-ink-400">{formatDateTime(entry.created_at, intlLocale(locale))}</p>
+          <p className="mt-0.5 text-sm font-medium text-ink-900">
+            {dict.historyAction[entry.action] ?? entry.action}
+          </p>
           {entry.actor_name ? (
             <p className="text-xs text-ink-500">{entry.actor_name}</p>
           ) : null}

@@ -2,29 +2,25 @@ import { NotificationSettings } from "@/components/notifications/notification-se
 import { Card, CardHeader, PageHeader } from "@/components/ui/layout";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { requireClientActor } from "@/lib/auth";
+import { getServerDictionary } from "@/lib/i18n/server";
 
 export async function ClientSettings() {
   await requireClientActor();
+  const { locale, dict } = await getServerDictionary();
 
   return (
     <>
-      <PageHeader title="Configuracoes" description="Aparencia e notificacoes deste aparelho." />
+      <PageHeader title={dict.settings.title} description={dict.settings.subtitle} />
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
-          <CardHeader
-            title="Aparencia"
-            description="Vale para este aparelho. Em 'Sistema' o app segue o tema do celular ou do computador."
-          />
-          <ThemeToggle />
+          <CardHeader title={dict.settings.appearance} description={dict.settings.appearanceHint} />
+          <ThemeToggle locale={locale} />
         </Card>
 
         <Card>
-          <CardHeader
-            title="Notificacoes"
-            description="Avisos de novo conteudo, documentos e retorno da equipe."
-          />
-          <NotificationSettings />
+          <CardHeader title={dict.settings.notifications} description={dict.notifications.settingsHint} />
+          <NotificationSettings locale={locale} />
         </Card>
       </div>
     </>

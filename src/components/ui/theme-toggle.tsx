@@ -3,14 +3,10 @@
 import { useEffect, useState } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 
+import { getDictionary } from "@/lib/i18n/dictionary";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 import { THEME_STORAGE_KEY, resolveTheme, type ThemePreference } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-
-const OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
-  { value: "light", label: "Claro", icon: Sun },
-  { value: "dark", label: "Escuro", icon: Moon },
-  { value: "system", label: "Sistema", icon: Monitor },
-];
 
 function apply(preference: ThemePreference) {
   document.documentElement.setAttribute("data-theme", resolveTheme(preference));
@@ -19,8 +15,26 @@ function apply(preference: ThemePreference) {
 /**
  * Claro / Escuro / Sistema. O valor mora no localStorage do aparelho: e uma
  * preferencia de dispositivo, nao de conta.
+ *
+ * So recebe `locale` (string), nunca o dicionario inteiro: o dicionario tem
+ * campos com funcao (para textos com variavel), e Server Component nao pode
+ * passar funcao como prop para Client Component — o RSC nao serializa isso.
+ * Cada Client Component busca o proprio dicionario com `getDictionary`.
  */
-export function ThemeToggle({ compact = false }: { compact?: boolean }) {
+export function ThemeToggle({
+  compact = false,
+  locale = DEFAULT_LOCALE,
+}: {
+  compact?: boolean;
+  locale?: Locale;
+}) {
+  const dict = getDictionary(locale).settings;
+  const OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
+    { value: "light", label: dict.light, icon: Sun },
+    { value: "dark", label: dict.dark, icon: Moon },
+    { value: "system", label: dict.system, icon: Monitor },
+  ];
+
   // Comeca em null para nao renderizar o estado errado antes de hidratar.
   const [preference, setPreference] = useState<ThemePreference | null>(null);
 

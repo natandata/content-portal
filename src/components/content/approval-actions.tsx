@@ -8,34 +8,42 @@ import { toast } from "sonner";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Field, FormError, Textarea } from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
+import { getDictionary, type Dictionary } from "@/lib/i18n/dictionary";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 import { submitApprovalAction } from "@/server/actions/approvals";
 import type { ContentStatus } from "@/types/database";
 
 type Intent = "rejected" | "revision_requested";
 
-const INTENT_COPY: Record<Intent, { title: string; question: string; cta: string }> = {
-  rejected: {
-    title: "Reprovar conteudo",
-    question: "Por que este conteudo precisa ser refeito?",
-    cta: "Enviar reprovacao",
-  },
-  revision_requested: {
-    title: "Solicitar alteracao",
-    question: "O que precisa ser alterado?",
-    cta: "Enviar solicitacao",
-  },
-};
+function intentCopy(dict: Dictionary): Record<Intent, { title: string; question: string; cta: string }> {
+  return {
+    rejected: {
+      title: dict.approval.modalRejectTitle,
+      question: dict.approval.modalRejectField,
+      cta: dict.approval.confirmReject,
+    },
+    revision_requested: {
+      title: dict.approval.modalRequestTitle,
+      question: dict.approval.modalRequestField,
+      cta: dict.approval.sendRequest,
+    },
+  };
+}
 
 /** Barra de acoes do cliente: sempre visivel na base do conteudo. */
 export function ApprovalActions({
   contentId,
   status,
   viewHref,
+  locale = DEFAULT_LOCALE,
 }: {
   contentId: string;
   status: ContentStatus;
   viewHref?: string;
+  locale?: Locale;
 }) {
+  const t = getDictionary(locale);
+  const INTENT_COPY = intentCopy(t);
   const router = useRouter();
   const [intent, setIntent] = useState<Intent | null>(null);
   const [comment, setComment] = useState("");
@@ -71,9 +79,7 @@ export function ApprovalActions({
   }
 
   if (isDraft) {
-    return (
-      <p className="text-sm text-ink-500">Este conteudo ainda esta em producao.</p>
-    );
+    return <p className="text-sm text-ink-500">{t.content.draftNotice}</p>;
   }
 
   return (
@@ -87,7 +93,7 @@ export function ApprovalActions({
             className="col-span-2 gap-2 sm:col-span-1"
           >
             <Eye className="size-4" aria-hidden />
-            Visualizar
+            {t.content.view}
           </LinkButton>
         ) : null}
 
@@ -96,10 +102,10 @@ export function ApprovalActions({
           variant="success"
           loading={pending}
           disabled={decided}
-          onClick={() => run({ status: "approved" }, "Conteudo aprovado.")}
+          onClick={() => run({ status: "approved" }, t.approval.approvedToast)}
         >
           <CheckCircle2 className="size-4" aria-hidden />
-          Aprovar
+          {t.content.approve}
         </Button>
 
         <Button
@@ -109,7 +115,7 @@ export function ApprovalActions({
           onClick={() => setIntent("rejected")}
         >
           <XCircle className="size-4" aria-hidden />
-          Reprovar
+          {t.content.reject}
         </Button>
 
         <Button
@@ -120,15 +126,11 @@ export function ApprovalActions({
           onClick={() => setIntent("revision_requested")}
         >
           <MessageSquareWarning className="size-4" aria-hidden />
-          Solicitar alteracao
+          {t.content.requestChange}
         </Button>
       </div>
 
-      {decided ? (
-        <p className="mt-2.5 text-xs text-ink-500">
-          Este conteudo ja foi aprovado. Fale com seu gestor para reabrir a revisao.
-        </p>
-      ) : null}
+      {decided ? <p className="mt-2.5 text-xs text-ink-500">{t.content.decidedNotice}</p> : null}
 
       <Modal
         open={intent !== null}
@@ -147,19 +149,19 @@ export function ApprovalActions({
               onClick={() => setIntent(null)}
               disabled={pending}
             >
-              Cancelar
+              {t.approval.cancel}
             </Button>
             <Button
               loading={pending}
               onClick={() => {
                 if (!intent) return;
                 if (comment.trim().length < 3) {
-                  setError("Escreva ao menos algumas palavras para orientar o profissional.");
+                  setError(t.approval.commentRequired);
                   return;
                 }
                 run(
                   { status: intent, comment: comment.trim() },
-                  intent === "rejected" ? "Reprovacao enviada." : "Solicitacao enviada.",
+                  intent === "rejected" ? t.approval.rejectedToast : t.approval.revisionToast,
                 );
               }}
             >
@@ -174,7 +176,11 @@ export function ApprovalActions({
             rows={5}
             value={comment}
             onChange={(event) => setComment(event.target.value)}
-            placeholder="Ex.: trocar a foto do slide 2 e ajustar a legenda."
+            placeholder={
+              intent === "rejected"
+                ? t.approval.modalRejectPlaceholder
+                : t.approval.modalRequestPlaceholder
+            }
             disabled={pending}
           />
         </Field>

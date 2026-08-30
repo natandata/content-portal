@@ -118,18 +118,24 @@ export const MAX_FEED_ITEMS = FEED_COLUMNS * FEED_ROWS;
 export const MAX_HIGHLIGHTS = 10;
 
 /** Abreviacao no estilo do Instagram: 1.2 mil, 34,5 mil, 1,2 mi. */
-export function formatCount(value: number): string {
+/**
+ * "en" usa o padrao do proprio Instagram (K/M, ponto decimal); pt-BR mantem
+ * "mil"/"mi" com virgula, que e como a rede social fala com o brasileiro.
+ */
+export function formatCount(value: number, locale: "pt-BR" | "en" = "pt-BR"): string {
   if (value < 1000) return String(value);
+
+  const isEn = locale === "en";
 
   if (value < 1_000_000) {
     const thousands = value / 1000;
     const label = thousands >= 100 ? Math.round(thousands) : Number(thousands.toFixed(1));
-    return `${String(label).replace(".", ",")} mil`;
+    return isEn ? `${label}K` : `${String(label).replace(".", ",")} mil`;
   }
 
   const millions = value / 1_000_000;
   const label = millions >= 100 ? Math.round(millions) : Number(millions.toFixed(1));
-  return `${String(label).replace(".", ",")} mi`;
+  return isEn ? `${label}M` : `${String(label).replace(".", ",")} mi`;
 }
 
 export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];

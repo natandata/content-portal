@@ -7,6 +7,8 @@ import {
   CONTRACT_STATUS_TONE,
   type BadgeTone,
 } from "@/lib/domain";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 import type { ContentStatus, ContractStatus } from "@/types/database";
 
@@ -46,28 +48,34 @@ export function Badge({
 
 export function ContentStatusBadge({
   status,
+  locale = DEFAULT_LOCALE,
   className,
 }: {
   status: ContentStatus;
+  locale?: Locale;
   className?: string;
 }) {
+  const label = locale === DEFAULT_LOCALE ? CONTENT_STATUS_LABEL[status] : getDictionary(locale).status.content[status];
   return (
     <Badge tone={CONTENT_STATUS_TONE[status]} className={className}>
-      {CONTENT_STATUS_LABEL[status]}
+      {label}
     </Badge>
   );
 }
 
 export function ContractStatusBadge({
   status,
+  locale = DEFAULT_LOCALE,
   className,
 }: {
   status: ContractStatus;
+  locale?: Locale;
   className?: string;
 }) {
+  const label = locale === DEFAULT_LOCALE ? CONTRACT_STATUS_LABEL[status] : getDictionary(locale).status.document[status];
   return (
     <Badge tone={CONTRACT_STATUS_TONE[status]} className={className}>
-      {CONTRACT_STATUS_LABEL[status]}
+      {label}
     </Badge>
   );
 }

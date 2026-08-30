@@ -9,23 +9,41 @@ import { NavBadge } from "@/components/shell/nav-badge";
 import { clientNavItems } from "@/components/shell/nav-items";
 import { IconButton } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import type { Locale } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 import type { NavBadges } from "@/server/queries";
 
+// So `locale` cruza de Server para Client Component — nunca o dicionario
+// inteiro, que tem campos com funcao e o RSC nao sabe serializar.
 export function ClientShell({
   companyName,
   accessCode,
   badges,
+  locale,
   children,
 }: {
   companyName: string;
   accessCode: string;
   badges: NavBadges;
+  locale: Locale;
   children: ReactNode;
 }) {
+  const dict = getDictionary(locale);
   const pathname = usePathname();
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  const navLabel: Record<string, string> = {
+    "/client/dashboard": dict.nav.home,
+    "/client/content": dict.nav.content,
+    "/client/feed": dict.nav.feed,
+    "/client/documents": dict.nav.documents,
+  };
+  const items = clientNavItems.map((item) => ({
+    ...item,
+    label: navLabel[item.href] ?? item.label,
+  }));
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -38,7 +56,7 @@ export function ClientShell({
 
           <div className="flex shrink-0 items-center gap-1">
             <nav className="hidden items-center gap-0.5 sm:flex">
-              {clientNavItems.map((item) => (
+              {items.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -56,7 +74,7 @@ export function ClientShell({
             </nav>
 
             <div className="w-[92px] shrink-0">
-              <ThemeToggle compact />
+              <ThemeToggle compact locale={locale} />
             </div>
 
             <Link
@@ -67,13 +85,13 @@ export function ClientShell({
                   ? "bg-ink-100 text-ink-900"
                   : "text-ink-500 hover:bg-ink-50 hover:text-ink-800",
               )}
-              aria-label="Configuracoes"
+              aria-label={dict.nav.settings}
             >
               <Settings className="size-4" aria-hidden />
             </Link>
 
             <form action="/api/auth/logout" method="post">
-              <IconButton label="Sair" type="submit">
+              <IconButton label={dict.common.logout} type="submit">
                 <LogOut className="size-4" />
               </IconButton>
             </form>
@@ -88,7 +106,7 @@ export function ClientShell({
       {/* Navegacao inferior — prioridade mobile */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/97 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-4 px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
-          {clientNavItems.map((item) => {
+          {items.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (

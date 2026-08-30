@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 import { pushSupported, subscribeToPush } from "@/lib/push-client";
 import {
   dismissNotificationPromptAction,
@@ -18,7 +20,14 @@ import {
  * antes), o convite nunca aparece: marcamos como respondido sem UI, para nao
  * insistir toda vez em um aparelho onde a resposta ja e conhecida.
  */
-export function NotificationPrompt({ onDone }: { onDone: () => void }) {
+export function NotificationPrompt({
+  locale = DEFAULT_LOCALE,
+  onDone,
+}: {
+  locale?: Locale;
+  onDone: () => void;
+}) {
+  const t = getDictionary(locale).notifications;
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -83,12 +92,9 @@ export function NotificationPrompt({ onDone }: { onDone: () => void }) {
         </span>
 
         <h2 id="notif-prompt-title" className="mt-4 text-lg font-semibold text-ink-900">
-          Ativar notificacoes?
+          {t.promptTitle}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-ink-600">
-          Avisamos na hora quando chegar conteudo para aprovar, documento para assinar ou
-          resposta do cliente. Pode ligar ou desligar quando quiser em Configuracoes.
-        </p>
+        <p className="mt-2 text-sm leading-relaxed text-ink-600">{t.promptBody}</p>
 
         <div className="mt-6 flex items-center justify-between gap-3">
           <button
@@ -97,11 +103,11 @@ export function NotificationPrompt({ onDone }: { onDone: () => void }) {
             disabled={busy}
             className="focus-ring rounded text-sm text-ink-500 transition hover:text-ink-900"
           >
-            Agora nao
+            {t.later}
           </button>
 
           <Button loading={busy} onClick={() => void accept()}>
-            Ativar notificacoes
+            {t.activate}
           </Button>
         </div>
       </div>

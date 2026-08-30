@@ -1,3 +1,4 @@
+import type { Dictionary } from "@/lib/i18n/dictionary";
 import type { UserRole } from "@/types/database";
 
 export interface TourStep {
@@ -66,37 +67,25 @@ const CLOSING: TourStep = {
   body: "Este tour aparece uma vez so. Se precisar rever alguma coisa, cada tela tem a explicacao do que faz logo abaixo do titulo.",
 };
 
-const CLIENT_STEPS: TourStep[] = [
-  {
-    icon: "wave",
-    title: "Bem-vindo ao seu portal",
-    body: "Aqui voce acompanha os conteudos que seu gestor preparou, aprova o que gostou e assina os documentos. Leva um minuto para conhecer.",
-  },
-  {
-    icon: "content",
-    title: "Conteudos",
-    body: "Cada post chega com imagem, legenda e data prevista. Abra para ver em tamanho grande antes de decidir.",
-  },
-  {
-    icon: "approvals",
-    title: "Aprovar, reprovar ou pedir alteracao",
-    body: "Se algo precisa mudar, escreva o que voce quer diferente. O comentario e obrigatorio nesses casos — e o que orienta a proxima versao.",
-  },
-  {
-    icon: "feed",
-    title: "Feed",
-    body: "A previa mostra como seu perfil vai ficar com os posts na ordem planejada. E so visualizacao: a composicao quem monta e seu gestor.",
-  },
-  {
-    icon: "documents",
-    title: "Documentos",
-    body: "Contrato, estrategia, brandbook. Da para ler na tela antes de baixar; quando o documento pedir assinatura, voce devolve o arquivo assinado por aqui.",
-  },
-  CLOSING,
-];
+/**
+ * Passos do cliente vem do dicionario (pt-BR/en) — e a unica parte do tour
+ * traduzida, porque e a unica que o cliente ve. Staff continua fixo em
+ * portugues.
+ */
+function clientSteps(dict: Dictionary): TourStep[] {
+  const t = dict.tour.client;
+  return [
+    { icon: "wave", title: t.welcomeTitle, body: t.welcomeBody },
+    { icon: "content", title: t.contentTitle, body: t.contentBody },
+    { icon: "approvals", title: t.approveTitle, body: t.approveBody },
+    { icon: "feed", title: t.feedTitle, body: t.feedBody },
+    { icon: "documents", title: t.documentsTitle, body: t.documentsBody },
+    { icon: "check", title: t.closingTitle, body: t.closingBody },
+  ];
+}
 
-export function tourSteps(role: UserRole): TourStep[] {
-  if (role === "client") return CLIENT_STEPS;
+export function tourSteps(role: UserRole, dict: Dictionary): TourStep[] {
+  if (role === "client") return clientSteps(dict);
   if (role === "admin") return [...STAFF_STEPS, ADMIN_EXTRA, CLOSING];
   return [...STAFF_STEPS, CLOSING];
 }

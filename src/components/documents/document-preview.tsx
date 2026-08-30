@@ -16,12 +16,16 @@ export function DocumentPreview({
   url,
   title,
   label = "Pre-visualizar",
+  openInNewTabLabel = "Abrir em nova aba",
+  closeLabel = "Fechar",
   variant = "outline",
   fullWidth,
 }: {
   url: string;
   title: string;
   label?: string;
+  openInNewTabLabel?: string;
+  closeLabel?: string;
   variant?: "outline" | "secondary" | "primary";
   fullWidth?: boolean;
 }) {
@@ -54,10 +58,10 @@ export function DocumentPreview({
               className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-ink-700 transition hover:text-ink-900"
             >
               <ExternalLink className="size-4" aria-hidden />
-              Abrir em nova aba
+              {openInNewTabLabel}
             </a>
             <Button variant="secondary" onClick={() => setOpen(false)}>
-              Fechar
+              {closeLabel}
             </Button>
           </>
         }

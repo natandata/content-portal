@@ -7,6 +7,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { FormError } from "@/components/ui/form";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 import { BUCKETS, signedContractPath } from "@/lib/paths";
 import { uploadToBucket, validateFile } from "@/lib/upload";
 import { formatBytes } from "@/lib/utils";
@@ -17,11 +19,14 @@ export function SignedDocumentUpload({
   contractId,
   clientId,
   alreadySent,
+  locale = DEFAULT_LOCALE,
 }: {
   contractId: string;
   clientId: string;
   alreadySent: boolean;
+  locale?: Locale;
 }) {
+  const t = getDictionary(locale).documents;
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -30,7 +35,7 @@ export function SignedDocumentUpload({
 
   async function send() {
     if (!file) {
-      setError("Selecione o PDF assinado.");
+      setError(t.selectPdf);
       return;
     }
 
@@ -47,7 +52,7 @@ export function SignedDocumentUpload({
       );
 
       if (upload.error) {
-        setError(`Nao foi possivel enviar o arquivo: ${upload.error}`);
+        setError(`${upload.error}`);
         return;
       }
 
@@ -57,7 +62,7 @@ export function SignedDocumentUpload({
         return;
       }
 
-      toast.success("Documento assinado enviado.");
+      toast.success(t.sendSigned);
       setFile(null);
       router.refresh();
     } finally {
@@ -99,7 +104,7 @@ export function SignedDocumentUpload({
             onClick={() => setFile(null)}
             disabled={busy}
           >
-            Trocar
+            {t.change}
           </button>
         </div>
       ) : (
@@ -111,13 +116,13 @@ export function SignedDocumentUpload({
           onClick={() => inputRef.current?.click()}
         >
           <Upload className="size-4" aria-hidden />
-          {alreadySent ? "Enviar novo arquivo assinado" : "Enviar documento assinado"}
+          {alreadySent ? t.sendNewSigned : t.sendSigned}
         </Button>
       )}
 
       {file ? (
         <Button fullWidth size="lg" loading={busy} onClick={() => void send()}>
-          Confirmar envio
+          {t.confirmSend}
         </Button>
       ) : null}
 

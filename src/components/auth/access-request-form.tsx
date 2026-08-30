@@ -5,12 +5,21 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Textarea } from "@/components/ui/form";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import type { Locale } from "@/lib/i18n/locale";
 
 /**
  * Solicitacao de acesso de profissional. A conta e criada travada e so passa a
  * funcionar depois que o administrador aprova.
  */
-export function AccessRequestForm({ onBack }: { onBack: () => void }) {
+export function AccessRequestForm({
+  locale,
+  onBack,
+}: {
+  locale: Locale;
+  onBack: () => void;
+}) {
+  const dict = getDictionary(locale);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,11 +33,11 @@ export function AccessRequestForm({ onBack }: { onBack: () => void }) {
     setError(null);
 
     if (name.trim().length < 2) {
-      setError("Informe seu nome.");
+      setError(dict.accessRequest.name);
       return;
     }
     if (password.length < 8) {
-      setError("A senha precisa ter ao menos 8 caracteres.");
+      setError(dict.accessRequest.passwordHint);
       return;
     }
 
@@ -47,13 +56,13 @@ export function AccessRequestForm({ onBack }: { onBack: () => void }) {
       };
 
       if (!response.ok) {
-        setError(payload.error ?? "Nao foi possivel enviar a solicitacao.");
+        setError(payload.error ?? dict.accessRequest.successBody);
         return;
       }
 
-      setSent(payload.message ?? "Solicitacao registrada.");
+      setSent(payload.message ?? dict.accessRequest.successBody);
     } catch {
-      setError("Falha de conexao. Verifique sua internet e tente novamente.");
+      setError(dict.login.connectionError);
     } finally {
       setBusy(false);
     }
@@ -65,10 +74,10 @@ export function AccessRequestForm({ onBack }: { onBack: () => void }) {
         <div className="mx-auto mb-4 flex size-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
           <CheckCircle2 className="size-6" aria-hidden />
         </div>
-        <h2 className="text-sm font-semibold text-ink-900">Solicitacao enviada</h2>
+        <h2 className="text-sm font-semibold text-ink-900">{dict.accessRequest.successTitle}</h2>
         <p className="mt-2 text-sm text-ink-500">{sent}</p>
         <Button variant="outline" className="mt-5" onClick={onBack}>
-          Voltar ao login
+          {dict.accessRequest.backToLogin}
         </Button>
       </div>
     );
@@ -82,27 +91,24 @@ export function AccessRequestForm({ onBack }: { onBack: () => void }) {
         className="focus-ring mb-4 inline-flex items-center gap-1.5 rounded text-sm text-ink-500 transition hover:text-ink-900"
       >
         <ArrowLeft className="size-4" aria-hidden />
-        Voltar
+        {dict.login.back}
       </button>
 
-      <h2 className="text-sm font-semibold text-ink-900">Solicitar acesso</h2>
-      <p className="mt-1 mb-4 text-sm text-ink-500">
-        Sua conta fica pendente ate o administrador aprovar.
-      </p>
+      <h2 className="text-sm font-semibold text-ink-900">{dict.accessRequest.title}</h2>
+      <p className="mt-1 mb-4 text-sm text-ink-500">{dict.accessRequest.subtitle}</p>
 
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Nome" htmlFor="request-name" required>
+        <Field label={dict.accessRequest.name} htmlFor="request-name" required>
           <Input
             id="request-name"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Como voce quer ser identificado"
             autoComplete="name"
             disabled={busy}
           />
         </Field>
 
-        <Field label="Email" htmlFor="request-email" required>
+        <Field label={dict.accessRequest.email} htmlFor="request-email" required>
           <Input
             id="request-email"
             type="email"
@@ -116,9 +122,9 @@ export function AccessRequestForm({ onBack }: { onBack: () => void }) {
         </Field>
 
         <Field
-          label="Senha"
+          label={dict.accessRequest.password}
           htmlFor="request-password"
-          hint="Minimo de 8 caracteres. Voce usara essa senha depois da aprovacao."
+          hint={dict.accessRequest.passwordHint}
           required
         >
           <Input
@@ -131,13 +137,12 @@ export function AccessRequestForm({ onBack }: { onBack: () => void }) {
           />
         </Field>
 
-        <Field label="Mensagem" htmlFor="request-note" hint="Opcional.">
+        <Field label={dict.accessRequest.note} htmlFor="request-note" hint={dict.accessRequest.noteHint}>
           <Textarea
             id="request-note"
             rows={3}
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            placeholder="Conte quem indicou voce ou com o que vai trabalhar."
             disabled={busy}
           />
         </Field>
@@ -145,7 +150,7 @@ export function AccessRequestForm({ onBack }: { onBack: () => void }) {
         <FormError>{error}</FormError>
 
         <Button type="submit" size="lg" fullWidth loading={busy}>
-          Enviar solicitacao
+          {dict.accessRequest.submit}
         </Button>
       </form>
     </div>

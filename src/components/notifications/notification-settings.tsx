@@ -5,6 +5,8 @@ import { Bell, BellOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { getDictionary } from "@/lib/i18n/dictionary";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 import { pushSupported, subscribeToPush, unsubscribeFromPush } from "@/lib/push-client";
 import {
   subscribeToPushAction,
@@ -17,7 +19,8 @@ type Status = "checking" | "unsupported" | "denied" | "on" | "off";
  * Liga/desliga notificacoes neste aparelho. Fica em Configuracoes e e o mesmo
  * fluxo do convite pos-tour — so que repetivel, a qualquer momento.
  */
-export function NotificationSettings() {
+export function NotificationSettings({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
+  const t = getDictionary(locale).notifications;
   const [status, setStatus] = useState<Status>("checking");
   const [busy, setBusy] = useState(false);
 
@@ -62,11 +65,11 @@ export function NotificationSettings() {
         return;
       }
       setStatus("on");
-      toast.success("Notificacoes ativadas neste aparelho.");
+      toast.success(t.enabledToast);
     } catch {
       // Negar a permissao do navegador tambem cai aqui.
       setStatus(Notification.permission === "denied" ? "denied" : "off");
-      toast.error("Nao foi possivel ativar. Verifique a permissao do navegador.");
+      toast.error(t.enableError);
     } finally {
       setBusy(false);
     }
@@ -78,32 +81,22 @@ export function NotificationSettings() {
       const endpoint = await unsubscribeFromPush();
       if (endpoint) await unsubscribeFromPushAction(endpoint);
       setStatus("off");
-      toast.success("Notificacoes desativadas neste aparelho.");
+      toast.success(t.disabledToast);
     } finally {
       setBusy(false);
     }
   }
 
   if (status === "checking") {
-    return <p className="text-sm text-ink-500">Verificando suporte do navegador...</p>;
+    return <p className="text-sm text-ink-500">{t.checking}</p>;
   }
 
   if (status === "unsupported") {
-    return (
-      <p className="text-sm text-ink-500">
-        Este navegador nao suporta notificacoes push. No iPhone, adicione o portal a tela de
-        inicio primeiro — o Safari so libera notificacoes para apps instalados.
-      </p>
-    );
+    return <p className="text-sm text-ink-500">{t.unsupported}</p>;
   }
 
   if (status === "denied") {
-    return (
-      <p className="text-sm text-ink-500">
-        As notificacoes estao bloqueadas nas configuracoes do navegador para este site. Libere
-        por la para poder ativar aqui.
-      </p>
-    );
+    return <p className="text-sm text-ink-500">{t.denied}</p>;
   }
 
   return (
@@ -116,11 +109,9 @@ export function NotificationSettings() {
         )}
         <div>
           <p className="text-sm font-medium text-ink-900">
-            {status === "on" ? "Ativadas neste aparelho" : "Desativadas neste aparelho"}
+            {status === "on" ? t.onThisDevice : t.offThisDevice}
           </p>
-          <p className="text-xs text-ink-500">
-            Novo conteudo para aprovar, documentos e retorno do cliente.
-          </p>
+          <p className="text-xs text-ink-500">{t.settingsHint}</p>
         </div>
       </div>
 
@@ -130,7 +121,7 @@ export function NotificationSettings() {
         loading={busy}
         onClick={() => void (status === "on" ? disable() : enable())}
       >
-        {status === "on" ? "Desativar" : "Ativar"}
+        {status === "on" ? t.disable : t.enable}
       </Button>
     </div>
   );
