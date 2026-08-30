@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireClientActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { resolveClientStaffIds, sendPushToUsers } from "@/lib/push";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, type ActionResult } from "@/server/result";
 
 const schema = z
@@ -26,7 +27,7 @@ const schema = z
 export async function submitApprovalAction(
   input: z.input<typeof schema>,
 ): Promise<ActionResult<null>> {
-  await requireClientActor();
+  const actor = await requireClientActor();
 
   const parsed = schema.safeParse(input);
   if (!parsed.success) {
@@ -55,6 +56,13 @@ export async function submitApprovalAction(
   revalidatePath("/professional/content");
 
   if (content) {
+    const activityAction = {
+      approved: `Aprovou o conteudo "${content.title}"`,
+      rejected: `Reprovou o conteudo "${content.title}"`,
+      revision_requested: `Pediu alteracao no conteudo "${content.title}"`,
+    }[parsed.data.status];
+    await logClientActivity(supabase, content.client_id, actor.displayName, activityAction);
+
     const notice = {
       approved: { title: "Conteudo aprovado", body: `O cliente aprovou "${content.title}".` },
       rejected: { title: "Conteudo reprovado", body: `O cliente reprovou "${content.title}".` },

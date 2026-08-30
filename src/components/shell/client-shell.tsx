@@ -7,6 +7,7 @@ import { LogOut, Settings } from "lucide-react";
 
 import { NavBadge } from "@/components/shell/nav-badge";
 import { clientNavItems } from "@/components/shell/nav-items";
+import { ReloadAppButton } from "@/components/shell/reload-app-button";
 import { IconButton } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getDictionary } from "@/lib/i18n/dictionary";
@@ -40,11 +41,13 @@ export function ClientShell({
     "/client/feed": dict.nav.feed,
     "/client/documents": dict.nav.documents,
     "/client/chat": dict.nav.chat,
+    "/client/payments": dict.nav.payments,
   };
   const items = clientNavItems.map((item) => ({
     ...item,
     label: navLabel[item.href] ?? item.label,
   }));
+  const mobileItems = items.filter((item) => !item.hideOnMobileNav);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -78,6 +81,8 @@ export function ClientShell({
               <ThemeToggle compact locale={locale} />
             </div>
 
+            <ReloadAppButton label={dict.common.reload} />
+
             <Link
               href="/client/settings"
               className={cn(
@@ -105,14 +110,15 @@ export function ClientShell({
       </main>
 
       {/*
-       * Navegacao inferior — prioridade mobile. grid-cols-5 porque
-       * clientNavItems tem 5 entradas (Inicio, Conteudos, Feed, Documentos,
-       * Chat); o texto encolhe um pouco em relacao ao topo para caber cinco
-       * colunas sem cortar em telas de 360-375px.
+       * Navegacao inferior — prioridade mobile. grid-cols-5 porque so 5 dos
+       * itens aparecem aqui (Inicio, Conteudos, Feed, Documentos, Chat) —
+       * Cobrancas fica de fora (hideOnMobileNav), so no menu de topo, para
+       * nao espremer uma sexta coluna em telas de 360-375px. O texto encolhe
+       * um pouco em relacao ao topo para caber cinco colunas sem cortar.
        */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/97 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 px-1 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
-          {items.map((item) => {
+          {mobileItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
             return (

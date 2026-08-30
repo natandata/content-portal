@@ -90,6 +90,7 @@ export interface Dictionary {
     feed: string;
     documents: string;
     chat: string;
+    payments: string;
     settings: string;
   };
   dashboard: {
@@ -102,6 +103,10 @@ export interface Dictionary {
     documentsCard: string;
     openDocuments: string;
     noDocuments: string;
+    paymentsCard: string;
+    openPayments: string;
+    paymentsOpenCount: (n: number) => string;
+    noOpenPayments: string;
     awaitingApprovalSection: string;
     seeAll: string;
     noPending: string;
@@ -213,6 +218,7 @@ export interface Dictionary {
   common: {
     logout: string;
     loading: string;
+    reload: string;
   };
   contentType: {
     image: string;
@@ -294,6 +300,25 @@ export interface Dictionary {
     reportTitle: string;
     reportEmpty: string;
     votersEmpty: string;
+  };
+  invoices: {
+    title: string;
+    subtitle: string;
+    empty: string;
+    emptyBody: string;
+    downloadBoleto: string;
+    boletoUnavailable: string;
+    copyLink: string;
+    openLink: string;
+    copyPix: string;
+  };
+  dashboardWidgets: {
+    calendarTitle: string;
+    calendarEmpty: string;
+    projectsTitle: string;
+    projectsEmpty: string;
+    activityTitle: string;
+    activityEmpty: string;
   };
 }
 
@@ -398,6 +423,7 @@ const ptBR: Dictionary = {
     feed: "Feed",
     documents: "Documentos",
     chat: "Chat",
+    payments: "Cobrancas",
     settings: "Configuracoes",
   },
   dashboard: {
@@ -410,6 +436,10 @@ const ptBR: Dictionary = {
     documentsCard: "Documentos",
     openDocuments: "Abrir documentos",
     noDocuments: "Nenhum documento disponivel ate o momento.",
+    paymentsCard: "Cobrancas",
+    openPayments: "Abrir cobrancas",
+    paymentsOpenCount: (n) => (n === 1 ? "1 cobranca em aberto" : `${n} cobrancas em aberto`),
+    noOpenPayments: "Nenhuma cobranca em aberto.",
     awaitingApprovalSection: "Aguardando aprovacao",
     seeAll: "Ver todos",
     noPending: "Nada pendente por aqui.",
@@ -531,7 +561,7 @@ const ptBR: Dictionary = {
     empty: "Nada no feed ainda.",
     newBadge: "novo",
   },
-  common: { logout: "Sair", loading: "Carregando..." },
+  common: { logout: "Sair", loading: "Carregando...", reload: "Recarregar o app" },
   contentType: { image: "Imagem", video: "Video", carousel: "Carrossel", slide: "slide", slides: "slides" },
   media: {
     unavailable: "Arquivo indisponivel",
@@ -590,6 +620,25 @@ const ptBR: Dictionary = {
     reportTitle: "Votos do mural",
     reportEmpty: "Nenhuma novidade publicada ainda.",
     votersEmpty: "Ninguem votou ainda.",
+  },
+  invoices: {
+    title: "Cobrancas",
+    subtitle: "Boleto, link de pagamento ou chave Pix — tudo que esta em aberto com voce.",
+    empty: "Nenhuma cobranca por aqui",
+    emptyBody: "Quando seu profissional enviar uma cobranca, ela aparece aqui.",
+    downloadBoleto: "Baixar boleto",
+    boletoUnavailable: "Boleto ainda nao disponivel",
+    copyLink: "Copiar link",
+    openLink: "Abrir link de pagamento",
+    copyPix: "Copiar chave Pix",
+  },
+  dashboardWidgets: {
+    calendarTitle: "Calendario de publicacoes",
+    calendarEmpty: "Nenhuma publicacao agendada por enquanto.",
+    projectsTitle: "Projetos ativos",
+    projectsEmpty: "Nenhum servico cadastrado ainda.",
+    activityTitle: "Atividades recentes",
+    activityEmpty: "Nenhuma atividade registrada ainda.",
   },
 };
 
@@ -694,6 +743,7 @@ const en: Dictionary = {
     feed: "Feed",
     documents: "Documents",
     chat: "Chat",
+    payments: "Payments",
     settings: "Settings",
   },
   dashboard: {
@@ -706,6 +756,10 @@ const en: Dictionary = {
     documentsCard: "Documents",
     openDocuments: "Open documents",
     noDocuments: "No documents available yet.",
+    paymentsCard: "Payments",
+    openPayments: "Open payments",
+    paymentsOpenCount: (n) => (n === 1 ? "1 charge open" : `${n} charges open`),
+    noOpenPayments: "No open charges.",
     awaitingApprovalSection: "Awaiting approval",
     seeAll: "See all",
     noPending: "Nothing pending here.",
@@ -833,7 +887,7 @@ const en: Dictionary = {
     empty: "Nothing in the feed yet.",
     newBadge: "new",
   },
-  common: { logout: "Sign out", loading: "Loading..." },
+  common: { logout: "Sign out", loading: "Loading...", reload: "Reload app" },
   contentType: { image: "Image", video: "Video", carousel: "Carousel", slide: "slide", slides: "slides" },
   media: {
     unavailable: "File unavailable",
@@ -892,6 +946,25 @@ const en: Dictionary = {
     reportTitle: "Board votes",
     reportEmpty: "No updates published yet.",
     votersEmpty: "No one has voted yet.",
+  },
+  invoices: {
+    title: "Payments",
+    subtitle: "Boleto, payment link or Pix key — everything open with you.",
+    empty: "No charges yet",
+    emptyBody: "When your content manager sends a charge, it shows up here.",
+    downloadBoleto: "Download boleto",
+    boletoUnavailable: "Boleto not available yet",
+    copyLink: "Copy link",
+    openLink: "Open payment link",
+    copyPix: "Copy Pix key",
+  },
+  dashboardWidgets: {
+    calendarTitle: "Publishing calendar",
+    calendarEmpty: "No publication scheduled yet.",
+    projectsTitle: "Active projects",
+    projectsEmpty: "No service registered yet.",
+    activityTitle: "Recent activity",
+    activityEmpty: "No activity logged yet.",
   },
 };
 

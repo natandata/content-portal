@@ -10,6 +10,7 @@ export const BUCKETS = {
   content: "content",
   thumbnails: "thumbnails",
   profiles: "profiles",
+  invoices: "invoices",
 } as const;
 
 export type BucketName = (typeof BUCKETS)[keyof typeof BUCKETS];
@@ -38,6 +39,10 @@ export function contentFilePath(
 
 export function thumbnailPath(clientId: string, contentId: string, position: number): string {
   return `${clientId}/${contentId}/${String(position).padStart(2, "0")}-${Date.now()}.jpg`;
+}
+
+export function invoiceBoletoPath(clientId: string, invoiceId: string, fileName: string): string {
+  return `${clientId}/${invoiceId}/${Date.now()}-${safeFileName(fileName)}`;
 }
 
 export function avatarPath(clientId: string, fileName: string): string {

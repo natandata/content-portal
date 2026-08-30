@@ -7,6 +7,7 @@ import { requireClientActor, requireStaff } from "@/lib/auth";
 import { BUCKETS } from "@/lib/paths";
 import { createClient } from "@/lib/supabase/server";
 import { resolveClientStaffIds, sendPushToClient, sendPushToUsers } from "@/lib/push";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { ContractRow, ContractStatus } from "@/types/database";
 
@@ -177,7 +178,7 @@ export async function submitSignedDocumentAction(
   contractId: string,
   filePath: string,
 ): Promise<ActionResult<null>> {
-  await requireClientActor();
+  const actor = await requireClientActor();
   const supabase = await createClient();
 
   const { data: contract, error } = await supabase.rpc("submit_signed_contract", {
@@ -192,6 +193,13 @@ export async function submitSignedDocumentAction(
   revalidateDocuments();
 
   if (contract) {
+    await logClientActivity(
+      supabase,
+      contract.client_id,
+      actor.displayName,
+      `Assinou o documento "${contract.title}"`,
+    );
+
     const { professionalId, adminIds } = await resolveClientStaffIds(contract.client_id);
     const notice = {
       title: "Documento assinado recebido",

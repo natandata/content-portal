@@ -1,5 +1,6 @@
 import {
   Activity,
+  Banknote,
   CheckCircle2,
   FileText,
   Grid3x3,
@@ -20,7 +21,13 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   /** Qual contador do menu aparece neste item, quando houver pendencia. */
-  badge?: "approvals" | "contracts" | "chat";
+  badge?: "approvals" | "contracts" | "chat" | "invoices";
+  /**
+   * So usado na area do cliente: item existe no menu de topo (desktop), mas
+   * fica de fora da barra inferior do celular — ela ja esta no limite de
+   * itens que cabem sem cortar em 360-375px.
+   */
+  hideOnMobileNav?: boolean;
 }
 
 export function staffNavItems(role: UserRole): NavItem[] {
@@ -32,6 +39,7 @@ export function staffNavItems(role: UserRole): NavItem[] {
     { href: `${base}/content`, label: "Conteudos", icon: Images },
     { href: `${base}/approvals`, label: "Aprovacoes", icon: CheckCircle2, badge: "approvals" },
     { href: `${base}/documents`, label: "Documentos", icon: FileText, badge: "contracts" },
+    { href: `${base}/payments`, label: "Cobrancas", icon: Banknote, badge: "invoices" },
     { href: `${base}/feed`, label: "Feed", icon: Grid3x3 },
     { href: `${base}/chat`, label: "Chat", icon: MessageCircle, badge: "chat" },
     { href: `${base}/updates`, label: "Mural", icon: Megaphone },
@@ -54,4 +62,11 @@ export const clientNavItems: NavItem[] = [
   { href: "/client/feed", label: "Feed", icon: Grid3x3 },
   { href: "/client/documents", label: "Documentos", icon: FileText, badge: "contracts" },
   { href: "/client/chat", label: "Chat", icon: MessageCircle, badge: "chat" },
+  {
+    href: "/client/payments",
+    label: "Cobrancas",
+    icon: Banknote,
+    badge: "invoices",
+    hideOnMobileNav: true,
+  },
 ];

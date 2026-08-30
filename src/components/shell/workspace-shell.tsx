@@ -7,6 +7,7 @@ import { LogOut, Menu, X } from "lucide-react";
 
 import { NavBadge } from "@/components/shell/nav-badge";
 import { staffNavItems } from "@/components/shell/nav-items";
+import { ReloadAppButton } from "@/components/shell/reload-app-button";
 import { IconButton } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { ROLE_LABEL } from "@/lib/domain";
@@ -91,6 +92,7 @@ export function WorkspaceShell({
           {ROLE_LABEL[role]} · {email}
         </p>
       </div>
+      <ReloadAppButton label="Recarregar o app" />
       <form action="/api/auth/logout" method="post">
         <IconButton label="Sair" type="submit">
           <LogOut className="size-4" />
@@ -137,9 +139,12 @@ export function WorkspaceShell({
           </span>
           <span className="truncate text-sm font-semibold text-ink-900">Content Portal</span>
         </Link>
-        <IconButton label="Abrir menu" className="shrink-0" onClick={() => setMenuOpen(true)}>
-          <Menu className="size-5" />
-        </IconButton>
+        <div className="flex shrink-0 items-center gap-1">
+          <ReloadAppButton label="Recarregar o app" />
+          <IconButton label="Abrir menu" onClick={() => setMenuOpen(true)}>
+            <Menu className="size-5" />
+          </IconButton>
+        </div>
       </header>
 
       {menuOpen ? (

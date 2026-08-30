@@ -2,7 +2,10 @@ import type {
   ContentStatus,
   ContentType,
   ContractStatus,
+  CurrencyCode,
   DocumentKind,
+  InvoiceMethod,
+  InvoiceStatus,
   UserRole,
 } from "@/types/database";
 
@@ -234,3 +237,60 @@ export function linkProviderLabel(url: string): string {
  * devolve pelo upload de documento assinado que ja existe nesta tela.
  */
 export const GOV_BR_ASSINADOR_URL = "https://assinador.iti.br/";
+
+// ---------------------------------------------------------------------------
+// Cobrancas (pagamentos)
+// ---------------------------------------------------------------------------
+
+export const CURRENCIES: CurrencyCode[] = ["BRL", "USD", "EUR", "GBP"];
+
+export const CURRENCY_LABEL: Record<CurrencyCode, string> = {
+  BRL: "Real (R$)",
+  USD: "Dolar (US$)",
+  EUR: "Euro (€)",
+  GBP: "Libra esterlina (£)",
+};
+
+export const INVOICE_METHODS: InvoiceMethod[] = ["boleto", "link", "pix"];
+
+export const INVOICE_METHOD_LABEL: Record<InvoiceMethod, string> = {
+  boleto: "Boleto",
+  link: "Link de pagamento",
+  pix: "Chave Pix",
+};
+
+export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
+  open: "Em aberto",
+  paid: "Paga",
+};
+
+/** Valor formatado na moeda certa — cada moeda com seu proprio simbolo, sempre. */
+export function formatMoney(
+  amount: number,
+  currency: CurrencyCode,
+  locale: "pt-BR" | "en" = "pt-BR",
+): string {
+  const intlLocale = currency === "BRL" ? "pt-BR" : locale === "en" ? "en-US" : "pt-BR";
+  return new Intl.NumberFormat(intlLocale, { style: "currency", currency }).format(amount);
+}
+
+/**
+ * Dias entre hoje (no fuso do app) e uma data pura (`date` do Postgres).
+ * Positivo = ainda vai vencer, zero = vence hoje, negativo = ja venceu.
+ */
+export function daysUntil(dateValue: string): number {
+  const anchor = new Date(`${dateValue}T12:00:00Z`);
+  const today = new Date(`${new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date())}T12:00:00Z`);
+  return Math.round((anchor.getTime() - today.getTime()) / 86_400_000);
+}
+
+/** Rotulo curto do prazo — usado no badge de status da cobranca. */
+export function dueDateLabel(dateValue: string, status: InvoiceStatus): { text: string; tone: BadgeTone } {
+  if (status === "paid") return { text: "Paga", tone: "success" };
+
+  const diff = daysUntil(dateValue);
+  if (diff < 0) return { text: `Vencida ha ${Math.abs(diff)} dia${Math.abs(diff) === 1 ? "" : "s"}`, tone: "danger" };
+  if (diff === 0) return { text: "Vence hoje", tone: "warning" };
+  if (diff <= 5) return { text: `Vence em ${diff} dia${diff === 1 ? "" : "s"}`, tone: "warning" };
+  return { text: "Em aberto", tone: "neutral" };
+}

@@ -12,6 +12,10 @@ export type ClientStatus = "active" | "inactive";
 
 export type ChatLinkTarget = "dashboard" | "content" | "documents" | "feed";
 
+export type InvoiceMethod = "boleto" | "link" | "pix";
+export type InvoiceStatus = "open" | "paid";
+export type CurrencyCode = "BRL" | "USD" | "EUR" | "GBP";
+
 export type ContractStatus =
   | "awaiting_signature"
   | "signed"
@@ -286,6 +290,46 @@ export type BulletinAdminReportRow = {
   voters: { name: string; role: string; vote: 1 | -1 }[];
 }
 
+export type InvoiceRow = {
+  id: string;
+  client_id: string;
+  created_by: string | null;
+  title: string;
+  method: InvoiceMethod;
+  amount: number;
+  currency: CurrencyCode;
+  due_date: string;
+  boleto_file_path: string | null;
+  payment_link: string | null;
+  pix_key: string | null;
+  status: InvoiceStatus;
+  paid_at: string | null;
+  paid_by: string | null;
+  last_reminder_sent_on: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ClientServiceRow = {
+  id: string;
+  client_id: string;
+  created_by: string | null;
+  title: string;
+  amount: number;
+  currency: CurrencyCode;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ClientActivityRow = {
+  id: string;
+  client_id: string;
+  actor_name: string;
+  action: string;
+  created_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -316,6 +360,9 @@ export type Database = {
       chat_reads: Table<ChatReadRow, 'thread_id' | 'user_id'>;
       bulletin_posts: Table<BulletinPostRow, 'title' | 'body'>;
       bulletin_votes: Table<BulletinVoteRow, 'post_id' | 'user_id' | 'vote'>;
+      invoices: Table<InvoiceRow, 'client_id' | 'title' | 'method' | 'amount' | 'due_date'>;
+      client_services: Table<ClientServiceRow, 'client_id' | 'title' | 'amount'>;
+      client_activities: Table<ClientActivityRow, 'client_id' | 'actor_name' | 'action'>;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -396,6 +443,9 @@ export type Database = {
     };
     Enums: {
       chat_link_target: ChatLinkTarget;
+      invoice_method: InvoiceMethod;
+      invoice_status: InvoiceStatus;
+      currency_code: CurrencyCode;
       document_kind: DocumentKind;
       user_role: UserRole;
       user_status: UserStatus;

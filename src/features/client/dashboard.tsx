@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, FileText, Images } from "lucide-react";
+import { ArrowRight, Banknote, FileText, Images } from "lucide-react";
 
 import { ContentCard } from "@/components/content/content-card";
 import { ApprovalActions } from "@/components/content/approval-actions";
@@ -8,6 +8,11 @@ import { EmptyState } from "@/components/ui/feedback";
 import { Card, CardHeader, PageHeader, StatCard } from "@/components/ui/layout";
 import { requireClientActor } from "@/lib/auth";
 import { BulletinWidget } from "@/features/bulletin/bulletin-widget";
+import {
+  ActiveProjectsWidget,
+  PublicationsCalendarWidget,
+  RecentActivityWidget,
+} from "@/features/client/dashboard-widgets";
 import { AWAITING_CLIENT_STATUSES } from "@/lib/domain";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
@@ -19,19 +24,21 @@ export async function ClientDashboard() {
   const supabase = await createClient();
   const { locale, dict } = await getServerDictionary();
 
-  const [{ data: pending }, { data: statusRows }, { data: contracts }] = await Promise.all([
-    supabase
-      .from("contents")
-      .select("*")
-      .in("status", AWAITING_CLIENT_STATUSES)
-      .order("updated_at", { ascending: false }),
-    supabase.from("contents").select("status"),
-    supabase
-      .from("contracts")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1),
-  ]);
+  const [{ data: pending }, { data: statusRows }, { data: contracts }, { count: openInvoicesCount }] =
+    await Promise.all([
+      supabase
+        .from("contents")
+        .select("*")
+        .in("status", AWAITING_CLIENT_STATUSES)
+        .order("updated_at", { ascending: false }),
+      supabase.from("contents").select("status"),
+      supabase
+        .from("contracts")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1),
+      supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
+    ]);
 
   const rows = pending ?? [];
   const ids = rows.map((row) => row.id);
@@ -68,6 +75,15 @@ export async function ClientDashboard() {
         <StatCard label={dict.dashboard.totalReceived} value={statusRows?.length ?? 0} />
       </div>
 
+      <div className="mb-6 grid gap-5 lg:grid-cols-2">
+        <PublicationsCalendarWidget supabase={supabase} locale={locale} />
+        <ActiveProjectsWidget supabase={supabase} locale={locale} />
+      </div>
+
+      <div className="mb-6">
+        <RecentActivityWidget supabase={supabase} locale={locale} />
+      </div>
+
       <BulletinWidget
         supabase={supabase}
         basePath="/client"
@@ -75,26 +91,52 @@ export async function ClientDashboard() {
         locale={locale}
       />
 
-      <Card className="mb-6">
-        <CardHeader title={dict.dashboard.documentsCard} />
-        {contract ? (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-ink-900">{contract.title}</p>
-              <ContractStatusBadge status={contract.status} locale={locale} className="mt-1.5" />
+      <div className="mb-6 grid gap-5 sm:grid-cols-2">
+        <Card>
+          <CardHeader title={dict.dashboard.documentsCard} />
+          {contract ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-ink-900">{contract.title}</p>
+                <ContractStatusBadge status={contract.status} locale={locale} className="mt-1.5" />
+              </div>
+              <Link
+                href="/client/documents"
+                className="focus-ring inline-flex items-center gap-1.5 rounded text-sm font-medium text-accent"
+              >
+                <FileText className="size-4" aria-hidden />
+                {dict.dashboard.openDocuments}
+              </Link>
             </div>
+          ) : (
+            <p className="text-sm text-ink-500">{dict.dashboard.noDocuments}</p>
+          )}
+        </Card>
+
+        {/*
+         * "Cobrancas" fica fora da barra inferior do celular (grid-cols-5 ja
+         * no limite) e do menu de topo em telas pequenas — esse link e o
+         * unico jeito de chegar la pelo celular, entao fica sempre visivel
+         * aqui, nao so quando ha algo em aberto.
+         */}
+        <Card>
+          <CardHeader title={dict.dashboard.paymentsCard} />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-ink-600">
+              {(openInvoicesCount ?? 0) > 0
+                ? dict.dashboard.paymentsOpenCount(openInvoicesCount ?? 0)
+                : dict.dashboard.noOpenPayments}
+            </p>
             <Link
-              href="/client/documents"
+              href="/client/payments"
               className="focus-ring inline-flex items-center gap-1.5 rounded text-sm font-medium text-accent"
             >
-              <FileText className="size-4" aria-hidden />
-              {dict.dashboard.openDocuments}
+              <Banknote className="size-4" aria-hidden />
+              {dict.dashboard.openPayments}
             </Link>
           </div>
-        ) : (
-          <p className="text-sm text-ink-500">{dict.dashboard.noDocuments}</p>
-        )}
-      </Card>
+        </Card>
+      </div>
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-4">

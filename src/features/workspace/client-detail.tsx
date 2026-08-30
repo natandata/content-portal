@@ -7,6 +7,7 @@ import { CopyCode } from "@/components/clients/copy-code";
 import { ContentCard } from "@/components/content/content-card";
 import { StaffContentActions } from "@/components/content/staff-content-actions";
 import { DocumentUploadModal } from "@/components/documents/document-upload-modal";
+import { ClientServicesCard } from "@/components/services/client-services-card";
 import { Badge, ContractStatusBadge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
@@ -14,7 +15,11 @@ import { Card, CardHeader, PageHeader, StatCard } from "@/components/ui/layout";
 import { basePath, requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
-import { loadContentFileCounts, loadContentPreviews } from "@/server/queries";
+import {
+  loadClientServices,
+  loadContentFileCounts,
+  loadContentPreviews,
+} from "@/server/queries";
 import type { ContentStatus } from "@/types/database";
 
 export async function ClientDetail({ clientId }: { clientId: string }) {
@@ -47,6 +52,8 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
       .select("id", { count: "exact", head: true })
       .eq("client_id", clientId),
   ]);
+
+  const services = await loadClientServices(supabase, clientId);
 
   const professionals =
     actor.role === "admin"
@@ -226,6 +233,8 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
               Organizar feed
             </Link>
           </Card>
+
+          <ClientServicesCard clientId={client.id} services={services} />
         </div>
       </div>
     </>

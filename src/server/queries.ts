@@ -9,6 +9,8 @@ import { signedUrl, signedUrlMap } from "@/lib/storage";
 import type {
   BulletinAdminReportRow,
   BulletinFeedRow,
+  ClientActivityRow,
+  ClientServiceRow,
   ContentFileRow,
   ContentRow,
   ContentStatus,
@@ -277,6 +279,7 @@ export interface NavBadges {
   approvals: number;
   contracts: number;
   chat: number;
+  invoices: number;
 }
 
 /** Equipe: o cliente respondeu (ou devolveu o contrato) e a bola voltou. */
@@ -284,7 +287,7 @@ export async function loadStaffBadges(supabase: Client): Promise<NavBadges> {
   const answered: ContentStatus[] = ["approved", "revision_requested", "rejected"];
   const returned: ContractStatus[] = ["signed", "under_review"];
 
-  const [contents, contracts, chat] = await Promise.all([
+  const [contents, contracts, chat, invoices] = await Promise.all([
     supabase
       .from("contents")
       .select("id", { count: "exact", head: true })
@@ -294,16 +297,22 @@ export async function loadStaffBadges(supabase: Client): Promise<NavBadges> {
       .select("id", { count: "exact", head: true })
       .in("status", returned),
     supabase.rpc("unread_chat_count"),
+    supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
   ]);
 
-  return { approvals: contents.count ?? 0, contracts: contracts.count ?? 0, chat: chat.data ?? 0 };
+  return {
+    approvals: contents.count ?? 0,
+    contracts: contracts.count ?? 0,
+    chat: chat.data ?? 0,
+    invoices: invoices.count ?? 0,
+  };
 }
 
 /** Cliente: o que chegou para ele decidir ou assinar. */
 export async function loadClientBadges(supabase: Client): Promise<NavBadges> {
   const waiting: ContentStatus[] = ["submitted", "awaiting_approval"];
 
-  const [contents, contracts, chat] = await Promise.all([
+  const [contents, contracts, chat, invoices] = await Promise.all([
     supabase
       .from("contents")
       .select("id", { count: "exact", head: true })
@@ -313,9 +322,15 @@ export async function loadClientBadges(supabase: Client): Promise<NavBadges> {
       .select("id", { count: "exact", head: true })
       .eq("status", "awaiting_signature" satisfies ContractStatus),
     supabase.rpc("unread_chat_count"),
+    supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
   ]);
 
-  return { approvals: contents.count ?? 0, contracts: contracts.count ?? 0, chat: chat.data ?? 0 };
+  return {
+    approvals: contents.count ?? 0,
+    contracts: contracts.count ?? 0,
+    chat: chat.data ?? 0,
+    invoices: invoices.count ?? 0,
+  };
 }
 
 /** Itens do feed de um cliente, ja com capa assinada, na ordem publicada. */
@@ -403,5 +418,53 @@ export async function loadBulletinAdminReport(
   supabase: Client,
 ): Promise<BulletinAdminReportRow[]> {
   const { data } = await supabase.rpc("bulletin_admin_report");
+  return data ?? [];
+}
+
+/** Calendario de publicacoes: proximos conteudos com data agendada, mais cedo primeiro. */
+export async function loadUpcomingContents(
+  supabase: Client,
+  limit = 3,
+): Promise<ContentRow[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from("contents")
+    .select("*")
+    .gte("scheduled_date", today)
+    .not("scheduled_date", "is", null)
+    .order("scheduled_date", { ascending: true })
+    .limit(limit);
+  return data ?? [];
+}
+
+/**
+ * Projetos ativos: escopo combinado com o cliente, na ordem cadastrada.
+ * `clientId` e opcional na area do cliente (a RLS ja so devolve o proprio),
+ * mas obrigatorio na pratica quando chamado da tela da equipe — sem ele, um
+ * profissional com varios clientes veria o escopo de todos misturado.
+ */
+export async function loadClientServices(
+  supabase: Client,
+  clientId?: string,
+): Promise<ClientServiceRow[]> {
+  let query = supabase.from("client_services").select("*").order("position", { ascending: true });
+  if (clientId) query = query.eq("client_id", clientId);
+  const { data } = await query;
+  return data ?? [];
+}
+
+/** Atividades recentes do cliente, mais nova primeiro. Mesma ressalva do `clientId` acima. */
+export async function loadClientActivities(
+  supabase: Client,
+  limit = 8,
+  clientId?: string,
+): Promise<ClientActivityRow[]> {
+  let query = supabase
+    .from("client_activities")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (clientId) query = query.eq("client_id", clientId);
+  const { data } = await query;
   return data ?? [];
 }

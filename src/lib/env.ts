@@ -32,6 +32,17 @@ export function adminEmail(): string {
   return (process.env.ADMIN_EMAIL ?? "admin@contentportal.local").toLowerCase();
 }
 
+/**
+ * Segredo que a Vercel manda automaticamente (`Authorization: Bearer ...`) ao
+ * chamar um Cron Job, quando a variavel CRON_SECRET existe no projeto. Sem a
+ * variavel configurada, o endpoint de cron recusa toda chamada — falha
+ * fechado de proposito, nunca aberto.
+ */
+export function cronSecret(): string | null {
+  const value = process.env.CRON_SECRET;
+  return value && value.trim() !== "" ? value : null;
+}
+
 export const isSupabaseConfigured =
   publicEnv.supabaseUrl.length > 0 && publicEnv.supabaseAnonKey.length > 0;
 

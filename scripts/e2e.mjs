@@ -946,7 +946,195 @@ async function main() {
     );
 
     // ---------------------------------------------------------------------
-    console.log("\n  [12] Limpeza");
+    console.log("\n  [12] Cobrancas e projetos ativos");
+    // ---------------------------------------------------------------------
+    await denied(
+      "cliente nao cria cobranca",
+      clientA.from("invoices").insert({
+        client_id: alfa.id,
+        title: "Tentativa",
+        method: "pix",
+        amount: 100,
+        currency: "BRL",
+        due_date: "2026-01-01",
+        pix_key: "chave@teste.com",
+      }),
+    );
+
+    await denied(
+      "cobranca por link exige o link (CHECK do banco)",
+      prof.from("invoices").insert({
+        client_id: alfa.id,
+        title: "Cobranca sem link",
+        method: "link",
+        amount: 500,
+        currency: "BRL",
+        due_date: "2026-01-01",
+      }),
+    );
+
+    await denied(
+      "cobranca por pix exige a chave (CHECK do banco)",
+      prof.from("invoices").insert({
+        client_id: alfa.id,
+        title: "Cobranca sem chave",
+        method: "pix",
+        amount: 500,
+        currency: "BRL",
+        due_date: "2026-01-01",
+      }),
+    );
+
+    const { data: pixInvoice, error: pixInvoiceError } = await prof
+      .from("invoices")
+      .insert({
+        client_id: alfa.id,
+        title: "Mensalidade E2E",
+        method: "pix",
+        amount: 1500,
+        currency: "BRL",
+        due_date: "2026-01-05",
+        pix_key: "chave-pix-e2e@teste.com",
+        created_by: profAuth.user.id,
+      })
+      .select("*")
+      .single();
+    check("profissional cria cobranca via Pix", !pixInvoiceError && Boolean(pixInvoice));
+
+    const { data: linkInvoice, error: linkInvoiceError } = await prof
+      .from("invoices")
+      .insert({
+        client_id: alfa.id,
+        title: "Pacote extra E2E",
+        method: "link",
+        amount: 200,
+        currency: "GBP",
+        due_date: "2026-02-10",
+        payment_link: "https://pagamento.exemplo.com/e2e",
+        created_by: profAuth.user.id,
+      })
+      .select("*")
+      .single();
+    check(
+      "profissional cria cobranca via link em outra moeda (GBP)",
+      !linkInvoiceError && Boolean(linkInvoice) && linkInvoice.currency === "GBP",
+    );
+
+    await denied(
+      "link com esquema perigoso e recusado",
+      prof.from("invoices").insert({
+        client_id: alfa.id,
+        title: "Cobranca maliciosa",
+        method: "link",
+        amount: 10,
+        currency: "BRL",
+        due_date: "2026-01-01",
+        payment_link: "javascript:alert(1)",
+      }),
+    );
+
+    const { data: clientASeesInvoices } = await clientA.from("invoices").select("id");
+    check(
+      "cliente A ve as duas cobrancas do proprio cadastro",
+      clientASeesInvoices?.length === 2,
+    );
+
+    const { data: clientBSeesInvoices } = await clientB.from("invoices").select("id");
+    check("cliente B nao ve cobranca do cliente A", (clientBSeesInvoices ?? []).length === 0);
+
+    const { error: clientMarksInvoicePaidError, count: clientMarkCount } = await clientA
+      .from("invoices")
+      .update({ status: "paid" }, { count: "exact" })
+      .eq("id", pixInvoice.id);
+    check(
+      "cliente nao marca a propria cobranca como paga (RLS bloqueia)",
+      !clientMarksInvoicePaidError && clientMarkCount === 0,
+    );
+
+    const { data: paidInvoice, error: markPaidError } = await prof
+      .from("invoices")
+      .update({ status: "paid", paid_at: new Date().toISOString(), paid_by: profAuth.user.id })
+      .eq("id", pixInvoice.id)
+      .select("*")
+      .single();
+    check(
+      "profissional marca a cobranca como paga",
+      !markPaidError && paidInvoice?.status === "paid" && Boolean(paidInvoice?.paid_at),
+    );
+
+    const { error: deleteInvoiceError } = await prof.from("invoices").delete().eq("id", linkInvoice.id);
+    check("profissional exclui uma cobranca", !deleteInvoiceError);
+
+    // -- Servicos combinados (Projetos Ativos) -----------------------------
+    await denied(
+      "cliente nao cadastra servico combinado",
+      clientA.from("client_services").insert({
+        client_id: alfa.id,
+        title: "Tentativa",
+        amount: 100,
+        currency: "BRL",
+      }),
+    );
+
+    const { data: service, error: serviceError } = await prof
+      .from("client_services")
+      .insert({
+        client_id: alfa.id,
+        title: "Social Media E2E",
+        amount: 1500,
+        currency: "BRL",
+        created_by: profAuth.user.id,
+      })
+      .select("*")
+      .single();
+    check("profissional cadastra servico combinado", !serviceError && Boolean(service));
+
+    const { data: clientASeesServices } = await clientA.from("client_services").select("id, title");
+    check(
+      "cliente A ve o proprio servico combinado",
+      clientASeesServices?.some((row) => row.id === service.id),
+    );
+
+    const { data: clientBSeesServices } = await clientB.from("client_services").select("id");
+    check("cliente B nao ve servico do cliente A", (clientBSeesServices ?? []).length === 0);
+
+    const { error: updateServiceError } = await prof
+      .from("client_services")
+      .update({ amount: 1800 })
+      .eq("id", service.id);
+    check("profissional atualiza o valor do servico", !updateServiceError);
+
+    // -- Atividades recentes -------------------------------------------------
+    await denied(
+      "cliente nao registra atividade em cadastro alheio",
+      clientA.from("client_activities").insert({
+        client_id: beta.id,
+        actor_name: "Contato Alfa Marcas E2E",
+        action: "Tentativa de log cruzado",
+      }),
+    );
+
+    const { error: activityError } = await clientA.from("client_activities").insert({
+      client_id: alfa.id,
+      actor_name: "Contato Alfa Marcas E2E",
+      action: "Aprovou o conteudo E2E",
+    });
+    check("cliente registra a propria atividade", !activityError);
+
+    const { data: clientASeesActivities } = await clientA
+      .from("client_activities")
+      .select("id, action")
+      .eq("client_id", alfa.id);
+    check(
+      "cliente A ve a atividade registrada",
+      clientASeesActivities?.some((row) => row.action === "Aprovou o conteudo E2E"),
+    );
+
+    const { data: clientBSeesActivities } = await clientB.from("client_activities").select("id");
+    check("cliente B nao ve atividade do cliente A", (clientBSeesActivities ?? []).length === 0);
+
+    // ---------------------------------------------------------------------
+    console.log("\n  [13] Limpeza");
     // ---------------------------------------------------------------------
   } finally {
     for (const id of created.clients) {
