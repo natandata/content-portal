@@ -9,13 +9,20 @@ import { createClient } from "@/lib/supabase/server";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { ContractRow, ContractStatus } from "@/types/database";
 
-const createSchema = z.object({
-  clientId: z.uuid("Selecione um cliente"),
-  title: z.string().trim().min(2, "Informe o nome do documento"),
-  notes: z.string().trim().max(1000).optional(),
-  kind: z.enum(["contract", "strategy", "brandbook", "mockup", "other"]),
-  requiresSignature: z.boolean(),
-});
+const createSchema = z
+  .object({
+    clientId: z.uuid("Selecione um cliente"),
+    title: z.string().trim().min(2, "Informe o nome do documento"),
+    notes: z.string().trim().max(1000).optional(),
+    kind: z.enum(["contract", "strategy", "brandbook", "mockup", "other"]),
+    requiresSignature: z.boolean(),
+    // So faz sentido oferecer o atalho do Gov.br quando ha o que assinar.
+    allowGovBrSignature: z.boolean().default(false),
+  })
+  .refine((data) => !data.allowGovBrSignature || data.requiresSignature, {
+    message: "A assinatura via Gov.br exige pedir devolucao assinada.",
+    path: ["allowGovBrSignature"],
+  });
 
 function revalidateDocuments(clientId?: string) {
   revalidatePath("/admin/documents");
@@ -48,6 +55,7 @@ export async function createDocumentAction(
       notes: parsed.data.notes || null,
       kind: parsed.data.kind,
       requires_signature: parsed.data.requiresSignature,
+      allow_gov_br_signature: parsed.data.allowGovBrSignature,
       created_by: actor.authUser.id,
     })
     .select("*")

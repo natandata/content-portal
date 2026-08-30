@@ -83,6 +83,9 @@ export async function DocumentsList({ clientId }: { clientId?: string } = {}) {
                         {contract.title}
                       </h3>
                       <Badge tone="neutral">{DOCUMENT_KIND_LABEL[contract.kind]}</Badge>
+                      {contract.allow_gov_br_signature ? (
+                        <Badge tone="info">Gov.br habilitado</Badge>
+                      ) : null}
                     </div>
                     <p className="mt-0.5 text-sm text-ink-500">
                       {clientId ? null : (

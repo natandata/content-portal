@@ -504,6 +504,42 @@ async function main() {
       }),
     );
 
+    // Assinatura via Gov.br: so pode ser habilitada junto com devolucao assinada.
+    const { data: signable } = await prof
+      .from("contracts")
+      .insert({
+        client_id: alfa.id,
+        title: "Contrato Gov.br E2E",
+        kind: "contract",
+        requires_signature: true,
+        allow_gov_br_signature: true,
+        created_by: profAuth.user.id,
+      })
+      .select("*")
+      .single();
+    check("documento aceita habilitar assinatura via Gov.br",
+      signable?.allow_gov_br_signature === true);
+
+    const { data: clientSignable } = await clientA
+      .from("contracts")
+      .select("allow_gov_br_signature")
+      .eq("id", signable.id)
+      .single();
+    check("cliente ve a assinatura via Gov.br habilitada",
+      clientSignable?.allow_gov_br_signature === true);
+
+    await denied(
+      "recusa Gov.br habilitado sem pedir devolucao assinada",
+      prof.from("contracts").insert({
+        client_id: alfa.id,
+        title: "Contrato invalido E2E",
+        kind: "contract",
+        requires_signature: false,
+        allow_gov_br_signature: true,
+        created_by: profAuth.user.id,
+      }),
+    );
+
     await denied(
       "profissional nao le a saude da plataforma",
       prof.rpc("platform_stats"),

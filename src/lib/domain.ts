@@ -211,3 +211,20 @@ export function linkProviderLabel(url: string): string {
 
   return host.replace(/^www\./i, "");
 }
+
+// ---------------------------------------------------------------------------
+// Assinatura via Gov.br
+// ---------------------------------------------------------------------------
+
+/**
+ * Assinador de documentos do ITI (Instituto Nacional de Tecnologia da
+ * Informacao), o mesmo orgao que emite o certificado do gov.br. Aceita login
+ * com conta gov.br e assina o PDF que a pessoa enviar por la.
+ *
+ * Nao ha API publica para abrir ja com o arquivo carregado nem para receber o
+ * PDF assinado de volta automaticamente — isso exigiria integracao
+ * credenciada com o ITI. O botao e um redirecionamento de conveniencia: abre
+ * o assinador oficial em nova aba: o cliente baixa o PDF aqui, assina la, e
+ * devolve pelo upload de documento assinado que ja existe nesta tela.
+ */
+export const GOV_BR_ASSINADOR_URL = "https://assinador.iti.br/";

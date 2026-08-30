@@ -1,6 +1,7 @@
 import { Download, FileCheck2, FileText } from "lucide-react";
 
 import { DocumentPreview } from "@/components/documents/document-preview";
+import { GovBrSignatureButton } from "@/components/documents/gov-br-signature-button";
 import { SignedDocumentUpload } from "@/components/documents/signed-document-upload";
 import { Badge, ContractStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
@@ -121,11 +122,14 @@ export async function ClientDocuments() {
                       Documento conferido e aprovado pelo seu gestor.
                     </p>
                   ) : (
-                    <SignedDocumentUpload
-                      contractId={contract.id}
-                      clientId={actor.client.id}
-                      alreadySent={alreadySent}
-                    />
+                    <>
+                      {contract.allow_gov_br_signature ? <GovBrSignatureButton /> : null}
+                      <SignedDocumentUpload
+                        contractId={contract.id}
+                        clientId={actor.client.id}
+                        alreadySent={alreadySent}
+                      />
+                    </>
                   )}
 
                   {signedUrl ? (

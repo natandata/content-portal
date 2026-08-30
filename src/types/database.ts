@@ -72,6 +72,8 @@ export type ContractRow = {
   status: ContractStatus;
   kind: DocumentKind;
   requires_signature: boolean;
+  /** Mostra ao cliente o botao "Assinar com Gov.br" — redireciona, nao integra. */
+  allow_gov_br_signature: boolean;
   created_by: string | null;
   uploaded_at: string | null;
   signed_at: string | null;

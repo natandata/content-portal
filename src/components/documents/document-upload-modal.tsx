@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { FileUp, Plus } from "lucide-react";
+import { ExternalLink, FileUp, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
 } from "@/lib/domain";
 import { BUCKETS, contractPath } from "@/lib/paths";
 import { uploadToBucket, validateFile } from "@/lib/upload";
-import { formatBytes } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 import type { DocumentKind } from "@/types/database";
 import { attachDocumentFileAction, createDocumentAction } from "@/server/actions/documents";
 
@@ -42,6 +42,7 @@ export function DocumentUploadModal({
   const [kind, setKind] = useState<DocumentKind>("contract");
   const [title, setTitle] = useState(DOCUMENT_KIND_DEFAULT_TITLE.contract);
   const [requiresSignature, setRequiresSignature] = useState(true);
+  const [allowGovBrSignature, setAllowGovBrSignature] = useState(false);
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +73,7 @@ export function DocumentUploadModal({
         notes,
         kind,
         requiresSignature,
+        allowGovBrSignature: requiresSignature && allowGovBrSignature,
       });
       if (!created.ok) {
         setError(created.error);
@@ -162,7 +164,9 @@ export function DocumentUploadModal({
                     ? suggestion
                     : current,
                 );
-                setRequiresSignature(defaultRequiresSignature(next));
+                const nextRequires = defaultRequiresSignature(next);
+                setRequiresSignature(nextRequires);
+                if (!nextRequires) setAllowGovBrSignature(false);
                 setKind(next);
               }}
               disabled={busy}
@@ -188,7 +192,11 @@ export function DocumentUploadModal({
             <input
               type="checkbox"
               checked={requiresSignature}
-              onChange={(event) => setRequiresSignature(event.target.checked)}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setRequiresSignature(checked);
+                if (!checked) setAllowGovBrSignature(false);
+              }}
               disabled={busy}
               className="mt-0.5 size-4 accent-ink-900"
             />
@@ -198,6 +206,32 @@ export function DocumentUploadModal({
               </span>
               <span className="block text-xs text-ink-500">
                 Marcado, o cliente ve o botao para enviar o arquivo assinado de volta.
+              </span>
+            </span>
+          </label>
+
+          <label
+            className={cn(
+              "flex items-start gap-2.5 rounded-xl border border-line px-3 py-2.5 transition",
+              requiresSignature ? "bg-ink-50/60" : "cursor-not-allowed bg-ink-50/30 opacity-60",
+            )}
+          >
+            <input
+              type="checkbox"
+              checked={allowGovBrSignature}
+              onChange={(event) => setAllowGovBrSignature(event.target.checked)}
+              disabled={busy || !requiresSignature}
+              className="mt-0.5 size-4 accent-ink-900"
+            />
+            <span>
+              <span className="flex items-center gap-1.5 text-sm font-medium text-ink-900">
+                Habilitar assinatura
+                <ExternalLink className="size-3.5 text-ink-400" aria-hidden />
+              </span>
+              <span className="block text-xs text-ink-500">
+                Mostra ao cliente o botao &ldquo;Assinar com Gov.br&rdquo;, que abre o
+                assinador oficial do governo em outra aba. E um atalho — o cliente ainda
+                baixa o PDF aqui e devolve o assinado por este mesmo formulario.
               </span>
             </span>
           </label>
