@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 
 import { NavBadge } from "@/components/shell/nav-badge";
 import { clientNavItems } from "@/components/shell/nav-items";
@@ -58,6 +58,19 @@ export function ClientShell({
             <div className="w-[92px] shrink-0">
               <ThemeToggle compact />
             </div>
+
+            <Link
+              href="/client/settings"
+              className={cn(
+                "focus-ring flex size-9 shrink-0 items-center justify-center rounded-lg transition",
+                isActive("/client/settings")
+                  ? "bg-ink-100 text-ink-900"
+                  : "text-ink-500 hover:bg-ink-50 hover:text-ink-800",
+              )}
+              aria-label="Configuracoes"
+            >
+              <Settings className="size-4" aria-hidden />
+            </Link>
 
             <form action="/api/auth/logout" method="post">
               <IconButton label="Sair" type="submit">

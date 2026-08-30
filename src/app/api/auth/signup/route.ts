@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { sendPushToAdmins } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -74,6 +75,13 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  await sendPushToAdmins({
+    title: "Nova solicitacao de acesso",
+    body: `${name} pediu acesso como profissional.`,
+    url: "/admin/professionals",
+    tag: "access-request",
+  }).catch(() => {});
 
   return NextResponse.json(NEUTRAL, { status: 201 });
 }

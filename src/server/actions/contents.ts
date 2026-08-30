@@ -7,6 +7,7 @@ import { requireStaff } from "@/lib/auth";
 import { LINK_FILE_TYPE, MAX_CAROUSEL_SLIDES, normalizeExternalUrl } from "@/lib/domain";
 import { BUCKETS } from "@/lib/paths";
 import { createClient } from "@/lib/supabase/server";
+import { sendPushToClient } from "@/lib/push";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { ContentRow } from "@/types/database";
 
@@ -270,6 +271,15 @@ export async function submitContentAction(contentId: string): Promise<ActionResu
     return fail("Adicione ao menos um arquivo antes de enviar para o cliente.");
   }
 
+  // O status anterior distingue o primeiro envio de um reenvio apos ajuste —
+  // sao duas notificacoes diferentes para o cliente.
+  const { data: before } = await supabase
+    .from("contents")
+    .select("status, title")
+    .eq("id", contentId)
+    .maybeSingle();
+  const wasAdjustment = before?.status === "revision_requested" || before?.status === "rejected";
+
   const { data, error } = await supabase
     .from("contents")
     .update({ status: "awaiting_approval" })
@@ -283,6 +293,23 @@ export async function submitContentAction(contentId: string): Promise<ActionResu
 
   await logHistory(contentId, "Conteudo enviado para aprovacao");
   revalidateContents(data.client_id, contentId);
+
+  // Aguardado: em serverless, um fire-and-forget pode ser cortado quando a
+  // funcao termina antes da promessa — nunca sabemos se a notificacao saiu.
+  // Falha aqui nunca derruba a acao: o conteudo ja foi enviado de verdade.
+  await sendPushToClient(data.client_id, wasAdjustment
+    ? {
+        title: "Ajuste feito",
+        body: `"${before?.title ?? "Conteudo"}" foi atualizado e esta pronto para sua revisao.`,
+        url: `/client/content/${contentId}`,
+        tag: `content-${contentId}`,
+      }
+    : {
+        title: "Novo conteudo para aprovar",
+        body: `"${before?.title ?? "Conteudo"}" chegou e esta esperando sua avaliacao.`,
+        url: `/client/content/${contentId}`,
+        tag: `content-${contentId}`,
+      }).catch(() => {});
   return done();
 }
 

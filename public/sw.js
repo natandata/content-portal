@@ -87,3 +87,60 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+/*
+ * Notificacoes push.
+ *
+ * O payload chega em JSON, montado pelo servidor em src/lib/push.ts. O clique
+ * foca uma aba ja aberta na mesma origem em vez de sempre abrir outra —
+ * evita empilhar abas do portal quando a pessoa ja esta com uma aberta.
+ */
+self.addEventListener("push", (event) => {
+  let payload = { title: "Content Portal", body: "Voce tem uma atualizacao." };
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch {
+    // Payload nao veio em JSON — segue com o texto padrao.
+  }
+
+  const url = payload.url || "/";
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag: payload.tag,
+      data: { url },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data && event.notification.data.url;
+  if (!targetUrl) return;
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientsList) => {
+        const target = new URL(targetUrl, self.location.origin).href;
+
+        for (const client of clientsList) {
+          if (client.url.startsWith(self.location.origin) && "focus" in client) {
+            client.navigate(target);
+            return client.focus();
+          }
+        }
+
+        return self.clients.openWindow(target);
+      }),
+  );
+});
+
+self.addEventListener("pushsubscriptionchange", () => {
+  // O navegador as vezes renova a inscricao sozinho (endpoint mudou). Sem um
+  // canal para reinscrever em segundo plano, a proxima abertura do app resolve
+  // isso — a UI de notificacoes detecta a divergencia e reinscreve.
+});

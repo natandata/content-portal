@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireClientActor, requireStaff } from "@/lib/auth";
 import { BUCKETS } from "@/lib/paths";
 import { createClient } from "@/lib/supabase/server";
+import { resolveClientStaffIds, sendPushToClient, sendPushToUsers } from "@/lib/push";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { ContractRow, ContractStatus } from "@/types/database";
 
@@ -79,13 +80,12 @@ export async function attachDocumentFileAction(
   // Documento que nao pede assinatura ja nasce entregue: nao ha o que aguardar.
   const { data: document } = await supabase
     .from("contracts")
-    .select("requires_signature")
+    .select("requires_signature, title")
     .eq("id", contractId)
     .maybeSingle();
 
-  const status: ContractStatus = document?.requires_signature === false
-    ? "delivered"
-    : "awaiting_signature";
+  const requiresSignature = document?.requires_signature !== false;
+  const status: ContractStatus = requiresSignature ? "awaiting_signature" : "delivered";
 
   const { data, error } = await supabase
     .from("contracts")
@@ -103,6 +103,22 @@ export async function attachDocumentFileAction(
   }
 
   revalidateDocuments(data.client_id);
+
+  const title = document?.title ?? "Documento";
+  await sendPushToClient(data.client_id, requiresSignature
+    ? {
+        title: "Novo documento para assinatura",
+        body: `"${title}" chegou e esta esperando sua assinatura.`,
+        url: "/client/documents",
+        tag: `document-${contractId}`,
+      }
+    : {
+        title: "Novo documento para visualizar",
+        body: `"${title}" ja esta disponivel para voce ver.`,
+        url: "/client/documents",
+        tag: `document-${contractId}`,
+      }).catch(() => {});
+
   return done();
 }
 
@@ -164,7 +180,7 @@ export async function submitSignedDocumentAction(
   await requireClientActor();
   const supabase = await createClient();
 
-  const { error } = await supabase.rpc("submit_signed_contract", {
+  const { data: contract, error } = await supabase.rpc("submit_signed_contract", {
     p_contract_id: contractId,
     p_file_path: filePath,
   });
@@ -174,5 +190,27 @@ export async function submitSignedDocumentAction(
   }
 
   revalidateDocuments();
+
+  if (contract) {
+    const { professionalId, adminIds } = await resolveClientStaffIds(contract.client_id);
+    const notice = {
+      title: "Documento assinado recebido",
+      body: `O cliente devolveu "${contract.title}" assinado.`,
+      tag: `document-${contractId}`,
+    };
+
+    await Promise.all([
+      professionalId
+        ? sendPushToUsers([professionalId], {
+            ...notice,
+            url: `/professional/documents`,
+          })
+        : Promise.resolve(),
+      adminIds.length > 0
+        ? sendPushToUsers(adminIds, { ...notice, url: "/admin/documents" })
+        : Promise.resolve(),
+    ]).catch(() => {});
+  }
+
   return done();
 }

@@ -43,6 +43,8 @@ export type UserRow = {
   requested_at: string | null;
   /** Quando esta pessoa concluiu (ou pulou) o tour de primeiro acesso. */
   tour_seen_at: string | null;
+  /** Quando esta pessoa respondeu (ou dispensou) o convite de notificacoes. */
+  notifications_prompted_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -58,6 +60,7 @@ export type ClientRow = {
   auth_user_id: string | null;
   status: ClientStatus;
   tour_seen_at: string | null;
+  notifications_prompted_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -117,6 +120,16 @@ export type PlatformSnapshotRow = {
   users_count: number;
   clients_count: number;
   contents_count: number;
+}
+
+export type PushSubscriptionRow = {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth_key: string;
+  user_agent: string | null;
+  created_at: string;
 }
 
 export type ClientProfileRow = {
@@ -199,6 +212,10 @@ export type Database = {
       contracts: Table<ContractRow, 'client_id' | 'title'>;
       contents: Table<ContentRow, 'client_id' | 'title' | 'type'>;
       content_files: Table<ContentFileRow, 'content_id' | 'position' | 'file_type'>;
+      push_subscriptions: Table<
+        PushSubscriptionRow,
+        'user_id' | 'endpoint' | 'p256dh' | 'auth_key'
+      >;
       platform_snapshots: Table<
         PlatformSnapshotRow,
         'database_bytes' | 'storage_bytes' | 'users_count' | 'clients_count' | 'contents_count'
@@ -232,6 +249,10 @@ export type Database = {
         Returns: FeedItemRow[];
       };
       mark_tour_seen: {
+        Args: Record<string, never>;
+        Returns: void;
+      };
+      mark_notifications_prompted: {
         Args: Record<string, never>;
         Returns: void;
       };

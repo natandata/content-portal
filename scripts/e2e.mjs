@@ -678,7 +678,63 @@ async function main() {
     check("cliente B nao ve o perfil do cliente A", (crossProfile ?? []).length === 0);
 
     // ---------------------------------------------------------------------
-    console.log("\n  [9] Limpeza");
+    console.log("\n  [9] Notificacoes");
+    // ---------------------------------------------------------------------
+    const { error: subError } = await clientA.from("push_subscriptions").insert({
+      user_id: alfa.auth_user_id,
+      endpoint: `https://fcm.googleapis.com/fcm/send/e2e-${stamp}`,
+      p256dh: "chave-p256dh-fake",
+      auth_key: "chave-auth-fake",
+    });
+    check("cliente cria a propria inscricao de push", !subError, subError?.message ?? "");
+
+    await denied(
+      "cliente nao cria inscricao para outra pessoa",
+      clientA.from("push_subscriptions").insert({
+        user_id: profAuth.user.id,
+        endpoint: `https://fcm.googleapis.com/fcm/send/e2e-alheio-${stamp}`,
+        p256dh: "x",
+        auth_key: "x",
+      }),
+    );
+
+    const { data: seenByOwner } = await clientA.from("push_subscriptions").select("id");
+    check("cliente ve a propria inscricao", seenByOwner?.length === 1);
+
+    const { data: seenByOther } = await clientB.from("push_subscriptions").select("id");
+    check("cliente B nao ve a inscricao do cliente A", (seenByOther ?? []).length === 0);
+
+    const { error: crossDelete, count: crossDeleteCount } = await clientB
+      .from("push_subscriptions")
+      .delete({ count: "exact" })
+      .eq("user_id", alfa.auth_user_id);
+    check(
+      "cliente B nao apaga a inscricao do cliente A",
+      !crossDelete && crossDeleteCount === 0,
+    );
+
+    const { error: promptError } = await clientA.rpc("mark_notifications_prompted");
+    check("cliente marca o convite de notificacoes como respondido", !promptError);
+
+    const { data: afterPrompt } = await admin
+      .from("clients")
+      .select("notifications_prompted_at")
+      .eq("id", alfa.id)
+      .single();
+    check("marca fica gravada no cliente certo", Boolean(afterPrompt?.notifications_prompted_at));
+
+    const { error: tourError } = await prof.rpc("mark_tour_seen");
+    check("profissional marca o tour como visto", !tourError);
+
+    const { data: profAfterTour } = await admin
+      .from("users")
+      .select("tour_seen_at")
+      .eq("id", profAuth.user.id)
+      .single();
+    check("marca do tour fica gravada no profissional certo", Boolean(profAfterTour?.tour_seen_at));
+
+    // ---------------------------------------------------------------------
+    console.log("\n  [10] Limpeza");
     // ---------------------------------------------------------------------
   } finally {
     for (const id of created.clients) {

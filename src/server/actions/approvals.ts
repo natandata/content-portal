@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireClientActor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { resolveClientStaffIds, sendPushToUsers } from "@/lib/push";
 import { describeError, done, fail, firstIssue, type ActionResult } from "@/server/result";
 
 const schema = z
@@ -33,7 +34,7 @@ export async function submitApprovalAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("submit_approval", {
+  const { data: content, error } = await supabase.rpc("submit_approval", {
     p_content_id: parsed.data.contentId,
     p_status: parsed.data.status,
     p_comment: parsed.data.comment || null,
@@ -52,6 +53,34 @@ export async function submitApprovalAction(
   revalidatePath("/professional/approvals");
   revalidatePath("/admin/content");
   revalidatePath("/professional/content");
+
+  if (content) {
+    const notice = {
+      approved: { title: "Conteudo aprovado", body: `O cliente aprovou "${content.title}".` },
+      rejected: { title: "Conteudo reprovado", body: `O cliente reprovou "${content.title}".` },
+      revision_requested: {
+        title: "Ajuste solicitado",
+        body: `O cliente pediu alteracao em "${content.title}".`,
+      },
+    }[parsed.data.status];
+
+    // URL diferente por publico: admin e profissional moram em prefixos distintos.
+    const { professionalId, adminIds } = await resolveClientStaffIds(content.client_id);
+    const tag = `content-${content.id}`;
+
+    await Promise.all([
+      professionalId
+        ? sendPushToUsers([professionalId], {
+            ...notice,
+            url: `/professional/content/${content.id}`,
+            tag,
+          })
+        : Promise.resolve(),
+      adminIds.length > 0
+        ? sendPushToUsers(adminIds, { ...notice, url: `/admin/content/${content.id}`, tag })
+        : Promise.resolve(),
+    ]).catch(() => {});
+  }
 
   return done();
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Activity,
   CheckCircle2,
@@ -41,7 +41,7 @@ const ICONS: Record<TourStep["icon"], LucideIcon> = {
  * mesmo assim nesta sessao — bloquear a entrada de alguem por causa de um
  * tutorial seria pior que mostra-lo de novo depois.
  */
-export function AppTour({ role }: { role: UserRole }) {
+export function AppTour({ role, onDone }: { role: UserRole; onDone?: () => void }) {
   const steps = tourSteps(role);
   const [index, setIndex] = useState(0);
   const [open, setOpen] = useState(true);
@@ -56,6 +56,12 @@ export function AppTour({ role }: { role: UserRole }) {
     };
   }, [open]);
 
+  const finish = useCallback(async () => {
+    setOpen(false);
+    onDone?.();
+    await completeTourAction();
+  }, [onDone]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -67,12 +73,7 @@ export function AppTour({ role }: { role: UserRole }) {
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, steps.length]);
-
-  async function finish() {
-    setOpen(false);
-    await completeTourAction();
-  }
+  }, [open, steps.length, finish]);
 
   if (!open) return null;
 

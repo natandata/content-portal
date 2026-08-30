@@ -1,4 +1,5 @@
 import { ChangePasswordForm } from "@/components/account/change-password-form";
+import { NotificationSettings } from "@/components/notifications/notification-settings";
 import { Card, CardHeader, PageHeader } from "@/components/ui/layout";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { requireStaff } from "@/lib/auth";
@@ -39,6 +40,14 @@ export async function WorkspaceSettings() {
             description="Vale para este aparelho. Em 'Sistema' o app segue o tema do celular ou do computador."
           />
           <ThemeToggle />
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Notificacoes"
+            description="Avisos de conteudo, documentos e retorno do cliente neste aparelho."
+          />
+          <NotificationSettings />
         </Card>
 
         <Card>
