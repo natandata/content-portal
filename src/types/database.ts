@@ -41,6 +41,8 @@ export type UserRow = {
   role: UserRole;
   status: UserStatus;
   requested_at: string | null;
+  /** Quando esta pessoa concluiu (ou pulou) o tour de primeiro acesso. */
+  tour_seen_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -55,6 +57,7 @@ export type ClientRow = {
   professional_id: string | null;
   auth_user_id: string | null;
   status: ClientStatus;
+  tour_seen_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -225,6 +228,10 @@ export type Database = {
       reorder_feed: {
         Args: { p_client_id: string; p_content_ids: string[] };
         Returns: FeedItemRow[];
+      };
+      mark_tour_seen: {
+        Args: Record<string, never>;
+        Returns: void;
       };
       platform_stats: {
         Args: Record<string, never>;

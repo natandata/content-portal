@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { WorkspaceShell } from "@/components/shell/workspace-shell";
+import { AppTour } from "@/components/tour/app-tour";
 import { createClient } from "@/lib/supabase/server";
 import { loadStaffBadges } from "@/server/queries";
 import { requireAdmin } from "@/lib/auth";
@@ -17,6 +18,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       email={actor.authUser.email ?? ""}
       badges={badges}
     >
+      {/* Primeiro acesso: o tour cobre a tela ate ser concluido ou pulado. */}
+      {actor.profile?.tour_seen_at ? null : <AppTour role="admin" />}
       {children}
     </WorkspaceShell>
   );
