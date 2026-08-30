@@ -62,7 +62,7 @@ export async function ClientDashboard() {
       </div>
 
       <Card className="mb-6">
-        <CardHeader title="Contrato" />
+        <CardHeader title="Documentos" />
         {contract ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
@@ -70,15 +70,15 @@ export async function ClientDashboard() {
               <ContractStatusBadge status={contract.status} className="mt-1.5" />
             </div>
             <Link
-              href="/client/contract"
+              href="/client/documents"
               className="focus-ring inline-flex items-center gap-1.5 rounded text-sm font-medium text-accent"
             >
               <FileText className="size-4" aria-hidden />
-              Abrir contrato
+              Abrir documentos
             </Link>
           </div>
         ) : (
-          <p className="text-sm text-ink-500">Nenhum contrato disponivel ate o momento.</p>
+          <p className="text-sm text-ink-500">Nenhum documento disponivel ate o momento.</p>
         )}
       </Card>
 

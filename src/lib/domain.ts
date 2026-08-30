@@ -2,6 +2,7 @@ import type {
   ContentStatus,
   ContentType,
   ContractStatus,
+  DocumentKind,
   UserRole,
 } from "@/types/database";
 
@@ -45,10 +46,11 @@ export const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
 
 export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
   awaiting_signature: "Aguardando assinatura",
-  signed: "Contrato enviado",
+  signed: "Documento enviado",
   under_review: "Aguardando conferencia",
   approved: "Aprovado",
   replaced: "Substituido",
+  delivered: "Entregue",
 };
 
 export const CONTRACT_STATUS_TONE: Record<ContractStatus, BadgeTone> = {
@@ -57,6 +59,41 @@ export const CONTRACT_STATUS_TONE: Record<ContractStatus, BadgeTone> = {
   under_review: "info",
   approved: "success",
   replaced: "neutral",
+  delivered: "success",
+};
+
+export const DOCUMENT_KIND_LABEL: Record<DocumentKind, string> = {
+  contract: "Contrato",
+  strategy: "Estrategia de conteudo",
+  brandbook: "Brandbook",
+  mockup: "Mockup",
+  other: "Outro documento",
+};
+
+/** Ordem em que os tipos aparecem no seletor. */
+export const DOCUMENT_KINDS: DocumentKind[] = [
+  "contract",
+  "strategy",
+  "brandbook",
+  "mockup",
+  "other",
+];
+
+/**
+ * So contrato pede devolucao assinada; o resto e entrega. E apenas o padrao do
+ * formulario — quem envia pode mudar.
+ */
+export function defaultRequiresSignature(kind: DocumentKind): boolean {
+  return kind === "contract";
+}
+
+/** Titulo sugerido ao trocar o tipo, para nao ter que digitar do zero. */
+export const DOCUMENT_KIND_DEFAULT_TITLE: Record<DocumentKind, string> = {
+  contract: "Contrato de Prestacao de Servicos",
+  strategy: "Estrategia de Conteudo",
+  brandbook: "Brandbook",
+  mockup: "Mockup",
+  other: "",
 };
 
 export const ROLE_LABEL: Record<UserRole, string> = {

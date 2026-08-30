@@ -7,10 +7,10 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { deleteContractAction, setContractStatusAction } from "@/server/actions/contracts";
+import { deleteDocumentAction, setDocumentStatusAction } from "@/server/actions/documents";
 import type { ContractStatus } from "@/types/database";
 
-export function ContractStaffActions({
+export function DocumentStaffActions({
   contractId,
   status,
 }: {
@@ -23,7 +23,7 @@ export function ContractStaffActions({
 
   function update(next: ContractStatus, message: string) {
     startTransition(async () => {
-      const result = await setContractStatusAction(contractId, next);
+      const result = await setDocumentStatusAction(contractId, next);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -41,7 +41,7 @@ export function ContractStaffActions({
             size="sm"
             variant="success"
             loading={pending}
-            onClick={() => update("approved", "Contrato conferido e aprovado.")}
+            onClick={() => update("approved", "Documento conferido e aprovado.")}
           >
             <CheckCircle2 className="size-4" aria-hidden />
             Confirmar recebimento
@@ -53,7 +53,7 @@ export function ContractStaffActions({
             size="sm"
             variant="outline"
             loading={pending}
-            onClick={() => update("under_review", "Contrato voltou para conferencia.")}
+            onClick={() => update("under_review", "Documento voltou para conferencia.")}
           >
             <RotateCcw className="size-4" aria-hidden />
             Reabrir conferencia
@@ -65,7 +65,7 @@ export function ContractStaffActions({
             size="sm"
             variant="outline"
             loading={pending}
-            onClick={() => update("replaced", "Contrato marcado como substituido.")}
+            onClick={() => update("replaced", "Documento marcado como substituido.")}
           >
             Marcar como substituido
           </Button>
@@ -86,7 +86,7 @@ export function ContractStaffActions({
       <Modal
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        title="Excluir contrato"
+        title="Excluir documento"
         size="sm"
         footer={
           <>
@@ -98,12 +98,12 @@ export function ContractStaffActions({
               loading={pending}
               onClick={() =>
                 startTransition(async () => {
-                  const result = await deleteContractAction(contractId);
+                  const result = await deleteDocumentAction(contractId);
                   if (!result.ok) {
                     toast.error(result.error);
                     return;
                   }
-                  toast.success("Contrato excluido.");
+                  toast.success("Documento excluido.");
                   setConfirmOpen(false);
                   router.refresh();
                 })
@@ -115,7 +115,7 @@ export function ContractStaffActions({
         }
       >
         <p className="text-sm text-ink-600">
-          O PDF original e o contrato assinado serao removidos do armazenamento.
+          O PDF original e o arquivo assinado serao removidos do armazenamento.
         </p>
       </Modal>
     </>

@@ -474,6 +474,49 @@ async function main() {
       .single();
     check("profissional confirma o recebimento", reviewed.status === "approved");
 
+    // Documento que nao e contrato: entrega, sem devolucao assinada.
+    const { data: brandbook } = await prof
+      .from("contracts")
+      .insert({
+        client_id: alfa.id,
+        title: "Brandbook E2E",
+        kind: "brandbook",
+        requires_signature: false,
+        status: "delivered",
+        created_by: profAuth.user.id,
+      })
+      .select("*")
+      .single();
+    check("documento sem assinatura e criado como entregue",
+      brandbook?.kind === "brandbook" && brandbook?.status === "delivered");
+
+    const { data: clientDocs } = await clientA
+      .from("contracts")
+      .select("id, kind")
+      .eq("kind", "brandbook");
+    check("cliente ve o documento entregue", clientDocs?.length === 1);
+
+    await denied(
+      "documento sem assinatura recusa devolucao assinada",
+      clientA.rpc("submit_signed_contract", {
+        p_contract_id: brandbook.id,
+        p_file_path: `${alfa.id}/${brandbook.id}/assinado.pdf`,
+      }),
+    );
+
+    await denied(
+      "profissional nao le a saude da plataforma",
+      prof.rpc("platform_stats"),
+    );
+    await denied(
+      "cliente nao le a saude da plataforma",
+      clientA.rpc("platform_stats"),
+    );
+    await denied(
+      "cliente nao lista arquivos orfaos",
+      clientA.rpc("orphan_storage_objects"),
+    );
+
     // ---------------------------------------------------------------------
     console.log("\n  [7] Feed");
     // ---------------------------------------------------------------------

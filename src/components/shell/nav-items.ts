@@ -1,4 +1,5 @@
 import {
+  Activity,
   CheckCircle2,
   FileText,
   Grid3x3,
@@ -28,12 +29,14 @@ export function staffNavItems(role: UserRole): NavItem[] {
     { href: `${base}/clients`, label: "Clientes", icon: Users },
     { href: `${base}/content`, label: "Conteudos", icon: Images },
     { href: `${base}/approvals`, label: "Aprovacoes", icon: CheckCircle2, badge: "approvals" },
-    { href: `${base}/contracts`, label: "Contratos", icon: FileText, badge: "contracts" },
+    { href: `${base}/documents`, label: "Documentos", icon: FileText, badge: "contracts" },
     { href: `${base}/feed`, label: "Feed", icon: Grid3x3 },
   ];
 
   if (role === "admin") {
     items.push({ href: "/admin/professionals", label: "Profissionais", icon: UserCog });
+    // Consumo de banco e Storage e assunto de quem responde pela conta.
+    items.push({ href: "/admin/platform", label: "Plataforma", icon: Activity });
   }
 
   items.push({ href: `${base}/settings`, label: "Configuracoes", icon: Settings });
@@ -45,5 +48,5 @@ export const clientNavItems: NavItem[] = [
   { href: "/client/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/client/content", label: "Conteudos", icon: Images, badge: "approvals" },
   { href: "/client/feed", label: "Feed", icon: Grid3x3 },
-  { href: "/client/contract", label: "Contrato", icon: FileText, badge: "contracts" },
+  { href: "/client/documents", label: "Documentos", icon: FileText, badge: "contracts" },
 ];

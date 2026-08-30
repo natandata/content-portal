@@ -15,7 +15,11 @@ export type ContractStatus =
   | "signed"
   | "under_review"
   | "approved"
-  | "replaced";
+  | "replaced"
+  /** Documento que nao pede assinatura: foi entregue e pronto. */
+  | "delivered";
+
+export type DocumentKind = "contract" | "strategy" | "brandbook" | "mockup" | "other";
 
 export type ContentType = "image" | "video" | "carousel";
 
@@ -63,6 +67,8 @@ export type ContractRow = {
   original_file_path: string | null;
   signed_file_path: string | null;
   status: ContractStatus;
+  kind: DocumentKind;
+  requires_signature: boolean;
   created_by: string | null;
   uploaded_at: string | null;
   signed_at: string | null;
@@ -96,6 +102,16 @@ export type ContentFileRow = {
   position: number;
   file_type: string;
   created_at: string;
+}
+
+export type PlatformSnapshotRow = {
+  id: string;
+  captured_at: string;
+  database_bytes: number;
+  storage_bytes: number;
+  users_count: number;
+  clients_count: number;
+  contents_count: number;
 }
 
 export type ClientProfileRow = {
@@ -178,6 +194,10 @@ export type Database = {
       contracts: Table<ContractRow, 'client_id' | 'title'>;
       contents: Table<ContentRow, 'client_id' | 'title' | 'type'>;
       content_files: Table<ContentFileRow, 'content_id' | 'position' | 'file_type'>;
+      platform_snapshots: Table<
+        PlatformSnapshotRow,
+        'database_bytes' | 'storage_bytes' | 'users_count' | 'clients_count' | 'contents_count'
+      >;
       client_profiles: Table<ClientProfileRow, 'client_id'>;
       profile_highlights: Table<ProfileHighlightRow, 'client_id' | 'title' | 'position'>;
       approvals: Table<ApprovalRow, 'content_id' | 'client_id' | 'status'>;
@@ -206,8 +226,17 @@ export type Database = {
         Args: { p_client_id: string; p_content_ids: string[] };
         Returns: FeedItemRow[];
       };
+      platform_stats: {
+        Args: Record<string, never>;
+        Returns: PlatformStats;
+      };
+      orphan_storage_objects: {
+        Args: Record<string, never>;
+        Returns: { bucket_id: string; name: string; size: number }[];
+      };
     };
     Enums: {
+      document_kind: DocumentKind;
       user_role: UserRole;
       user_status: UserStatus;
       client_status: ClientStatus;
@@ -218,4 +247,32 @@ export type Database = {
     };
     CompositeTypes: { [_ in never]: never };
   };
+}
+
+/** Retorno do RPC `platform_stats` — painel de saude da plataforma. */
+export type PlatformStats = {
+  database_bytes: number;
+  storage_bytes: number;
+  postgres_version: string;
+  tables: { name: string; bytes: number; rows: number }[];
+  buckets: { name: string; files: number; bytes: number }[];
+  counts: {
+    users: number;
+    clients: number;
+    contents: number;
+    content_files: number;
+    documents: number;
+    approvals: number;
+    history: number;
+    feed_items: number;
+    highlights: number;
+  };
+  snapshots: {
+    captured_at: string;
+    database_bytes: number;
+    storage_bytes: number;
+    users_count: number;
+    clients_count: number;
+    contents_count: number;
+  }[];
 }

@@ -10,10 +10,10 @@ import { FormError } from "@/components/ui/form";
 import { BUCKETS, signedContractPath } from "@/lib/paths";
 import { uploadToBucket, validateFile } from "@/lib/upload";
 import { formatBytes } from "@/lib/utils";
-import { submitSignedContractAction } from "@/server/actions/contracts";
+import { submitSignedDocumentAction } from "@/server/actions/documents";
 
 /** Envio do PDF assinado pelo proprio cliente. */
-export function SignedContractUpload({
+export function SignedDocumentUpload({
   contractId,
   clientId,
   alreadySent,
@@ -51,13 +51,13 @@ export function SignedContractUpload({
         return;
       }
 
-      const result = await submitSignedContractAction(contractId, path);
+      const result = await submitSignedDocumentAction(contractId, path);
       if (!result.ok) {
         setError(result.error);
         return;
       }
 
-      toast.success("Contrato assinado enviado.");
+      toast.success("Documento assinado enviado.");
       setFile(null);
       router.refresh();
     } finally {
@@ -111,7 +111,7 @@ export function SignedContractUpload({
           onClick={() => inputRef.current?.click()}
         >
           <Upload className="size-4" aria-hidden />
-          {alreadySent ? "Enviar novo arquivo assinado" : "Enviar contrato assinado"}
+          {alreadySent ? "Enviar novo arquivo assinado" : "Enviar documento assinado"}
         </Button>
       )}
 

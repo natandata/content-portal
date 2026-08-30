@@ -8,20 +8,27 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select, Textarea } from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
+import {
+  DOCUMENT_KINDS,
+  DOCUMENT_KIND_DEFAULT_TITLE,
+  DOCUMENT_KIND_LABEL,
+  defaultRequiresSignature,
+} from "@/lib/domain";
 import { BUCKETS, contractPath } from "@/lib/paths";
 import { uploadToBucket, validateFile } from "@/lib/upload";
 import { formatBytes } from "@/lib/utils";
-import { attachContractFileAction, createContractAction } from "@/server/actions/contracts";
+import type { DocumentKind } from "@/types/database";
+import { attachDocumentFileAction, createDocumentAction } from "@/server/actions/documents";
 
 export interface ClientOption {
   id: string;
   companyName: string;
 }
 
-export function ContractUploadModal({
+export function DocumentUploadModal({
   clients,
   defaultClientId,
-  label = "Novo contrato",
+  label = "Novo documento",
 }: {
   clients: ClientOption[];
   defaultClientId?: string;
@@ -32,7 +39,9 @@ export function ContractUploadModal({
 
   const [open, setOpen] = useState(false);
   const [clientId, setClientId] = useState(defaultClientId ?? "");
-  const [title, setTitle] = useState("Contrato de Prestacao de Servicos");
+  const [kind, setKind] = useState<DocumentKind>("contract");
+  const [title, setTitle] = useState(DOCUMENT_KIND_DEFAULT_TITLE.contract);
+  const [requiresSignature, setRequiresSignature] = useState(true);
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,15 +54,25 @@ export function ContractUploadModal({
       setError("Selecione o cliente.");
       return;
     }
+    if (title.trim().length < 2) {
+      setError("Informe o nome do documento.");
+      return;
+    }
     if (!file) {
-      setError("Selecione o PDF do contrato.");
+      setError("Selecione o PDF do documento.");
       return;
     }
 
     setBusy(true);
 
     try {
-      const created = await createContractAction({ clientId, title, notes });
+      const created = await createDocumentAction({
+        clientId,
+        title,
+        notes,
+        kind,
+        requiresSignature,
+      });
       if (!created.ok) {
         setError(created.error);
         return;
@@ -68,13 +87,13 @@ export function ContractUploadModal({
         return;
       }
 
-      const attached = await attachContractFileAction(contract.id, path);
+      const attached = await attachDocumentFileAction(contract.id, path);
       if (!attached.ok) {
         setError(attached.error);
         return;
       }
 
-      toast.success("Contrato enviado ao cliente.");
+      toast.success(`${DOCUMENT_KIND_LABEL[kind]} enviado ao cliente.`);
       setOpen(false);
       setFile(null);
       setNotes("");
@@ -94,15 +113,19 @@ export function ContractUploadModal({
       <Modal
         open={open}
         onClose={() => !busy && setOpen(false)}
-        title="Enviar contrato"
-        description="O cliente recebe o PDF para baixar, assinar e devolver assinado."
+        title="Enviar documento"
+        description={
+          requiresSignature
+            ? "O cliente recebe o PDF para baixar, assinar e devolver assinado."
+            : "O cliente recebe o PDF para ler e baixar. Nao pede devolucao."
+        }
         footer={
           <>
             <Button variant="secondary" onClick={() => setOpen(false)} disabled={busy}>
               Cancelar
             </Button>
             <Button loading={busy} onClick={() => void submit()}>
-              Enviar contrato
+              Enviar documento
             </Button>
           </>
         }
@@ -124,7 +147,35 @@ export function ContractUploadModal({
             </Select>
           </Field>
 
-          <Field label="Nome do contrato" htmlFor="contract-title" required>
+          <Field label="Tipo" htmlFor="document-kind" required>
+            <Select
+              id="document-kind"
+              value={kind}
+              onChange={(event) => {
+                const next = event.target.value as DocumentKind;
+                const suggestion = DOCUMENT_KIND_DEFAULT_TITLE[next];
+
+                // So sobrescreve o titulo se ele ainda for a sugestao anterior:
+                // texto digitado a mao nao pode sumir na troca de tipo.
+                setTitle((current) =>
+                  Object.values(DOCUMENT_KIND_DEFAULT_TITLE).includes(current)
+                    ? suggestion
+                    : current,
+                );
+                setRequiresSignature(defaultRequiresSignature(next));
+                setKind(next);
+              }}
+              disabled={busy}
+            >
+              {DOCUMENT_KINDS.map((option) => (
+                <option key={option} value={option}>
+                  {DOCUMENT_KIND_LABEL[option]}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="Nome do documento" htmlFor="contract-title" required>
             <Input
               id="contract-title"
               value={title}
@@ -132,6 +183,24 @@ export function ContractUploadModal({
               disabled={busy}
             />
           </Field>
+
+          <label className="flex items-start gap-2.5 rounded-xl border border-line bg-ink-50/60 px-3 py-2.5">
+            <input
+              type="checkbox"
+              checked={requiresSignature}
+              onChange={(event) => setRequiresSignature(event.target.checked)}
+              disabled={busy}
+              className="mt-0.5 size-4 accent-ink-900"
+            />
+            <span>
+              <span className="block text-sm font-medium text-ink-900">
+                Pedir devolucao assinada
+              </span>
+              <span className="block text-xs text-ink-500">
+                Marcado, o cliente ve o botao para enviar o arquivo assinado de volta.
+              </span>
+            </span>
+          </label>
 
           <Field label="Observacao" htmlFor="contract-notes" hint="Opcional.">
             <Textarea

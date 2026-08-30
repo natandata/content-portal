@@ -6,7 +6,7 @@ import { ClientFormModal } from "@/components/clients/client-form-modal";
 import { CopyCode } from "@/components/clients/copy-code";
 import { ContentCard } from "@/components/content/content-card";
 import { StaffContentActions } from "@/components/content/staff-content-actions";
-import { ContractUploadModal } from "@/components/contracts/contract-upload-modal";
+import { DocumentUploadModal } from "@/components/documents/document-upload-modal";
 import { Badge, ContractStatusBadge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
@@ -180,9 +180,9 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
         <div className="space-y-5">
           <Card>
             <CardHeader
-              title="Contrato"
+              title="Documentos"
               actions={
-                <ContractUploadModal
+                <DocumentUploadModal
                   clients={[{ id: client.id, companyName: client.company_name }]}
                   defaultClientId={client.id}
                   label="Enviar"
@@ -200,15 +200,15 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
                 </div>
                 <ContractStatusBadge status={activeContract.status} />
                 <Link
-                  href={`${base}/contracts`}
+                  href={`${base}/documents`}
                   className="focus-ring flex items-center gap-1.5 rounded text-sm font-medium text-accent"
                 >
                   <FileText className="size-4" aria-hidden />
-                  Abrir contratos
+                  Abrir documentos
                 </Link>
               </div>
             ) : (
-              <p className="text-sm text-ink-500">Nenhum contrato enviado ate agora.</p>
+              <p className="text-sm text-ink-500">Nenhum documento enviado ate agora.</p>
             )}
           </Card>
 

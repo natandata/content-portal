@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  * costuma recusar PDF em iframe, por isso o link de abrir em outra aba fica
  * sempre visivel, e nao so quando algo falha.
  */
-export function ContractPreview({
+export function DocumentPreview({
   url,
   title,
   label = "Pre-visualizar",
