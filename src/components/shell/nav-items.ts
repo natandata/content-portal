@@ -5,6 +5,8 @@ import {
   Grid3x3,
   Images,
   LayoutDashboard,
+  Megaphone,
+  MessageCircle,
   Settings,
   UserCog,
   Users,
@@ -18,7 +20,7 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   /** Qual contador do menu aparece neste item, quando houver pendencia. */
-  badge?: "approvals" | "contracts";
+  badge?: "approvals" | "contracts" | "chat";
 }
 
 export function staffNavItems(role: UserRole): NavItem[] {
@@ -31,6 +33,8 @@ export function staffNavItems(role: UserRole): NavItem[] {
     { href: `${base}/approvals`, label: "Aprovacoes", icon: CheckCircle2, badge: "approvals" },
     { href: `${base}/documents`, label: "Documentos", icon: FileText, badge: "contracts" },
     { href: `${base}/feed`, label: "Feed", icon: Grid3x3 },
+    { href: `${base}/chat`, label: "Chat", icon: MessageCircle, badge: "chat" },
+    { href: `${base}/updates`, label: "Mural", icon: Megaphone },
   ];
 
   if (role === "admin") {
@@ -49,4 +53,5 @@ export const clientNavItems: NavItem[] = [
   { href: "/client/content", label: "Conteudos", icon: Images, badge: "approvals" },
   { href: "/client/feed", label: "Feed", icon: Grid3x3 },
   { href: "/client/documents", label: "Documentos", icon: FileText, badge: "contracts" },
+  { href: "/client/chat", label: "Chat", icon: MessageCircle, badge: "chat" },
 ];

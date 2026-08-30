@@ -7,6 +7,7 @@ import { ContractStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
 import { Card, CardHeader, PageHeader, StatCard } from "@/components/ui/layout";
 import { requireClientActor } from "@/lib/auth";
+import { BulletinWidget } from "@/features/bulletin/bulletin-widget";
 import { AWAITING_CLIENT_STATUSES } from "@/lib/domain";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
@@ -66,6 +67,13 @@ export async function ClientDashboard() {
         />
         <StatCard label={dict.dashboard.totalReceived} value={statusRows?.length ?? 0} />
       </div>
+
+      <BulletinWidget
+        supabase={supabase}
+        basePath="/client"
+        isAdmin={false}
+        locale={locale}
+      />
 
       <Card className="mb-6">
         <CardHeader title={dict.dashboard.documentsCard} />

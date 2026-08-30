@@ -7,6 +7,8 @@ import type { ProfileView } from "@/components/feed/instagram-profile";
 import { BUCKETS } from "@/lib/paths";
 import { signedUrl, signedUrlMap } from "@/lib/storage";
 import type {
+  BulletinAdminReportRow,
+  BulletinFeedRow,
   ContentFileRow,
   ContentRow,
   ContentStatus,
@@ -274,6 +276,7 @@ export async function loadProfileForm(supabase: Client, clientId: string) {
 export interface NavBadges {
   approvals: number;
   contracts: number;
+  chat: number;
 }
 
 /** Equipe: o cliente respondeu (ou devolveu o contrato) e a bola voltou. */
@@ -281,7 +284,7 @@ export async function loadStaffBadges(supabase: Client): Promise<NavBadges> {
   const answered: ContentStatus[] = ["approved", "revision_requested", "rejected"];
   const returned: ContractStatus[] = ["signed", "under_review"];
 
-  const [contents, contracts] = await Promise.all([
+  const [contents, contracts, chat] = await Promise.all([
     supabase
       .from("contents")
       .select("id", { count: "exact", head: true })
@@ -290,16 +293,17 @@ export async function loadStaffBadges(supabase: Client): Promise<NavBadges> {
       .from("contracts")
       .select("id", { count: "exact", head: true })
       .in("status", returned),
+    supabase.rpc("unread_chat_count"),
   ]);
 
-  return { approvals: contents.count ?? 0, contracts: contracts.count ?? 0 };
+  return { approvals: contents.count ?? 0, contracts: contracts.count ?? 0, chat: chat.data ?? 0 };
 }
 
 /** Cliente: o que chegou para ele decidir ou assinar. */
 export async function loadClientBadges(supabase: Client): Promise<NavBadges> {
   const waiting: ContentStatus[] = ["submitted", "awaiting_approval"];
 
-  const [contents, contracts] = await Promise.all([
+  const [contents, contracts, chat] = await Promise.all([
     supabase
       .from("contents")
       .select("id", { count: "exact", head: true })
@@ -308,9 +312,10 @@ export async function loadClientBadges(supabase: Client): Promise<NavBadges> {
       .from("contracts")
       .select("id", { count: "exact", head: true })
       .eq("status", "awaiting_signature" satisfies ContractStatus),
+    supabase.rpc("unread_chat_count"),
   ]);
 
-  return { approvals: contents.count ?? 0, contracts: contracts.count ?? 0 };
+  return { approvals: contents.count ?? 0, contracts: contracts.count ?? 0, chat: chat.data ?? 0 };
 }
 
 /** Itens do feed de um cliente, ja com capa assinada, na ordem publicada. */
@@ -355,4 +360,48 @@ export async function loadFeedEntries(
       },
     ];
   });
+}
+
+/** Mural: posts publicados, com contagem e o voto de quem pediu. */
+export async function loadBulletinFeed(supabase: Client): Promise<BulletinFeedRow[]> {
+  const { data } = await supabase.rpc("bulletin_feed");
+  return data ?? [];
+}
+
+/**
+ * Mural para o admin gerenciar: junta rascunho + publicado (so admin le
+ * rascunho, via RLS) com a contagem que ja existir em `bulletin_feed` — post
+ * ainda rascunho nunca tem voto, entao 0/0/null e sempre correto para ele.
+ */
+export async function loadBulletinAdminList(
+  supabase: Client,
+): Promise<(BulletinFeedRow & { published: boolean })[]> {
+  const [{ data: posts }, feed] = await Promise.all([
+    supabase.from("bulletin_posts").select("*").order("created_at", { ascending: false }),
+    loadBulletinFeed(supabase),
+  ]);
+
+  const feedById = new Map(feed.map((row) => [row.id, row]));
+
+  return (posts ?? []).map((post) => {
+    const counted = feedById.get(post.id);
+    return {
+      id: post.id,
+      title: post.title,
+      body: post.body,
+      created_at: post.created_at,
+      likes: counted?.likes ?? 0,
+      dislikes: counted?.dislikes ?? 0,
+      my_vote: counted?.my_vote ?? null,
+      published: post.published,
+    };
+  });
+}
+
+/** Relatorio de votos do mural — so admin. */
+export async function loadBulletinAdminReport(
+  supabase: Client,
+): Promise<BulletinAdminReportRow[]> {
+  const { data } = await supabase.rpc("bulletin_admin_report");
+  return data ?? [];
 }

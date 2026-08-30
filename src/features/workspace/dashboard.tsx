@@ -6,6 +6,8 @@ import { EmptyState } from "@/components/ui/feedback";
 import { Card, PageHeader, StatCard } from "@/components/ui/layout";
 import { LinkButton } from "@/components/ui/button";
 import { basePath, requireStaff } from "@/lib/auth";
+import { BulletinWidget } from "@/features/bulletin/bulletin-widget";
+import { DEFAULT_LOCALE } from "@/lib/i18n/locale";
 import { createClient } from "@/lib/supabase/server";
 import { formatRelativeDay } from "@/lib/utils";
 import { loadClientNames, loadDashboardStats } from "@/server/queries";
@@ -54,6 +56,13 @@ export async function WorkspaceDashboard() {
         <StatCard label="Aguardando cliente" value={stats.awaitingClient} tone="info" />
         <StatCard label="Aprovados" value={stats.approved} tone="success" />
       </div>
+
+      <BulletinWidget
+        supabase={supabase}
+        basePath={base}
+        isAdmin={actor.role === "admin"}
+        locale={DEFAULT_LOCALE}
+      />
 
       <Card padded={false}>
         <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">

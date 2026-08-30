@@ -39,6 +39,7 @@ export function ClientShell({
     "/client/content": dict.nav.content,
     "/client/feed": dict.nav.feed,
     "/client/documents": dict.nav.documents,
+    "/client/chat": dict.nav.chat,
   };
   const items = clientNavItems.map((item) => ({
     ...item,
@@ -103,9 +104,14 @@ export function ClientShell({
         {children}
       </main>
 
-      {/* Navegacao inferior — prioridade mobile */}
+      {/*
+       * Navegacao inferior — prioridade mobile. grid-cols-5 porque
+       * clientNavItems tem 5 entradas (Inicio, Conteudos, Feed, Documentos,
+       * Chat); o texto encolhe um pouco em relacao ao topo para caber cinco
+       * colunas sem cortar em telas de 360-375px.
+       */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/97 backdrop-blur sm:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-4 px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto grid max-w-md grid-cols-5 px-1 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
           {items.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -114,7 +120,7 @@ export function ClientShell({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "focus-ring flex flex-col items-center gap-1 rounded-lg py-1.5 text-[11px] font-medium transition",
+                  "focus-ring flex flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] font-medium transition",
                   active ? "text-ink-900" : "text-ink-400",
                 )}
               >
@@ -123,11 +129,11 @@ export function ClientShell({
                   {item.badge ? (
                     <NavBadge
                       count={badges[item.badge]}
-                      className="absolute -top-1.5 -right-2.5 ml-0"
+                      className="absolute -top-1.5 -right-2 ml-0 min-w-4 px-1 text-[9px]"
                     />
                   ) : null}
                 </span>
-                {item.label}
+                <span className="truncate px-0.5">{item.label}</span>
               </Link>
             );
           })}

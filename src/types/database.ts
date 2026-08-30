@@ -10,6 +10,8 @@ export type UserRole = "admin" | "professional" | "client";
 export type UserStatus = "active" | "inactive" | "pending";
 export type ClientStatus = "active" | "inactive";
 
+export type ChatLinkTarget = "dashboard" | "content" | "documents" | "feed";
+
 export type ContractStatus =
   | "awaiting_signature"
   | "signed"
@@ -200,6 +202,90 @@ type Table<Row, Required extends keyof Row> = {
   Relationships: [];
 };
 
+export type ChatThreadRow = {
+  id: string;
+  client_id: string;
+  created_at: string;
+}
+
+export type ChatMessageRow = {
+  id: string;
+  thread_id: string;
+  sender_id: string;
+  body: string;
+  link_target_type: ChatLinkTarget | null;
+  link_target_id: string | null;
+  link_label: string | null;
+  created_at: string;
+}
+
+export type ChatReadRow = {
+  thread_id: string;
+  user_id: string;
+  last_read_at: string;
+}
+
+export type BulletinPostRow = {
+  id: string;
+  title: string;
+  body: string;
+  published: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type BulletinVoteRow = {
+  post_id: string;
+  user_id: string;
+  vote: 1 | -1;
+  created_at: string;
+}
+
+/** Retorno do RPC `bulletin_feed` — um post com contagem agregada e o voto de quem pediu. */
+export type BulletinFeedRow = {
+  id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  likes: number;
+  dislikes: number;
+  my_vote: 1 | -1 | null;
+}
+
+/** Retorno do RPC `bulletin_admin_report` — so admin. */
+/** Retorno do RPC `chat_thread_messages` — mensagem com o nome do remetente ja resolvido. */
+export type ChatThreadMessage = {
+  id: string;
+  sender_id: string;
+  sender_name: string;
+  is_staff: boolean;
+  body: string;
+  link_target_type: ChatLinkTarget | null;
+  link_target_id: string | null;
+  link_label: string | null;
+  created_at: string;
+}
+
+/** Retorno do RPC `chat_inbox` — um item por cliente que a equipe gerencia. */
+export type ChatInboxEntry = {
+  client_id: string;
+  company_name: string;
+  last_message: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+}
+
+export type BulletinAdminReportRow = {
+  post_id: string;
+  title: string;
+  published: boolean;
+  created_at: string;
+  likes: number;
+  dislikes: number;
+  voters: { name: string; role: string; vote: 1 | -1 }[];
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -225,6 +311,11 @@ export type Database = {
       approvals: Table<ApprovalRow, 'content_id' | 'client_id' | 'status'>;
       approval_history: Table<ApprovalHistoryRow, 'content_id' | 'action'>;
       feed_items: Table<FeedItemRow, 'client_id' | 'content_id' | 'position'>;
+      chat_threads: Table<ChatThreadRow, 'client_id'>;
+      chat_messages: Table<ChatMessageRow, 'thread_id' | 'sender_id'>;
+      chat_reads: Table<ChatReadRow, 'thread_id' | 'user_id'>;
+      bulletin_posts: Table<BulletinPostRow, 'title' | 'body'>;
+      bulletin_votes: Table<BulletinVoteRow, 'post_id' | 'user_id' | 'vote'>;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -264,8 +355,47 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { bucket_id: string; name: string; size: number }[];
       };
+      send_chat_message: {
+        Args: {
+          p_client_id: string;
+          p_body: string;
+          p_link_target_type?: ChatLinkTarget | null;
+          p_link_target_id?: string | null;
+          p_link_label?: string | null;
+        };
+        Returns: ChatMessageRow;
+      };
+      unread_chat_count: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      chat_thread_messages: {
+        Args: { p_client_id: string };
+        Returns: ChatThreadMessage[];
+      };
+      mark_chat_read: {
+        Args: { p_client_id: string };
+        Returns: void;
+      };
+      chat_inbox: {
+        Args: Record<string, never>;
+        Returns: ChatInboxEntry[];
+      };
+      bulletin_feed: {
+        Args: Record<string, never>;
+        Returns: BulletinFeedRow[];
+      };
+      vote_on_bulletin_post: {
+        Args: { p_post_id: string; p_vote: number };
+        Returns: void;
+      };
+      bulletin_admin_report: {
+        Args: Record<string, never>;
+        Returns: BulletinAdminReportRow[];
+      };
     };
     Enums: {
+      chat_link_target: ChatLinkTarget;
       document_kind: DocumentKind;
       user_role: UserRole;
       user_status: UserStatus;

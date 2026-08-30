@@ -10,6 +10,8 @@ export interface TourStep {
     | "approvals"
     | "documents"
     | "feed"
+    | "chat"
+    | "mural"
     | "platform"
     | "settings"
     | "check";
@@ -41,12 +43,22 @@ const STAFF_STEPS: TourStep[] = [
   {
     icon: "documents",
     title: "Documentos",
-    body: "Contrato, estrategia de conteudo, brandbook, mockup. So contrato pede devolucao assinada; o resto o cliente apenas le e baixa.",
+    body: "Contrato, estrategia de conteudo, brandbook, mockup. So contrato pede devolucao assinada — e o cliente pode assinar pelo Gov.br quando voce habilitar; o resto ele so le e baixa.",
   },
   {
     icon: "feed",
     title: "Feed",
     body: "A grade de 3 x 10 simula o perfil do Instagram. Arraste para reorganizar e edite foto, nome, @, bio e destaques em Editar perfil.",
+  },
+  {
+    icon: "chat",
+    title: "Chat",
+    body: "Fale direto com cada cliente. Da para anexar um link que leva a pessoa direto a um conteudo, aos documentos ou ao feed — util quando voce quer que ela veja algo especifico.",
+  },
+  {
+    icon: "mural",
+    title: "Mural",
+    body: "Publique novidades sobre o que voce esta preparando para o portal. Todo mundo pode curtir ou nao curtir, e voce ve o resultado dos votos.",
   },
   {
     icon: "settings",
@@ -80,6 +92,8 @@ function clientSteps(dict: Dictionary): TourStep[] {
     { icon: "approvals", title: t.approveTitle, body: t.approveBody },
     { icon: "feed", title: t.feedTitle, body: t.feedBody },
     { icon: "documents", title: t.documentsTitle, body: t.documentsBody },
+    { icon: "chat", title: t.chatTitle, body: t.chatBody },
+    { icon: "mural", title: t.muralTitle, body: t.muralBody },
     { icon: "check", title: t.closingTitle, body: t.closingBody },
   ];
 }

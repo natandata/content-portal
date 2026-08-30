@@ -58,6 +58,10 @@ export interface Dictionary {
       feedBody: string;
       documentsTitle: string;
       documentsBody: string;
+      chatTitle: string;
+      chatBody: string;
+      muralTitle: string;
+      muralBody: string;
       closingTitle: string;
       closingBody: string;
     };
@@ -85,6 +89,7 @@ export interface Dictionary {
     content: string;
     feed: string;
     documents: string;
+    chat: string;
     settings: string;
   };
   dashboard: {
@@ -242,6 +247,54 @@ export interface Dictionary {
     empty: string;
     newBadge: string;
   };
+  chat: {
+    title: string;
+    subtitle: string;
+    inboxEmpty: string;
+    inboxEmptyBody: string;
+    threadEmpty: string;
+    placeholder: string;
+    send: string;
+    attachLink: string;
+    linkTarget: string;
+    linkTargetDashboard: string;
+    linkTargetContent: string;
+    linkTargetDocuments: string;
+    linkTargetFeed: string;
+    linkTargetContentPlaceholder: string;
+    linkLabel: string;
+    linkLabelPlaceholder: string;
+    openLink: string;
+    staffOnlyLink: string;
+    cancel: string;
+    back: string;
+  };
+  bulletin: {
+    title: string;
+    subtitle: string;
+    dashboardTitle: string;
+    empty: string;
+    seeAll: string;
+    like: string;
+    dislike: string;
+    newPost: string;
+    editPost: string;
+    postTitle: string;
+    postBody: string;
+    publish: string;
+    published: string;
+    draft: string;
+    save: string;
+    cancel: string;
+    delete: string;
+    confirmDelete: string;
+    createdToast: string;
+    updatedToast: string;
+    deletedToast: string;
+    reportTitle: string;
+    reportEmpty: string;
+    votersEmpty: string;
+  };
 }
 
 const ptBR: Dictionary = {
@@ -307,6 +360,12 @@ const ptBR: Dictionary = {
       documentsTitle: "Documentos",
       documentsBody:
         "Contrato, estrategia, brandbook. Da para ler na tela antes de baixar; quando o documento pedir assinatura, voce devolve o arquivo assinado por aqui.",
+      chatTitle: "Chat",
+      chatBody:
+        "Fale direto com quem cuida do seu conteudo. As vezes a mensagem vem com um botao que leva voce direto para algo especifico no portal.",
+      muralTitle: "Mural",
+      muralBody:
+        "Novidades sobre o que esta por vir no portal. De uma olhada e diga se gostou — seu voto ajuda a decidir o que vem a seguir.",
       closingTitle: "Pronto para comecar",
       closingBody:
         "Este tour aparece uma vez so. Se precisar rever alguma coisa, cada tela tem a explicacao do que faz logo abaixo do titulo.",
@@ -333,7 +392,14 @@ const ptBR: Dictionary = {
     disabledToast: "Notificacoes desativadas neste aparelho.",
     enableError: "Nao foi possivel ativar. Verifique a permissao do navegador.",
   },
-  nav: { home: "Inicio", content: "Conteudos", feed: "Feed", documents: "Documentos", settings: "Configuracoes" },
+  nav: {
+    home: "Inicio",
+    content: "Conteudos",
+    feed: "Feed",
+    documents: "Documentos",
+    chat: "Chat",
+    settings: "Configuracoes",
+  },
   dashboard: {
     hello: (name) => `Ola, ${name}`,
     subtitle: "Aqui estao os conteudos que aguardam a sua avaliacao.",
@@ -477,6 +543,54 @@ const ptBR: Dictionary = {
     goToSlide: (n) => `Ir para o slide ${n}`,
     slideOf: (c, t) => `Slide ${c}/${t}`,
   },
+  chat: {
+    title: "Chat",
+    subtitle: "Converse direto com quem cuida do seu conteudo.",
+    inboxEmpty: "Nenhuma conversa ainda",
+    inboxEmptyBody: "As conversas aparecem aqui assim que voce cadastrar um cliente.",
+    threadEmpty: "Nenhuma mensagem ainda. Escreva a primeira.",
+    placeholder: "Escreva uma mensagem...",
+    send: "Enviar",
+    attachLink: "Anexar link",
+    linkTarget: "Para onde leva",
+    linkTargetDashboard: "Inicio",
+    linkTargetContent: "Um conteudo especifico",
+    linkTargetDocuments: "Documentos",
+    linkTargetFeed: "Feed",
+    linkTargetContentPlaceholder: "Selecione o conteudo",
+    linkLabel: "Texto do botao",
+    linkLabelPlaceholder: "Ex.: Veja o novo post",
+    openLink: "Abrir",
+    staffOnlyLink: "Somente a equipe pode enviar um link.",
+    cancel: "Cancelar",
+    back: "Voltar",
+  },
+  bulletin: {
+    title: "Mural de novidades",
+    subtitle: "O que estamos preparando para o portal.",
+    dashboardTitle: "Novidades",
+    empty: "Nenhuma novidade publicada ainda.",
+    seeAll: "Ver todas",
+    like: "Gostei",
+    dislike: "Nao gostei",
+    newPost: "Nova novidade",
+    editPost: "Editar novidade",
+    postTitle: "Titulo",
+    postBody: "Descricao",
+    publish: "Publicada",
+    published: "Publicada",
+    draft: "Rascunho",
+    save: "Salvar",
+    cancel: "Cancelar",
+    delete: "Excluir",
+    confirmDelete: "Excluir esta novidade? Os votos tambem serao apagados.",
+    createdToast: "Novidade criada.",
+    updatedToast: "Novidade atualizada.",
+    deletedToast: "Novidade excluida.",
+    reportTitle: "Votos do mural",
+    reportEmpty: "Nenhuma novidade publicada ainda.",
+    votersEmpty: "Ninguem votou ainda.",
+  },
 };
 
 const en: Dictionary = {
@@ -542,6 +656,12 @@ const en: Dictionary = {
       documentsTitle: "Documents",
       documentsBody:
         "Contract, strategy, brandbook. You can read it on screen before downloading; when a document needs a signature, you return the signed file right here.",
+      chatTitle: "Chat",
+      chatBody:
+        "Message the person handling your content directly. Sometimes a message comes with a button that takes you straight to something specific in the portal.",
+      muralTitle: "Updates board",
+      muralBody:
+        "News about what's coming to the portal. Take a look and let us know if you like it — your vote helps decide what comes next.",
       closingTitle: "Ready to get started",
       closingBody:
         "This tour only shows up once. If you need a reminder, every screen has a short explanation right below its title.",
@@ -568,7 +688,14 @@ const en: Dictionary = {
     disabledToast: "Notifications turned off for this device.",
     enableError: "Couldn't turn it on. Check your browser's notification permission.",
   },
-  nav: { home: "Home", content: "Content", feed: "Feed", documents: "Documents", settings: "Settings" },
+  nav: {
+    home: "Home",
+    content: "Content",
+    feed: "Feed",
+    documents: "Documents",
+    chat: "Chat",
+    settings: "Settings",
+  },
   dashboard: {
     hello: (name) => `Hi, ${name}`,
     subtitle: "Here's the content waiting for your review.",
@@ -717,6 +844,54 @@ const en: Dictionary = {
     nextSlide: "Next slide",
     goToSlide: (n) => `Go to slide ${n}`,
     slideOf: (c, t) => `Slide ${c}/${t}`,
+  },
+  chat: {
+    title: "Chat",
+    subtitle: "Talk directly with the person handling your content.",
+    inboxEmpty: "No conversations yet",
+    inboxEmptyBody: "Conversations show up here once you register a client.",
+    threadEmpty: "No messages yet. Write the first one.",
+    placeholder: "Write a message...",
+    send: "Send",
+    attachLink: "Attach link",
+    linkTarget: "Where it leads",
+    linkTargetDashboard: "Home",
+    linkTargetContent: "A specific piece of content",
+    linkTargetDocuments: "Documents",
+    linkTargetFeed: "Feed",
+    linkTargetContentPlaceholder: "Select the content",
+    linkLabel: "Button text",
+    linkLabelPlaceholder: "E.g.: Check out the new post",
+    openLink: "Open",
+    staffOnlyLink: "Only the team can send a link.",
+    cancel: "Cancel",
+    back: "Back",
+  },
+  bulletin: {
+    title: "Updates board",
+    subtitle: "What we're preparing for the portal.",
+    dashboardTitle: "Updates",
+    empty: "No updates published yet.",
+    seeAll: "See all",
+    like: "Like",
+    dislike: "Dislike",
+    newPost: "New update",
+    editPost: "Edit update",
+    postTitle: "Title",
+    postBody: "Description",
+    publish: "Published",
+    published: "Published",
+    draft: "Draft",
+    save: "Save",
+    cancel: "Cancel",
+    delete: "Delete",
+    confirmDelete: "Delete this update? Votes will be deleted too.",
+    createdToast: "Update created.",
+    updatedToast: "Update saved.",
+    deletedToast: "Update deleted.",
+    reportTitle: "Board votes",
+    reportEmpty: "No updates published yet.",
+    votersEmpty: "No one has voted yet.",
   },
 };
 

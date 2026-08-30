@@ -61,7 +61,7 @@ async function main() {
   const stamp = Date.now();
   const professionalEmail = `e2e-prof-${stamp}@teste.local`;
   const professionalPassword = `e2e-${randomUUID()}`;
-  const created = { authUsers: [], clients: [] };
+  const created = { authUsers: [], clients: [], bulletinPosts: [] };
 
   console.log("\n  Content Portal — teste ponta a ponta\n");
 
@@ -734,7 +734,219 @@ async function main() {
     check("marca do tour fica gravada no profissional certo", Boolean(profAfterTour?.tour_seen_at));
 
     // ---------------------------------------------------------------------
-    console.log("\n  [10] Limpeza");
+    console.log("\n  [10] Chat");
+    // ---------------------------------------------------------------------
+    const { data: inboxBeforeAny } = await prof.rpc("chat_inbox");
+    check(
+      "inbox do profissional lista os dois clientes mesmo sem mensagem",
+      inboxBeforeAny?.length === 2 &&
+        inboxBeforeAny.every((row) => row.last_message === null),
+    );
+
+    await denied(
+      "cliente nao anexa link na propria mensagem",
+      clientA.rpc("send_chat_message", {
+        p_client_id: alfa.id,
+        p_body: "queria ver isso",
+        p_link_target_type: "feed",
+      }),
+    );
+
+    await denied(
+      "cliente nao manda mensagem em nome de outro cliente",
+      clientA.rpc("send_chat_message", { p_client_id: beta.id, p_body: "oi" }),
+    );
+
+    const { data: firstMsg, error: firstMsgError } = await clientA.rpc("send_chat_message", {
+      p_client_id: alfa.id,
+      p_body: "Oi, tenho uma duvida sobre o post.",
+    });
+    check("cliente envia a primeira mensagem do thread", !firstMsgError && Boolean(firstMsg));
+
+    await denied(
+      "link para conteudo de outro cliente e recusado",
+      prof.rpc("send_chat_message", {
+        p_client_id: beta.id,
+        p_body: null,
+        p_link_target_type: "content",
+        p_link_target_id: post.id,
+      }),
+    );
+
+    const { error: linkMsgError } = await prof.rpc("send_chat_message", {
+      p_client_id: alfa.id,
+      p_body: null,
+      p_link_target_type: "content",
+      p_link_target_id: post.id,
+      p_link_label: "Veja este post",
+    });
+    check("profissional envia toggle apontando pro conteudo do proprio cliente", !linkMsgError);
+
+    const { error: emptyMsgError } = await clientA.rpc("send_chat_message", {
+      p_client_id: alfa.id,
+      p_body: "   ",
+    });
+    check("mensagem sem corpo e sem link e recusada", Boolean(emptyMsgError));
+
+    const { error: threadDeniedError } = await clientB.rpc("chat_thread_messages", {
+      p_client_id: alfa.id,
+    });
+    check("cliente B recebe erro ao pedir o thread do cliente A", Boolean(threadDeniedError));
+
+    const { data: threadForClientA } = await clientA.rpc("chat_thread_messages", {
+      p_client_id: alfa.id,
+    });
+    check(
+      "cliente A ve as duas mensagens do proprio thread, com nome de quem enviou",
+      threadForClientA?.length === 2 &&
+        threadForClientA.some((m) => m.is_staff && m.sender_name === "Profissional E2E") &&
+        threadForClientA.some((m) => !m.is_staff),
+    );
+    check(
+      "mensagem com toggle chega com o destino anexado",
+      threadForClientA?.some(
+        (m) => m.link_target_type === "content" && m.link_target_id === post.id,
+      ),
+    );
+
+    const { data: unreadForClientA } = await clientA.rpc("unread_chat_count");
+    check("cliente A tem 1 nao lida (a mensagem com o link)", unreadForClientA === 1);
+
+    const { error: markReadError } = await clientA.rpc("mark_chat_read", {
+      p_client_id: alfa.id,
+    });
+    check("cliente A marca o thread como lido", !markReadError);
+
+    const { data: unreadAfterRead } = await clientA.rpc("unread_chat_count");
+    check("nao-lidas zera depois de marcar como lido", unreadAfterRead === 0);
+
+    const { data: inboxAfter } = await prof.rpc("chat_inbox");
+    const alfaInbox = inboxAfter?.find((row) => row.client_id === alfa.id);
+    check(
+      "inbox do profissional mostra a ultima mensagem do cliente Alfa",
+      Boolean(alfaInbox) && alfaInbox.unread_count === 1,
+      `visto: ${JSON.stringify(alfaInbox)}`,
+    );
+
+    // ---------------------------------------------------------------------
+    console.log("\n  [11] Mural");
+    // ---------------------------------------------------------------------
+    const { data: publishedPost, error: publishedPostError } = await admin
+      .from("bulletin_posts")
+      .insert({
+        title: "Nova aba de relatorios E2E",
+        body: "Estamos preparando uma aba de relatorios mensais.",
+        published: true,
+        created_by: profAuth.user.id,
+      })
+      .select("id")
+      .single();
+    check("admin publica novidade no mural", !publishedPostError && Boolean(publishedPost));
+    if (publishedPost) created.bulletinPosts.push(publishedPost.id);
+
+    const { data: draftPost, error: draftPostError } = await admin
+      .from("bulletin_posts")
+      .insert({
+        title: "Rascunho de novidade E2E",
+        body: "Ainda em estudo, ninguem alem do admin deveria ver.",
+        published: false,
+        created_by: profAuth.user.id,
+      })
+      .select("id")
+      .single();
+    check("admin cria rascunho de novidade", !draftPostError && Boolean(draftPost));
+    if (draftPost) created.bulletinPosts.push(draftPost.id);
+
+    await denied(
+      "profissional nao publica novidade direto na tabela",
+      prof.from("bulletin_posts").insert({ title: "Tentativa", body: "Tentativa de post" }),
+    );
+    await denied(
+      "cliente nao publica novidade direto na tabela",
+      clientA.from("bulletin_posts").insert({ title: "Tentativa", body: "Tentativa de post" }),
+    );
+    const { error: profDeleteError, count: profDeleteCount } = await prof
+      .from("bulletin_posts")
+      .delete({ count: "exact" })
+      .eq("id", publishedPost.id);
+    check(
+      "profissional nao apaga novidade (RLS bloqueia, 0 linhas afetadas)",
+      !profDeleteError && profDeleteCount === 0,
+    );
+
+    const { data: feedForClientA } = await clientA.rpc("bulletin_feed");
+    check(
+      "cliente A ve a novidade publicada no feed do mural",
+      feedForClientA?.some((row) => row.id === publishedPost.id),
+    );
+    check(
+      "cliente A nao ve o rascunho no feed do mural",
+      !feedForClientA?.some((row) => row.id === draftPost.id),
+    );
+
+    const { error: voteError } = await clientA.rpc("vote_on_bulletin_post", {
+      p_post_id: publishedPost.id,
+      p_vote: 1,
+    });
+    check("cliente A vota positivo na novidade", !voteError);
+
+    const { error: profVoteError } = await prof.rpc("vote_on_bulletin_post", {
+      p_post_id: publishedPost.id,
+      p_vote: -1,
+    });
+    check("profissional vota negativo na mesma novidade", !profVoteError);
+
+    await denied(
+      "voto invalido e recusado",
+      clientB.rpc("vote_on_bulletin_post", { p_post_id: publishedPost.id, p_vote: 2 }),
+    );
+
+    await denied(
+      "nao da pra votar em rascunho",
+      clientA.rpc("vote_on_bulletin_post", { p_post_id: draftPost.id, p_vote: 1 }),
+    );
+
+    const { data: feedAfterVotes } = await clientA.rpc("bulletin_feed");
+    const publishedInFeed = feedAfterVotes?.find((row) => row.id === publishedPost.id);
+    check(
+      "feed agrega 1 curtida e 1 nao curtida, e mostra so o proprio voto do cliente A",
+      publishedInFeed?.likes === 1 &&
+        publishedInFeed?.dislikes === 1 &&
+        publishedInFeed?.my_vote === 1,
+      `visto: ${JSON.stringify(publishedInFeed)}`,
+    );
+
+    const { error: switchVoteError } = await clientA.rpc("vote_on_bulletin_post", {
+      p_post_id: publishedPost.id,
+      p_vote: -1,
+    });
+    check("cliente A troca o proprio voto de curtida pra nao curtida", !switchVoteError);
+
+    const { error: removeVoteError } = await prof.rpc("vote_on_bulletin_post", {
+      p_post_id: publishedPost.id,
+      p_vote: 0,
+    });
+    check("profissional remove o proprio voto", !removeVoteError);
+
+    const { data: feedAfterSwitch } = await clientA.rpc("bulletin_feed");
+    const publishedAfterSwitch = feedAfterSwitch?.find((row) => row.id === publishedPost.id);
+    check(
+      "depois da troca e da remocao: 1 nao-curtida, nenhuma curtida",
+      publishedAfterSwitch?.likes === 0 && publishedAfterSwitch?.dislikes === 1,
+      `visto: ${JSON.stringify(publishedAfterSwitch)}`,
+    );
+
+    await denied("profissional nao le o relatorio de votos do mural", prof.rpc("bulletin_admin_report"));
+    await denied("cliente nao le o relatorio de votos do mural", clientA.rpc("bulletin_admin_report"));
+
+    const { data: rawVotesForClientB } = await clientB.from("bulletin_votes").select("*");
+    check(
+      "cliente B nao enxerga voto alheio na tabela crua (RLS so mostra o proprio)",
+      (rawVotesForClientB ?? []).length === 0,
+    );
+
+    // ---------------------------------------------------------------------
+    console.log("\n  [12] Limpeza");
     // ---------------------------------------------------------------------
   } finally {
     for (const id of created.clients) {
@@ -769,6 +981,9 @@ async function main() {
     }
     for (const id of created.authUsers) await admin.auth.admin.deleteUser(id);
     await admin.from("users").delete().eq("email", professionalEmail);
+    if (created.bulletinPosts.length) {
+      await admin.from("bulletin_posts").delete().in("id", created.bulletinPosts);
+    }
 
     console.log(`\n  ${passed} verificacoes ok, ${failed} falha(s).\n`);
     process.exit(failed === 0 ? 0 : 1);
