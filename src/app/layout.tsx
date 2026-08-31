@@ -41,6 +41,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        {/* Favicon em todas as guias */}
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         {/* Antes da primeira pintura: sem isso o app pisca claro antes de escurecer. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
