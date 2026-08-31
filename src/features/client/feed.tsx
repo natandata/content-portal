@@ -3,6 +3,7 @@ import { Grid3x3 } from "lucide-react";
 import { FeedGrid, type FeedEntry } from "@/components/feed/feed-grid";
 import { FeedTabs } from "@/components/feed/feed-tabs";
 import { InstagramHeader } from "@/components/feed/instagram-profile";
+import { RealtimeRefresh } from "@/components/realtime/realtime-refresh";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireClientActor } from "@/lib/auth";
@@ -67,6 +68,11 @@ export async function ClientFeed() {
 
   return (
     <>
+      <RealtimeRefresh
+        channelKey={`client-feed-${actor.client.id}`}
+        tables="feed_items,contents,content_files,client_profiles,profile_highlights"
+      />
+
       <PageHeader
         title={dict.feed.title}
         description={dict.feed.subtitle(actor.client.company_name)}

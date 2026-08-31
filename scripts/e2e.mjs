@@ -603,6 +603,43 @@ async function main() {
       prof.rpc("add_feed_item", { p_client_id: beta.id, p_content_id: post.id }),
     );
 
+    // Rascunho e invisivel pro cliente (RLS) — colocar no feed so faz
+    // sentido se ele for ver, entao add_feed_item promove pra fora do
+    // rascunho. Sem isso, o profissional via o item no editor e o cliente
+    // via "feed vazio".
+    const { data: draftForFeed, error: draftForFeedErr } = await prof
+      .from("contents")
+      .insert({
+        client_id: alfa.id,
+        professional_id: profAuth.user.id,
+        title: "Rascunho pro feed E2E",
+        type: "image",
+        status: "draft",
+      })
+      .select("*")
+      .single();
+    check("cria conteudo em rascunho para testar o feed", !draftForFeedErr && Boolean(draftForFeed));
+
+    const { error: addDraftErr } = await prof.rpc("add_feed_item", {
+      p_client_id: alfa.id,
+      p_content_id: draftForFeed.id,
+    });
+    check("profissional adiciona rascunho ao feed", !addDraftErr);
+
+    const { data: promoted } = await prof
+      .from("contents")
+      .select("status")
+      .eq("id", draftForFeed.id)
+      .single();
+    check("add_feed_item promove o rascunho para 'approved'", promoted?.status === "approved");
+
+    const { data: clientSeesPromoted } = await clientA
+      .from("contents")
+      .select("id")
+      .eq("id", draftForFeed.id)
+      .maybeSingle();
+    check("cliente enxerga o conteudo depois de promovido", Boolean(clientSeesPromoted));
+
     // ---------------------------------------------------------------------
     console.log("\n  [8] Perfil do Instagram");
     // ---------------------------------------------------------------------

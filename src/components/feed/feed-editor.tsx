@@ -19,7 +19,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Grid3x3, Layers, Play, Plus, X } from "lucide-react";
+import { Grid3x3, Layers, Play, Plus, Save, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -137,13 +137,23 @@ export function FeedEditor({
 }) {
   const router = useRouter();
   const [entries, setEntries] = useState(initialEntries);
+  const [savedOrder, setSavedOrder] = useState(initialEntries);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     setEntries(initialEntries);
+    setSavedOrder(initialEntries);
   }, [initialEntries]);
+
+  const dirty = useMemo(
+    () =>
+      entries.length !== savedOrder.length ||
+      entries.some((entry, index) => entry.feedItemId !== savedOrder[index]?.feedItemId),
+    [entries, savedOrder],
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -163,28 +173,37 @@ export function FeedEditor({
     const to = entries.findIndex((entry) => entry.feedItemId === over.id);
     if (from < 0 || to < 0) return;
 
-    const next = arrayMove(entries, from, to);
-    const previous = entries;
-    setEntries(next);
+    // So reorganiza local — persiste tudo de uma vez quando clicar em Salvar.
+    setEntries(arrayMove(entries, from, to));
+  }
 
-    startTransition(async () => {
+  async function saveOrder() {
+    setSaving(true);
+    try {
       const result = await reorderFeedAction(
         clientId,
-        next.map((entry) => entry.contentId),
+        entries.map((entry) => entry.contentId),
       );
 
       if (!result.ok) {
-        setEntries(previous);
         toast.error(result.error);
         return;
       }
 
-      toast.success("Feed atualizado.");
+      setSavedOrder(entries);
+      toast.success("Feed salvo — ja atualizado para o cliente.");
       router.refresh();
-    });
+    } finally {
+      setSaving(false);
+    }
   }
 
   function remove(entry: FeedEntry) {
+    if (dirty) {
+      toast.error("Salve a nova ordem antes de remover um item.");
+      return;
+    }
+
     const previous = entries;
     setEntries(entries.filter((item) => item.feedItemId !== entry.feedItemId));
 
@@ -219,6 +238,7 @@ export function FeedEditor({
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-ink-500 tabular-nums">
             {entries.length} de {MAX_FEED_ITEMS} posicoes
+            {dirty ? <span className="ml-2 text-amber-600">· alteracoes nao salvas</span> : null}
           </p>
           <div className="flex gap-2">
             {profileEditor}
@@ -234,6 +254,10 @@ export function FeedEditor({
             <Button size="sm" disabled={full || pending} onClick={() => setPickerOpen(true)}>
               <Plus className="size-4" aria-hidden />
               Adicionar
+            </Button>
+            <Button size="sm" loading={saving} disabled={!dirty || pending} onClick={() => void saveOrder()}>
+              <Save className="size-4" aria-hidden />
+              Salvar
             </Button>
           </div>
         </div>
@@ -262,7 +286,7 @@ export function FeedEditor({
                           entry={entry}
                           index={index}
                           onRemove={remove}
-                          disabled={pending}
+                          disabled={pending || saving}
                         />
                       ))}
 
@@ -271,7 +295,7 @@ export function FeedEditor({
                           key={`empty-${index}`}
                           type="button"
                           onClick={() => setUploadOpen(true)}
-                          disabled={pending}
+                          disabled={pending || saving}
                           aria-label="Adicionar foto nesta posicao"
                           className="focus-ring group flex aspect-square flex-col items-center justify-center gap-1 border border-dashed border-line bg-ink-50/60 text-ink-300 transition hover:border-ink-300 hover:bg-ink-100 hover:text-ink-500 disabled:opacity-50"
                         >
