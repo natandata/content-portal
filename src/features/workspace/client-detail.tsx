@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, FileText, Grid3x3, Images } from "lucide-react";
 
+import { ClientDeleteButton } from "@/components/clients/client-delete-button";
 import { ClientFormModal } from "@/components/clients/client-form-modal";
 import { CopyCode } from "@/components/clients/copy-code";
 import { ContentCard } from "@/components/content/content-card";
@@ -99,6 +100,11 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
         description={client.name}
         actions={
           <>
+            <ClientDeleteButton
+              clientId={client.id}
+              clientName={client.company_name}
+              redirectTo={`${base}/clients`}
+            />
             <ClientFormModal
               role={actor.role}
               professionals={professionals.map((professional) => ({

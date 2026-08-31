@@ -176,3 +176,38 @@ export async function setClientStatusAction(
   revalidatePath(`/professional/clients/${id}`);
   return done();
 }
+
+export async function deleteClientAction(id: string): Promise<ActionResult<null>> {
+  await requireStaff();
+
+  if (!id || typeof id !== "string") {
+    return fail("ID do cliente invalido.");
+  }
+
+  const supabase = await createClient();
+
+  // Verificar se o cliente existe e se o usuario tem permissao (via RLS)
+  const { data: client, error: selectError } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (selectError || !client) {
+    return fail(
+      describeError(selectError, "Cliente nao encontrado ou sem permissao para deletar."),
+    );
+  }
+
+  // Realizar o delete - RLS vai validar novamente
+  const { error: deleteError } = await supabase.from("clients").delete().eq("id", id);
+
+  if (deleteError) {
+    return fail(describeError(deleteError, "Nao foi possivel deletar o cliente."));
+  }
+
+  revalidateClients();
+  revalidatePath("/admin/clients");
+  revalidatePath("/professional/clients");
+  return done();
+}
