@@ -49,6 +49,11 @@ export function avatarPath(clientId: string, fileName: string): string {
   return `${clientId}/avatar-${Date.now()}.${fileExtension(fileName)}`;
 }
 
+/** Capa do card em Clientes e do topo da tela do cliente — mesma imagem, dois recortes. */
+export function clientCoverPath(clientId: string, fileName: string): string {
+  return `${clientId}/cover-${Date.now()}.${fileExtension(fileName)}`;
+}
+
 export function highlightCoverPath(
   clientId: string,
   position: number,

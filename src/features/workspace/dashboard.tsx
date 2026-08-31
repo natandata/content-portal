@@ -1,17 +1,20 @@
 import Link from "next/link";
-import { ArrowRight, Inbox } from "lucide-react";
+import { ArrowRight, Inbox, Wallet } from "lucide-react";
 
 import { ContentStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
-import { Card, PageHeader, StatCard } from "@/components/ui/layout";
+import { Card, CardHeader, PageHeader, StatCard } from "@/components/ui/layout";
 import { LinkButton } from "@/components/ui/button";
 import { basePath, requireStaff } from "@/lib/auth";
 import { BulletinWidget } from "@/features/bulletin/bulletin-widget";
+import { formatMoney } from "@/lib/domain";
 import { DEFAULT_LOCALE } from "@/lib/i18n/locale";
 import { createClient } from "@/lib/supabase/server";
 import { formatRelativeDay } from "@/lib/utils";
-import { loadClientNames, loadDashboardStats } from "@/server/queries";
+import { loadClientNames, loadDashboardStats, loadMonthlyRevenueForecast } from "@/server/queries";
 import type { ContentStatus } from "@/types/database";
+
+const MONTH_LABEL = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date());
 
 const PENDING_STATUSES: ContentStatus[] = [
   "draft",
@@ -26,7 +29,7 @@ export async function WorkspaceDashboard() {
   const base = basePath(actor.role);
   const supabase = await createClient();
 
-  const [stats, pendingResult] = await Promise.all([
+  const [stats, pendingResult, revenueForecast] = await Promise.all([
     loadDashboardStats(supabase),
     supabase
       .from("contents")
@@ -34,6 +37,7 @@ export async function WorkspaceDashboard() {
       .in("status", PENDING_STATUSES)
       .order("updated_at", { ascending: false })
       .limit(10),
+    loadMonthlyRevenueForecast(supabase),
   ]);
 
   const pending = pendingResult.data ?? [];
@@ -55,6 +59,29 @@ export async function WorkspaceDashboard() {
         <StatCard label="Conteudos pendentes" value={stats.pendingContents} tone="warning" />
         <StatCard label="Aguardando cliente" value={stats.awaitingClient} tone="info" />
         <StatCard label="Aprovados" value={stats.approved} tone="success" />
+      </div>
+
+      <div className="mb-6">
+        <Card>
+          <CardHeader
+            title={`Receita prevista de ${MONTH_LABEL}`}
+            description="Soma das cobrancas com vencimento neste mes, pagas ou em aberto."
+          />
+          {revenueForecast.length === 0 ? (
+            <p className="text-sm text-ink-500">Nenhuma cobranca vencendo neste mes.</p>
+          ) : (
+            <ul className="flex flex-wrap gap-x-8 gap-y-2">
+              {revenueForecast.map((row) => (
+                <li key={row.currency} className="flex items-center gap-2">
+                  <Wallet className="size-4 text-ink-400" aria-hidden />
+                  <span className="text-lg font-semibold text-ink-900 tabular-nums">
+                    {formatMoney(row.amount, row.currency)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       </div>
 
       <BulletinWidget

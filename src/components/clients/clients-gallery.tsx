@@ -63,51 +63,60 @@ function ClientCard({
   const status = displayStatus(client);
   const meta = STATUS_META[status];
 
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "focus-ring group flex gap-3 rounded-xl border border-line bg-surface transition hover:border-ink-300 hover:shadow-sm",
-        dense ? "items-center px-3 py-2.5" : "flex-col p-4",
-      )}
-    >
-      <div className={cn("flex items-center gap-3", !dense && "w-full")}>
-        <span
-          className={cn(
-            "flex shrink-0 items-center justify-center rounded-full bg-ink-100 font-semibold text-ink-600",
-            dense ? "size-9 text-xs" : "size-11 text-sm",
-          )}
-        >
+  if (dense) {
+    return (
+      <Link
+        href={href}
+        className="focus-ring group flex items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2.5 transition hover:border-ink-300 hover:shadow-sm"
+      >
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ink-100 text-xs font-semibold text-ink-600">
           {initials(client.companyName)}
         </span>
 
-        {dense ? (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-ink-900">{client.companyName}</p>
-            <p className="truncate text-xs text-ink-500">{client.name}</p>
-          </div>
-        ) : null}
-
-        {dense ? (
-          <div className="flex shrink-0 items-center gap-2">
-            {client.pendingApprovalCount > 0 ? (
-              <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-semibold text-ink-600 tabular-nums">
-                {client.pendingApprovalCount} pendente(s)
-              </span>
-            ) : null}
-            <Badge tone={meta.tone}>{meta.label}</Badge>
-          </div>
-        ) : null}
-      </div>
-
-      {!dense ? (
-        <div className="mt-3 min-w-0">
-          <p className="truncate text-sm font-semibold text-ink-900">{client.companyName}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-ink-900">{client.companyName}</p>
           <p className="truncate text-xs text-ink-500">{client.name}</p>
         </div>
-      ) : null}
 
-      {!dense ? (
+        <div className="flex shrink-0 items-center gap-2">
+          {client.pendingApprovalCount > 0 ? (
+            <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-semibold text-ink-600 tabular-nums">
+              {client.pendingApprovalCount} pendente(s)
+            </span>
+          ) : null}
+          <Badge tone={meta.tone}>{meta.label}</Badge>
+        </div>
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="focus-ring group flex flex-col overflow-hidden rounded-xl border border-line bg-surface transition hover:border-ink-300 hover:shadow-sm"
+    >
+      {/* Mesma capa da tela do cliente, recortada baixa e larga aqui. */}
+      <div className="relative h-16 w-full shrink-0 bg-ink-100">
+        {client.coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={client.coverUrl}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover"
+          />
+        ) : (
+          <div className="size-full bg-gradient-to-br from-ink-100 to-ink-50" />
+        )}
+        <span className="absolute -bottom-4 left-3 flex size-9 shrink-0 items-center justify-center rounded-full bg-ink-100 text-xs font-semibold text-ink-600 ring-2 ring-surface">
+          {initials(client.companyName)}
+        </span>
+      </div>
+
+      <div className="min-w-0 flex-1 p-4 pt-6">
+        <p className="truncate text-sm font-semibold text-ink-900">{client.companyName}</p>
+        <p className="truncate text-xs text-ink-500">{client.name}</p>
+
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Badge tone={meta.tone}>{meta.label}</Badge>
           {client.pendingApprovalCount > 0 ? (
@@ -116,7 +125,7 @@ function ClientCard({
             </span>
           ) : null}
         </div>
-      ) : null}
+      </div>
     </Link>
   );
 }

@@ -33,6 +33,7 @@ import type { ContentType } from "@/types/database";
 import { FeedGrid, type FeedEntry } from "./feed-grid";
 import { FeedTabs } from "./feed-tabs";
 import { InstagramHeader, type ProfileView } from "./instagram-profile";
+import { QuickFeedUpload } from "./quick-feed-upload";
 
 export interface AvailableContent {
   id: string;
@@ -137,6 +138,7 @@ export function FeedEditor({
   const router = useRouter();
   const [entries, setEntries] = useState(initialEntries);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -220,6 +222,15 @@ export function FeedEditor({
           </p>
           <div className="flex gap-2">
             {profileEditor}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={full || pending}
+              onClick={() => setUploadOpen(true)}
+            >
+              <Plus className="size-4" aria-hidden />
+              Enviar foto
+            </Button>
             <Button size="sm" disabled={full || pending} onClick={() => setPickerOpen(true)}>
               <Plus className="size-4" aria-hidden />
               Adicionar
@@ -256,12 +267,17 @@ export function FeedEditor({
                       ))}
 
                       {Array.from({ length: emptySlots }).map((_, index) => (
-                        <div
+                        <button
                           key={`empty-${index}`}
-                          className="flex aspect-square items-center justify-center border border-dashed border-line bg-ink-50/60 text-[11px] text-ink-300 tabular-nums"
+                          type="button"
+                          onClick={() => setUploadOpen(true)}
+                          disabled={pending}
+                          aria-label="Adicionar foto nesta posicao"
+                          className="focus-ring group flex aspect-square flex-col items-center justify-center gap-1 border border-dashed border-line bg-ink-50/60 text-ink-300 transition hover:border-ink-300 hover:bg-ink-100 hover:text-ink-500 disabled:opacity-50"
                         >
-                          {entries.length + index + 1}
-                        </div>
+                          <Plus className="size-4 opacity-0 transition group-hover:opacity-100" aria-hidden />
+                          <span className="text-[11px] tabular-nums">{entries.length + index + 1}</span>
+                        </button>
                       ))}
                     </div>
                   </SortableContext>
@@ -342,6 +358,8 @@ export function FeedEditor({
           </div>
         )}
       </Modal>
+
+      <QuickFeedUpload clientId={clientId} open={uploadOpen} onClose={() => setUploadOpen(false)} />
     </div>
   );
 }

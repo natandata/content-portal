@@ -211,3 +211,26 @@ export async function deleteClientAction(id: string): Promise<ActionResult<null>
   revalidatePath("/professional/clients");
   return done();
 }
+
+/** Capa do cliente: mesma imagem no card da galeria e no topo da tela do cliente. */
+export async function updateClientCoverAction(
+  clientId: string,
+  coverPath: string | null,
+): Promise<ActionResult<null>> {
+  await requireStaff();
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({ cover_path: coverPath })
+    .eq("id", clientId);
+
+  if (error) {
+    return fail(describeError(error, "Nao foi possivel salvar a capa."));
+  }
+
+  revalidateClients();
+  revalidatePath(`/admin/clients/${clientId}`);
+  revalidatePath(`/professional/clients/${clientId}`);
+  return done();
+}

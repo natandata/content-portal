@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, FileText, Grid3x3, Images } from "lucide-react";
 
+import { ClientCoverUpload } from "@/components/clients/client-cover-upload";
 import { ClientDeleteButton } from "@/components/clients/client-delete-button";
 import { ClientFormModal } from "@/components/clients/client-form-modal";
 import { CopyCode } from "@/components/clients/copy-code";
@@ -14,6 +15,8 @@ import { LinkButton } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { Card, CardHeader, PageHeader, StatCard } from "@/components/ui/layout";
 import { basePath, requireStaff } from "@/lib/auth";
+import { BUCKETS } from "@/lib/paths";
+import { signedUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import {
@@ -54,7 +57,10 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
       .eq("client_id", clientId),
   ]);
 
-  const services = await loadClientServices(supabase, clientId);
+  const [services, coverUrl] = await Promise.all([
+    loadClientServices(supabase, clientId),
+    signedUrl(supabase, BUCKETS.profiles, client.cover_path),
+  ]);
 
   const professionals =
     actor.role === "admin"
@@ -86,6 +92,8 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
 
   return (
     <>
+      <ClientCoverUpload clientId={client.id} coverUrl={coverUrl} className="mb-5 h-32 sm:h-44" />
+
       <PageHeader
         breadcrumb={
           <Link

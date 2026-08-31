@@ -141,6 +141,36 @@ export interface DashboardStats {
   approved: number;
 }
 
+export interface RevenueForecastRow {
+  currency: CurrencyCode;
+  amount: number;
+}
+
+/**
+ * Soma das cobrancas com vencimento no mes corrente — aberta ou paga, o que
+ * importa e o que esta previsto para cair naquele mes. RLS ja restringe as
+ * linhas aos clientes que quem chamou enxerga (o profissional so ve as
+ * proprias, o admin ve todas).
+ */
+export async function loadMonthlyRevenueForecast(supabase: Client): Promise<RevenueForecastRow[]> {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+
+  const { data } = await supabase
+    .from("invoices")
+    .select("amount, currency")
+    .gte("due_date", monthStart)
+    .lte("due_date", monthEnd);
+
+  const byCurrency = new Map<CurrencyCode, number>();
+  for (const row of data ?? []) {
+    byCurrency.set(row.currency, (byCurrency.get(row.currency) ?? 0) + Number(row.amount));
+  }
+
+  return Array.from(byCurrency.entries()).map(([currency, amount]) => ({ currency, amount }));
+}
+
 export async function loadDashboardStats(supabase: Client): Promise<DashboardStats> {
   const awaitingClientStatuses: ContentStatus[] = ["submitted", "awaiting_approval"];
   const pendingStatuses: ContentStatus[] = [
@@ -251,6 +281,8 @@ export interface ClientGalleryRow {
   name: string;
   accessCode: string;
   status: ClientStatus;
+  /** Mesma imagem exibida no card e no topo da tela do cliente. */
+  coverUrl: string | null;
   /** Conteudos aguardando decisao do cliente (submitted/awaiting_approval). */
   pendingApprovalCount: number;
   /** Tem conteudo com alteracao solicitada ou reprovado, esperando a equipe. */
@@ -283,20 +315,26 @@ export async function loadClientsGallery(
     Date.now() - STALE_ACTIVITY_DAYS * 24 * 60 * 60 * 1000,
   ).toISOString();
 
-  const [{ data: contents }, { data: overdueInvoices }, { data: activities }] = await Promise.all([
-    supabase.from("contents").select("client_id, status, updated_at").in("client_id", ids),
-    supabase
-      .from("invoices")
-      .select("client_id")
-      .in("client_id", ids)
-      .eq("status", "open")
-      .lt("due_date", todayIso),
-    supabase
-      .from("client_activities")
-      .select("client_id, created_at")
-      .in("client_id", ids)
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: contents }, { data: overdueInvoices }, { data: activities }, coverUrls] =
+    await Promise.all([
+      supabase.from("contents").select("client_id, status, updated_at").in("client_id", ids),
+      supabase
+        .from("invoices")
+        .select("client_id")
+        .in("client_id", ids)
+        .eq("status", "open")
+        .lt("due_date", todayIso),
+      supabase
+        .from("client_activities")
+        .select("client_id, created_at")
+        .in("client_id", ids)
+        .order("created_at", { ascending: false }),
+      signedUrlMap(
+        supabase,
+        BUCKETS.profiles,
+        rows.map((client) => client.cover_path),
+      ),
+    ]);
 
   const pendingByClient = new Map<string, number>();
   const adjustmentByClient = new Set<string>();
@@ -334,6 +372,7 @@ export async function loadClientsGallery(
       name: client.name,
       accessCode: client.access_code,
       status: client.status,
+      coverUrl: client.cover_path ? (coverUrls.get(client.cover_path) ?? null) : null,
       pendingApprovalCount: pendingByClient.get(client.id) ?? 0,
       needsAdjustment: adjustmentByClient.has(client.id),
       overdueInvoice: overdueSet.has(client.id),

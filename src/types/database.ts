@@ -65,6 +65,7 @@ export type ClientRow = {
   professional_id: string | null;
   auth_user_id: string | null;
   status: ClientStatus;
+  cover_path: string | null;
   tour_seen_at: string | null;
   notifications_prompted_at: string | null;
   created_at: string;
