@@ -104,6 +104,7 @@ function ClientCard({
             alt=""
             loading="lazy"
             className="size-full object-cover"
+            style={{ objectPosition: `50% ${client.coverPositionY}%` }}
           />
         ) : (
           <div className="size-full bg-gradient-to-br from-ink-100 to-ink-50" />

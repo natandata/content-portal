@@ -92,7 +92,12 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
 
   return (
     <>
-      <ClientCoverUpload clientId={client.id} coverUrl={coverUrl} className="mb-5 h-32 sm:h-44" />
+      <ClientCoverUpload
+        clientId={client.id}
+        coverUrl={coverUrl}
+        coverPositionY={client.cover_position_y}
+        className="mb-5 h-32 sm:h-44"
+      />
 
       <PageHeader
         breadcrumb={

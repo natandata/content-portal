@@ -283,6 +283,8 @@ export interface ClientGalleryRow {
   status: ClientStatus;
   /** Mesma imagem exibida no card e no topo da tela do cliente. */
   coverUrl: string | null;
+  /** Ancoragem vertical do recorte (0 = topo, 50 = centro, 100 = base). */
+  coverPositionY: number;
   /** Conteudos aguardando decisao do cliente (submitted/awaiting_approval). */
   pendingApprovalCount: number;
   /** Tem conteudo com alteracao solicitada ou reprovado, esperando a equipe. */
@@ -373,6 +375,7 @@ export async function loadClientsGallery(
       accessCode: client.access_code,
       status: client.status,
       coverUrl: client.cover_path ? (coverUrls.get(client.cover_path) ?? null) : null,
+      coverPositionY: client.cover_position_y,
       pendingApprovalCount: pendingByClient.get(client.id) ?? 0,
       needsAdjustment: adjustmentByClient.has(client.id),
       overdueInvoice: overdueSet.has(client.id),

@@ -234,3 +234,28 @@ export async function updateClientCoverAction(
   revalidatePath(`/professional/clients/${clientId}`);
   return done();
 }
+
+/** Ponto vertical de ancoragem da capa (0 = topo, 50 = centro, 100 = base). */
+export async function updateClientCoverPositionAction(
+  clientId: string,
+  positionY: number,
+): Promise<ActionResult<null>> {
+  await requireStaff();
+
+  const clamped = Math.round(Math.min(100, Math.max(0, positionY)));
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clients")
+    .update({ cover_position_y: clamped })
+    .eq("id", clientId);
+
+  if (error) {
+    return fail(describeError(error, "Nao foi possivel salvar o ajuste da capa."));
+  }
+
+  revalidateClients();
+  revalidatePath(`/admin/clients/${clientId}`);
+  revalidatePath(`/professional/clients/${clientId}`);
+  return done();
+}
