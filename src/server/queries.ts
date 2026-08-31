@@ -6,11 +6,13 @@ import type { FeedEntry } from "@/components/feed/feed-grid";
 import type { ProfileView } from "@/components/feed/instagram-profile";
 import { BUCKETS } from "@/lib/paths";
 import { signedUrl, signedUrlMap } from "@/lib/storage";
+import { AWAITING_CLIENT_STATUSES, NEEDS_TEAM_ACTION_STATUSES } from "@/lib/domain";
 import type {
   BulletinAdminReportRow,
   BulletinFeedRow,
   ClientActivityRow,
   ClientServiceRow,
+  ClientStatus,
   ContentFileRow,
   ContentRow,
   ContentStatus,
@@ -238,6 +240,106 @@ export async function loadProfessionalClientIds(
     .select("id")
     .eq("professional_id", professionalId);
   return (data ?? []).map((row) => row.id);
+}
+
+/** Aparece como "cliente parado" so depois de tanto tempo sem nenhum toque. */
+const STALE_ACTIVITY_DAYS = 30;
+
+export interface ClientGalleryRow {
+  id: string;
+  companyName: string;
+  name: string;
+  accessCode: string;
+  status: ClientStatus;
+  /** Conteudos aguardando decisao do cliente (submitted/awaiting_approval). */
+  pendingApprovalCount: number;
+  /** Tem conteudo com alteracao solicitada ou reprovado, esperando a equipe. */
+  needsAdjustment: boolean;
+  /** Tem cobranca em aberto com vencimento no passado. */
+  overdueInvoice: boolean;
+  /** Cliente antigo (30+ dias) sem nenhum conteudo ou atividade nos ultimos 30 dias. */
+  staleActivity: boolean;
+}
+
+/**
+ * Clientes com os sinais usados pela galeria (Por status / Atencao): conteudo
+ * pendente, ajuste pedido, cobranca vencida e inatividade prolongada. Calcula
+ * tudo em memoria a partir de poucas queries em lote — a base de clientes por
+ * profissional e pequena o bastante para isso ser mais simples que um RPC.
+ */
+export async function loadClientsGallery(
+  supabase: Client,
+  options: { professionalId?: string } = {},
+): Promise<ClientGalleryRow[]> {
+  let clientsQuery = supabase.from("clients").select("*").order("company_name");
+  if (options.professionalId) clientsQuery = clientsQuery.eq("professional_id", options.professionalId);
+  const { data: clients } = await clientsQuery;
+  const rows = clients ?? [];
+  if (rows.length === 0) return [];
+
+  const ids = rows.map((client) => client.id);
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const staleThreshold = new Date(
+    Date.now() - STALE_ACTIVITY_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+
+  const [{ data: contents }, { data: overdueInvoices }, { data: activities }] = await Promise.all([
+    supabase.from("contents").select("client_id, status, updated_at").in("client_id", ids),
+    supabase
+      .from("invoices")
+      .select("client_id")
+      .in("client_id", ids)
+      .eq("status", "open")
+      .lt("due_date", todayIso),
+    supabase
+      .from("client_activities")
+      .select("client_id, created_at")
+      .in("client_id", ids)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const pendingByClient = new Map<string, number>();
+  const adjustmentByClient = new Set<string>();
+  const lastContentByClient = new Map<string, string>();
+
+  for (const row of contents ?? []) {
+    if (AWAITING_CLIENT_STATUSES.includes(row.status as ContentStatus)) {
+      pendingByClient.set(row.client_id, (pendingByClient.get(row.client_id) ?? 0) + 1);
+    }
+    if (NEEDS_TEAM_ACTION_STATUSES.includes(row.status as ContentStatus)) {
+      adjustmentByClient.add(row.client_id);
+    }
+    const current = lastContentByClient.get(row.client_id);
+    if (!current || row.updated_at > current) lastContentByClient.set(row.client_id, row.updated_at);
+  }
+
+  const overdueSet = new Set((overdueInvoices ?? []).map((row) => row.client_id));
+
+  const lastActivityByClient = new Map<string, string>();
+  for (const row of activities ?? []) {
+    if (!lastActivityByClient.has(row.client_id)) lastActivityByClient.set(row.client_id, row.created_at);
+  }
+
+  return rows.map((client) => {
+    const lastTouch = [lastContentByClient.get(client.id), lastActivityByClient.get(client.id)]
+      .filter((value): value is string => Boolean(value))
+      .sort()
+      .at(-1);
+    const clientIsOldEnough = client.created_at < staleThreshold;
+    const staleActivity = clientIsOldEnough && (!lastTouch || lastTouch < staleThreshold);
+
+    return {
+      id: client.id,
+      companyName: client.company_name,
+      name: client.name,
+      accessCode: client.access_code,
+      status: client.status,
+      pendingApprovalCount: pendingByClient.get(client.id) ?? 0,
+      needsAdjustment: adjustmentByClient.has(client.id),
+      overdueInvoice: overdueSet.has(client.id),
+      staleActivity,
+    };
+  });
 }
 
 /** Mapa id -> nome de empresa, para as listagens que cruzam clientes. */
