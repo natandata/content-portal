@@ -11,15 +11,20 @@ import { loadContentPreviews, loadProfileForm, loadProfileView } from "@/server/
 
 import { ClientSwitcher } from "./client-switcher";
 
-export async function FeedBoard({ clientId }: { clientId?: string }) {
+export async function FeedBoard({
+  clientId,
+  professionalId,
+}: {
+  clientId?: string;
+  professionalId?: string;
+}) {
   const actor = await requireStaff();
   const base = basePath(actor.role);
   const supabase = await createClient();
 
-  const { data: clients } = await supabase
-    .from("clients")
-    .select("id, company_name")
-    .order("company_name");
+  let clientsQuery = supabase.from("clients").select("id, company_name").order("company_name");
+  if (professionalId) clientsQuery = clientsQuery.eq("professional_id", professionalId);
+  const { data: clients } = await clientsQuery;
 
   const options = (clients ?? []).map((client) => ({
     id: client.id,
@@ -105,6 +110,7 @@ export async function FeedBoard({ clientId }: { clientId?: string }) {
           basePath={`${base}/feed`}
           clients={options}
           selectedClientId={selectedId}
+          professionalId={professionalId}
         />
       </div>
 

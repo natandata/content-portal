@@ -8,24 +8,37 @@ import { basePath, requireStaff } from "@/lib/auth";
 import { AWAITING_CLIENT_STATUSES, NEEDS_TEAM_ACTION_STATUSES } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
-import { loadClientNames, loadContentFileCounts, loadContentPreviews } from "@/server/queries";
+import {
+  loadClientNames,
+  loadContentFileCounts,
+  loadContentPreviews,
+  loadProfessionalClientIds,
+} from "@/server/queries";
 
-export async function ApprovalsList() {
+export async function ApprovalsList({ professionalId }: { professionalId?: string } = {}) {
   const actor = await requireStaff();
   const base = basePath(actor.role);
   const supabase = await createClient();
 
+  const clientIds = professionalId
+    ? await loadProfessionalClientIds(supabase, professionalId)
+    : null;
+  const scopedIds = clientIds && clientIds.length === 0 ? ["00000000-0000-0000-0000-000000000000"] : clientIds;
+
+  const waitingQuery = supabase
+    .from("contents")
+    .select("*")
+    .in("status", AWAITING_CLIENT_STATUSES)
+    .order("updated_at", { ascending: false });
+  const needsActionQuery = supabase
+    .from("contents")
+    .select("*")
+    .in("status", NEEDS_TEAM_ACTION_STATUSES)
+    .order("updated_at", { ascending: false });
+
   const [{ data: waiting }, { data: needsAction }] = await Promise.all([
-    supabase
-      .from("contents")
-      .select("*")
-      .in("status", AWAITING_CLIENT_STATUSES)
-      .order("updated_at", { ascending: false }),
-    supabase
-      .from("contents")
-      .select("*")
-      .in("status", NEEDS_TEAM_ACTION_STATUSES)
-      .order("updated_at", { ascending: false }),
+    scopedIds ? waitingQuery.in("client_id", scopedIds) : waitingQuery,
+    scopedIds ? needsActionQuery.in("client_id", scopedIds) : needsActionQuery,
   ]);
 
   const all = [...(needsAction ?? []), ...(waiting ?? [])];

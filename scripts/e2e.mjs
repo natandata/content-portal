@@ -1134,7 +1134,130 @@ async function main() {
     check("cliente B nao ve atividade do cliente A", (clientBSeesActivities ?? []).length === 0);
 
     // ---------------------------------------------------------------------
-    console.log("\n  [13] Limpeza");
+    console.log("\n  [13] Chat interno: admin <-> profissionais, e mural com data prevista");
+    // ---------------------------------------------------------------------
+    const adminEmail = `e2e-admin-${stamp}@teste.local`;
+    const adminPassword = `e2e-${randomUUID()}`;
+    const profBEmail = `e2e-prof-b-${stamp}@teste.local`;
+    const profBPassword = `e2e-${randomUUID()}`;
+
+    const { data: adminAuth } = await admin.auth.admin.createUser({
+      email: adminEmail,
+      password: adminPassword,
+      email_confirm: true,
+      app_metadata: { role: "admin" },
+    });
+    created.authUsers.push(adminAuth.user.id);
+    await admin
+      .from("users")
+      .insert({ id: adminAuth.user.id, name: "Admin E2E", email: adminEmail, role: "admin" });
+
+    const adminSession = session();
+    await adminSession.auth.signInWithPassword({ email: adminEmail, password: adminPassword });
+
+    const { data: profBAuth } = await admin.auth.admin.createUser({
+      email: profBEmail,
+      password: profBPassword,
+      email_confirm: true,
+      app_metadata: { role: "professional" },
+    });
+    created.authUsers.push(profBAuth.user.id);
+    await admin.from("users").insert({
+      id: profBAuth.user.id,
+      name: "Profissional B E2E",
+      email: profBEmail,
+      role: "professional",
+    });
+
+    const profB = session();
+    await profB.auth.signInWithPassword({ email: profBEmail, password: profBPassword });
+
+    const { error: staffMsgError } = await prof.rpc("send_staff_chat_message", {
+      p_professional_id: profAuth.user.id,
+      p_body: "Ola admin, tudo certo com o cliente Alfa.",
+    });
+    check("profissional A manda mensagem no proprio thread com o admin", !staffMsgError);
+
+    await denied(
+      "profissional B nao le o thread do profissional A",
+      profB.rpc("staff_chat_thread_messages", { p_professional_id: profAuth.user.id }).then(
+        ({ data, error }) => ({ error: error ?? (data?.length ? null : { message: "vazio" }) }),
+      ),
+    );
+
+    await denied(
+      "profissional B nao manda mensagem em nome do profissional A",
+      profB.rpc("send_staff_chat_message", {
+        p_professional_id: profAuth.user.id,
+        p_body: "Tentativa cruzada",
+      }),
+    );
+
+    const { data: adminReadsThreadA, error: adminReadError } = await adminSession.rpc(
+      "staff_chat_thread_messages",
+      { p_professional_id: profAuth.user.id },
+    );
+    check(
+      "admin le o thread do profissional A",
+      !adminReadError && adminReadsThreadA?.length === 1,
+    );
+
+    const { error: adminReplyError } = await adminSession.rpc("send_staff_chat_message", {
+      p_professional_id: profAuth.user.id,
+      p_body: "Show, obrigado pelo retorno!",
+    });
+    check("admin responde no thread do profissional A", !adminReplyError);
+
+    const { data: profAUnreadBefore } = await prof.rpc("unread_staff_chat_count");
+    check("profissional A tem 1 nao lida do admin", profAUnreadBefore === 1);
+
+    await prof.rpc("mark_staff_chat_read", { p_professional_id: profAuth.user.id });
+    const { data: profAUnreadAfter } = await prof.rpc("unread_staff_chat_count");
+    check("nao-lidas do profissional A zeram depois de marcar como lido", profAUnreadAfter === 0);
+
+    const { data: adminInbox } = await adminSession.rpc("staff_chat_inbox");
+    const inboxEntryA = (adminInbox ?? []).find((row) => row.professional_id === profAuth.user.id);
+    check(
+      "inbox do admin mostra a ultima mensagem do profissional A",
+      inboxEntryA?.last_message === "Show, obrigado pelo retorno!",
+    );
+    const inboxEntryB = (adminInbox ?? []).find((row) => row.professional_id === profBAuth.user.id);
+    check(
+      "inbox do admin lista o profissional B mesmo sem mensagem",
+      Boolean(inboxEntryB) && inboxEntryB.last_message === null,
+    );
+
+    await denied(
+      "profissional comum nao le a inbox do admin",
+      prof.rpc("staff_chat_inbox").then(({ data, error }) => ({
+        error: error ?? (data?.length ? null : { message: "vazio" }),
+      })),
+    );
+
+    // -- Mural: data prevista de implementacao -------------------------------
+    const { data: scheduledPost, error: scheduledPostError } = await adminSession
+      .from("bulletin_posts")
+      .insert({
+        title: "Nova automacao E2E",
+        body: "Chegando em breve.",
+        published: true,
+        scheduled_date: "2026-12-01",
+        created_by: adminAuth.user.id,
+      })
+      .select("*")
+      .single();
+    check("admin publica novidade com data prevista", !scheduledPostError && Boolean(scheduledPost));
+    if (scheduledPost) created.bulletinPosts.push(scheduledPost.id);
+
+    const { data: feedWithDate } = await clientA.rpc("bulletin_feed");
+    const feedEntry = (feedWithDate ?? []).find((row) => row.id === scheduledPost?.id);
+    check(
+      "cliente ve a data prevista da novidade no feed do mural",
+      feedEntry?.scheduled_date === "2026-12-01",
+    );
+
+    // ---------------------------------------------------------------------
+    console.log("\n  [14] Limpeza");
     // ---------------------------------------------------------------------
   } finally {
     for (const id of created.clients) {

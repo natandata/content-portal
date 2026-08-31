@@ -21,9 +21,11 @@ interface Props {
   professionals: ProfessionalOption[];
   client?: ClientRow;
   label?: string;
+  /** Pre-seleciona o profissional ao criar — usado quando o admin cria a partir da tela de um profissional. */
+  defaultProfessionalId?: string;
 }
 
-export function ClientFormModal({ role, professionals, client, label }: Props) {
+export function ClientFormModal({ role, professionals, client, label, defaultProfessionalId }: Props) {
   const router = useRouter();
   const isEdit = Boolean(client);
 
@@ -32,7 +34,9 @@ export function ClientFormModal({ role, professionals, client, label }: Props) {
   const [companyName, setCompanyName] = useState(client?.company_name ?? "");
   const [email, setEmail] = useState(client?.email ?? "");
   const [phone, setPhone] = useState(client?.phone ?? "");
-  const [professionalId, setProfessionalId] = useState(client?.professional_id ?? "");
+  const [professionalId, setProfessionalId] = useState(
+    client?.professional_id ?? defaultProfessionalId ?? "",
+  );
   const [status, setStatus] = useState<"active" | "inactive">(client?.status ?? "active");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,7 +47,7 @@ export function ClientFormModal({ role, professionals, client, label }: Props) {
     setCompanyName("");
     setEmail("");
     setPhone("");
-    setProfessionalId("");
+    setProfessionalId(defaultProfessionalId ?? "");
   }
 
   async function submit() {

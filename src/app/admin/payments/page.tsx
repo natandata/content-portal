@@ -5,11 +5,16 @@ import { InvoicesList } from "@/features/workspace/invoices-list";
 
 export const metadata: Metadata = { title: "Cobrancas" };
 
-export default function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ client?: string; professional?: string }>;
+}) {
+  const { client, professional } = await searchParams;
   return (
     <>
       <RevalidateInvoicesBadge />
-      <InvoicesList />
+      <InvoicesList clientId={client} professionalId={professional} />
     </>
   );
 }

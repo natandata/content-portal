@@ -287,6 +287,9 @@ export interface Dictionary {
     editPost: string;
     postTitle: string;
     postBody: string;
+    scheduledDate: string;
+    scheduledDateHint: string;
+    plannedFor: (date: string) => string;
     publish: string;
     published: string;
     draft: string;
@@ -607,6 +610,9 @@ const ptBR: Dictionary = {
     editPost: "Editar novidade",
     postTitle: "Titulo",
     postBody: "Descricao",
+    scheduledDate: "Data prevista de implementacao",
+    scheduledDateHint: "Opcional — quando essa novidade deve chegar ao app.",
+    plannedFor: (date) => `Previsto para ${date}`,
     publish: "Publicada",
     published: "Publicada",
     draft: "Rascunho",
@@ -933,6 +939,9 @@ const en: Dictionary = {
     editPost: "Edit update",
     postTitle: "Title",
     postBody: "Description",
+    scheduledDate: "Planned rollout date",
+    scheduledDateHint: "Optional — when this update should land in the app.",
+    plannedFor: (date) => `Planned for ${date}`,
     publish: "Published",
     published: "Published",
     draft: "Draft",

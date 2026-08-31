@@ -11,12 +11,15 @@ export function ContentFilters({
   statuses,
   selectedClientId,
   selectedStatus,
+  professionalId,
 }: {
   basePath: string;
   clients: { id: string; companyName: string }[];
   statuses: { value: string; label: string }[];
   selectedClientId?: string;
   selectedStatus?: string;
+  /** Preserva o filtro de profissional (vindo de Profissionais) ao trocar cliente/status. */
+  professionalId?: string;
 }) {
   const router = useRouter();
 
@@ -27,6 +30,7 @@ export function ContentFilters({
 
     if (client) params.set("client", client);
     if (status) params.set("status", status);
+    if (professionalId) params.set("professional", professionalId);
 
     const query = params.toString();
     router.push(query ? `${basePath}?${query}` : basePath);

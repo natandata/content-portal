@@ -11,7 +11,7 @@ export default async function ProfessionalLayout({ children }: { children: React
   const actor = await requireStaff();
   if (actor.role !== "professional") redirect(HOME_BY_ROLE[actor.role]);
 
-  const badges = await loadStaffBadges(await createClient());
+  const badges = await loadStaffBadges(await createClient(), "professional");
 
   return (
     <WorkspaceShell

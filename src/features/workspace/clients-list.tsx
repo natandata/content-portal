@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Users } from "lucide-react";
+import { ArrowLeft, ChevronRight, Users } from "lucide-react";
 
 import { ClientFormModal } from "@/components/clients/client-form-modal";
 import { CopyCode } from "@/components/clients/copy-code";
@@ -10,12 +10,14 @@ import { basePath, requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { initials } from "@/lib/utils";
 
-export async function ClientsList() {
+export async function ClientsList({ professionalId }: { professionalId?: string } = {}) {
   const actor = await requireStaff();
   const base = basePath(actor.role);
   const supabase = await createClient();
 
-  const { data: clients } = await supabase.from("clients").select("*").order("company_name");
+  let query = supabase.from("clients").select("*").order("company_name");
+  if (professionalId) query = query.eq("professional_id", professionalId);
+  const { data: clients } = await query;
 
   const professionals =
     actor.role === "admin"
@@ -33,12 +35,37 @@ export async function ClientsList() {
     name: professional.name,
   }));
 
+  const scopedProfessional = professionalId
+    ? professionals.find((professional) => professional.id === professionalId)
+    : undefined;
+
   return (
     <>
       <PageHeader
+        breadcrumb={
+          professionalId ? (
+            <Link
+              href={`/admin/professionals/${professionalId}`}
+              className="focus-ring inline-flex items-center gap-1.5 rounded text-sm text-ink-500 hover:text-ink-900"
+            >
+              <ArrowLeft className="size-4" aria-hidden />
+              {scopedProfessional?.name ?? "Profissional"}
+            </Link>
+          ) : undefined
+        }
         title="Clientes"
-        description="Cada cliente entra na plataforma com o proprio codigo de acesso."
-        actions={<ClientFormModal role={actor.role} professionals={professionalOptions} />}
+        description={
+          scopedProfessional
+            ? `Clientes atendidos por ${scopedProfessional.name}.`
+            : "Cada cliente entra na plataforma com o proprio codigo de acesso."
+        }
+        actions={
+          <ClientFormModal
+            role={actor.role}
+            professionals={professionalOptions}
+            defaultProfessionalId={professionalId}
+          />
+        }
       />
 
       {!clients || clients.length === 0 ? (
@@ -46,7 +73,13 @@ export async function ClientsList() {
           icon={<Users className="size-5" />}
           title="Nenhum cliente cadastrado"
           description="Crie o primeiro cliente para gerar o codigo de acesso e comecar a enviar conteudos."
-          action={<ClientFormModal role={actor.role} professionals={professionalOptions} />}
+          action={
+            <ClientFormModal
+              role={actor.role}
+              professionals={professionalOptions}
+              defaultProfessionalId={professionalId}
+            />
+          }
         />
       ) : (
         <Card padded={false}>

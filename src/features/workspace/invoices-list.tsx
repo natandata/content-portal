@@ -10,21 +10,36 @@ import { BUCKETS } from "@/lib/paths";
 import { signedDownloadUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, safeFileName } from "@/lib/utils";
-import { loadClientNames } from "@/server/queries";
+import { loadClientNames, loadProfessionalClientIds } from "@/server/queries";
 
 const METHOD_ICON = { boleto: Banknote, link: Link2, pix: QrCode };
 
-export async function InvoicesList({ clientId }: { clientId?: string } = {}) {
+export async function InvoicesList({
+  clientId,
+  professionalId,
+}: {
+  clientId?: string;
+  professionalId?: string;
+} = {}) {
   await requireStaff();
   const supabase = await createClient();
 
   let query = supabase.from("invoices").select("*").order("due_date", { ascending: true });
-  if (clientId) query = query.eq("client_id", clientId);
+  let clientsQuery = supabase
+    .from("clients")
+    .select("id, company_name")
+    .eq("status", "active")
+    .order("company_name");
 
-  const [{ data: invoices }, { data: clients }] = await Promise.all([
-    query,
-    supabase.from("clients").select("id, company_name").eq("status", "active").order("company_name"),
-  ]);
+  if (clientId) {
+    query = query.eq("client_id", clientId);
+  } else if (professionalId) {
+    const ids = await loadProfessionalClientIds(supabase, professionalId);
+    query = query.in("client_id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    clientsQuery = clientsQuery.eq("professional_id", professionalId);
+  }
+
+  const [{ data: invoices }, { data: clients }] = await Promise.all([query, clientsQuery]);
 
   const rows = invoices ?? [];
   const clientOptions = (clients ?? []).map((client) => ({

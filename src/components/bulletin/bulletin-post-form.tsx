@@ -30,6 +30,7 @@ export function BulletinPostForm({
   const [title, setTitle] = useState(post?.title ?? "");
   const [body, setBody] = useState(post?.body ?? "");
   const [published, setPublished] = useState(post?.published ?? true);
+  const [scheduledDate, setScheduledDate] = useState(post?.scheduledDate ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -39,8 +40,8 @@ export function BulletinPostForm({
 
     try {
       const result = isEdit
-        ? await updateBulletinPostAction(post!.id, { title, body, published })
-        : await createBulletinPostAction({ title, body, published });
+        ? await updateBulletinPostAction(post!.id, { title, body, published, scheduledDate })
+        : await createBulletinPostAction({ title, body, published, scheduledDate });
 
       if (!result.ok) {
         setError(result.error);
@@ -53,6 +54,7 @@ export function BulletinPostForm({
         setTitle("");
         setBody("");
         setPublished(true);
+        setScheduledDate("");
       }
       router.refresh();
     } finally {
@@ -99,6 +101,16 @@ export function BulletinPostForm({
           />
         </Field>
 
+        <Field label={dict.scheduledDate} htmlFor="bulletin-scheduled-date" hint={dict.scheduledDateHint}>
+          <Input
+            id="bulletin-scheduled-date"
+            type="date"
+            value={scheduledDate}
+            onChange={(event) => setScheduledDate(event.target.value)}
+            disabled={busy}
+          />
+        </Field>
+
         <label className="flex items-center gap-2.5 rounded-xl border border-line bg-ink-50/60 px-3 py-2.5">
           <input
             type="checkbox"
@@ -121,4 +133,5 @@ export interface BulletinFormPost {
   title: string;
   body: string;
   published: boolean;
+  scheduledDate?: string | null;
 }

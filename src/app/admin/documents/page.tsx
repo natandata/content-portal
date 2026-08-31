@@ -4,6 +4,11 @@ import { DocumentsList } from "@/features/workspace/documents-list";
 
 export const metadata: Metadata = { title: "Documentos" };
 
-export default function Page() {
-  return <DocumentsList />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ client?: string; professional?: string }>;
+}) {
+  const { client, professional } = await searchParams;
+  return <DocumentsList clientId={client} professionalId={professional} />;
 }

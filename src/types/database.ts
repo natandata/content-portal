@@ -234,6 +234,7 @@ export type BulletinPostRow = {
   title: string;
   body: string;
   published: boolean;
+  scheduled_date: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -251,6 +252,7 @@ export type BulletinFeedRow = {
   id: string;
   title: string;
   body: string;
+  scheduled_date: string | null;
   created_at: string;
   likes: number;
   dislikes: number;
@@ -284,10 +286,50 @@ export type BulletinAdminReportRow = {
   post_id: string;
   title: string;
   published: boolean;
+  scheduled_date: string | null;
   created_at: string;
   likes: number;
   dislikes: number;
   voters: { name: string; role: string; vote: 1 | -1 }[];
+}
+
+export type StaffChatMessageRow = {
+  id: string;
+  thread_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+}
+
+export type StaffChatThreadRow = {
+  id: string;
+  professional_id: string;
+  created_at: string;
+}
+
+export type StaffChatReadRow = {
+  thread_id: string;
+  user_id: string;
+  last_read_at: string;
+}
+
+/** Retorno do RPC `staff_chat_thread_messages`. */
+export type StaffChatThreadMessage = {
+  id: string;
+  sender_id: string;
+  sender_name: string;
+  is_admin: boolean;
+  body: string;
+  created_at: string;
+}
+
+/** Retorno do RPC `staff_chat_inbox` — so admin, um item por profissional. */
+export type StaffChatInboxEntry = {
+  professional_id: string;
+  professional_name: string;
+  last_message: string | null;
+  last_message_at: string | null;
+  unread_count: number;
 }
 
 export type InvoiceRow = {
@@ -363,6 +405,9 @@ export type Database = {
       invoices: Table<InvoiceRow, 'client_id' | 'title' | 'method' | 'amount' | 'due_date'>;
       client_services: Table<ClientServiceRow, 'client_id' | 'title' | 'amount'>;
       client_activities: Table<ClientActivityRow, 'client_id' | 'actor_name' | 'action'>;
+      staff_chat_threads: Table<StaffChatThreadRow, 'professional_id'>;
+      staff_chat_messages: Table<StaffChatMessageRow, 'thread_id' | 'sender_id' | 'body'>;
+      staff_chat_reads: Table<StaffChatReadRow, 'thread_id' | 'user_id'>;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -439,6 +484,26 @@ export type Database = {
       bulletin_admin_report: {
         Args: Record<string, never>;
         Returns: BulletinAdminReportRow[];
+      };
+      send_staff_chat_message: {
+        Args: { p_professional_id: string; p_body: string };
+        Returns: StaffChatMessageRow;
+      };
+      staff_chat_thread_messages: {
+        Args: { p_professional_id: string };
+        Returns: StaffChatThreadMessage[];
+      };
+      mark_staff_chat_read: {
+        Args: { p_professional_id: string };
+        Returns: void;
+      };
+      staff_chat_inbox: {
+        Args: Record<string, never>;
+        Returns: StaffChatInboxEntry[];
+      };
+      unread_staff_chat_count: {
+        Args: Record<string, never>;
+        Returns: number;
       };
     };
     Enums: {

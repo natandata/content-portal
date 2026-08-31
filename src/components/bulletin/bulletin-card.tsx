@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { CalendarClock, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { BulletinPostForm } from "@/components/bulletin/bulletin-post-form";
@@ -84,6 +84,13 @@ export function BulletinCard({
 
       <p className="mt-2 text-sm whitespace-pre-wrap text-ink-700">{post.body}</p>
 
+      {post.scheduled_date ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-accent">
+          <CalendarClock className="size-3.5" aria-hidden />
+          {dict.plannedFor(formatDate(post.scheduled_date, intlLocale(locale)))}
+        </p>
+      ) : null}
+
       <div className="mt-4">
         <VoteButtons
           postId={post.id}
@@ -98,7 +105,13 @@ export function BulletinCard({
         <BulletinPostForm
           open={editing}
           onClose={() => setEditing(false)}
-          post={{ id: post.id, title: post.title, body: post.body, published }}
+          post={{
+            id: post.id,
+            title: post.title,
+            body: post.body,
+            published,
+            scheduledDate: post.scheduled_date,
+          }}
           locale={locale}
         />
       ) : null}

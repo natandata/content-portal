@@ -4,6 +4,11 @@ import { ApprovalsList } from "@/features/workspace/approvals-list";
 
 export const metadata: Metadata = { title: "Aprovacoes" };
 
-export default function Page() {
-  return <ApprovalsList />;
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ professional?: string }>;
+}) {
+  const { professional } = await searchParams;
+  return <ApprovalsList professionalId={professional} />;
 }

@@ -8,7 +8,12 @@ import { PageHeader } from "@/components/ui/layout";
 import { basePath, requireStaff } from "@/lib/auth";
 import { CONTENT_STATUS_LABEL, CONTENT_STATUS_ORDER } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
-import { loadClientNames, loadContentFileCounts, loadContentPreviews } from "@/server/queries";
+import {
+  loadClientNames,
+  loadContentFileCounts,
+  loadContentPreviews,
+  loadProfessionalClientIds,
+} from "@/server/queries";
 import type { ContentStatus } from "@/types/database";
 
 import { ContentFilters } from "./content-filters";
@@ -16,9 +21,11 @@ import { ContentFilters } from "./content-filters";
 export async function ContentsList({
   clientId,
   status,
+  professionalId,
 }: {
   clientId?: string;
   status?: string;
+  professionalId?: string;
 }) {
   const actor = await requireStaff();
   const base = basePath(actor.role);
@@ -34,13 +41,18 @@ export async function ContentsList({
     .order("updated_at", { ascending: false })
     .limit(120);
 
-  if (clientId) query = query.eq("client_id", clientId);
+  if (clientId) {
+    query = query.eq("client_id", clientId);
+  } else if (professionalId) {
+    const clientIds = await loadProfessionalClientIds(supabase, professionalId);
+    query = query.in("client_id", clientIds.length > 0 ? clientIds : ["00000000-0000-0000-0000-000000000000"]);
+  }
   if (statusFilter) query = query.eq("status", statusFilter);
 
-  const [{ data: contents }, { data: clients }] = await Promise.all([
-    query,
-    supabase.from("clients").select("id, company_name").order("company_name"),
-  ]);
+  let clientsQuery = supabase.from("clients").select("id, company_name").order("company_name");
+  if (professionalId) clientsQuery = clientsQuery.eq("professional_id", professionalId);
+
+  const [{ data: contents }, { data: clients }] = await Promise.all([query, clientsQuery]);
 
   const rows = contents ?? [];
   const ids = rows.map((row) => row.id);
@@ -74,6 +86,7 @@ export async function ContentsList({
         }))}
         selectedClientId={clientId}
         selectedStatus={statusFilter}
+        professionalId={professionalId}
       />
 
       {rows.length === 0 ? (

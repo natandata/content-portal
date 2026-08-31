@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, ShieldCheck } from "lucide-react";
 
 import { NavBadge } from "@/components/shell/nav-badge";
 import { EmptyState } from "@/components/ui/feedback";
@@ -8,18 +8,37 @@ import { basePath, requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatRelativeDay, initials } from "@/lib/utils";
 
-/** Lista de conversas — um item por cliente que a equipe gerencia. */
+/** Lista de conversas — um item por cliente que a equipe gerencia, mais o admin. */
 export async function ChatInbox() {
   const actor = await requireStaff();
   const base = basePath(actor.role);
   const supabase = await createClient();
 
   const { data: inbox } = await supabase.rpc("chat_inbox");
+  const { data: adminUnread } = await supabase.rpc("unread_staff_chat_count");
   const rows = inbox ?? [];
 
   return (
     <>
       <PageHeader title="Chat" description="Converse com cada cliente que voce atende." />
+
+      <Card padded={false} className="mb-4">
+        <Link
+          href={`${base}/chat/admin`}
+          className="focus-ring flex items-center gap-3 px-4 py-3.5 transition hover:bg-ink-50 sm:px-5"
+        >
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <ShieldCheck className="size-5" aria-hidden />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-ink-900">Administrador</p>
+            <p className="truncate text-xs text-ink-500">Fale direto com quem administra a conta</p>
+          </div>
+
+          {(adminUnread ?? 0) > 0 ? <NavBadge count={adminUnread ?? 0} className="ml-0" /> : null}
+        </Link>
+      </Card>
 
       {rows.length === 0 ? (
         <EmptyState

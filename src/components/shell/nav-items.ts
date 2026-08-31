@@ -30,10 +30,28 @@ export interface NavItem {
   hideOnMobileNav?: boolean;
 }
 
-export function staffNavItems(role: UserRole): NavItem[] {
-  const base = role === "admin" ? "/admin" : "/professional";
+/**
+ * O admin nao opera clientes/conteudos diretamente — isso e trabalho do
+ * profissional responsavel. O admin acompanha (Dashboard), fala com a
+ * equipe (Chat), publica novidades (Mural) e, quando precisa entrar no
+ * dia a dia de um cliente especifico, faz isso de dentro de Profissionais.
+ */
+function adminNavItems(): NavItem[] {
+  return [
+    { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/admin/chat", label: "Chat", icon: MessageCircle, badge: "chat" },
+    { href: "/admin/updates", label: "Mural", icon: Megaphone },
+    { href: "/admin/professionals", label: "Profissionais", icon: UserCog },
+    // Consumo de banco e Storage e assunto de quem responde pela conta.
+    { href: "/admin/platform", label: "Plataforma", icon: Activity },
+    { href: "/admin/settings", label: "Configuracoes", icon: Settings },
+  ];
+}
 
-  const items: NavItem[] = [
+function professionalNavItems(): NavItem[] {
+  const base = "/professional";
+
+  return [
     { href: `${base}/dashboard`, label: "Dashboard", icon: LayoutDashboard },
     { href: `${base}/clients`, label: "Clientes", icon: Users },
     { href: `${base}/content`, label: "Conteudos", icon: Images },
@@ -43,17 +61,12 @@ export function staffNavItems(role: UserRole): NavItem[] {
     { href: `${base}/feed`, label: "Feed", icon: Grid3x3 },
     { href: `${base}/chat`, label: "Chat", icon: MessageCircle, badge: "chat" },
     { href: `${base}/updates`, label: "Mural", icon: Megaphone },
+    { href: `${base}/settings`, label: "Configuracoes", icon: Settings },
   ];
+}
 
-  if (role === "admin") {
-    items.push({ href: "/admin/professionals", label: "Profissionais", icon: UserCog });
-    // Consumo de banco e Storage e assunto de quem responde pela conta.
-    items.push({ href: "/admin/platform", label: "Plataforma", icon: Activity });
-  }
-
-  items.push({ href: `${base}/settings`, label: "Configuracoes", icon: Settings });
-
-  return items;
+export function staffNavItems(role: UserRole): NavItem[] {
+  return role === "admin" ? adminNavItems() : professionalNavItems();
 }
 
 export const clientNavItems: NavItem[] = [

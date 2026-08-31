@@ -12,6 +12,7 @@ const postSchema = z.object({
   title: z.string().trim().min(1, "Informe o titulo").max(120),
   body: z.string().trim().min(1, "Informe a descricao").max(4000),
   published: z.boolean(),
+  scheduledDate: z.union([z.iso.date(), z.literal("")]).optional(),
 });
 
 function revalidateBulletin() {
@@ -40,6 +41,7 @@ export async function createBulletinPostAction(
       title: parsed.data.title,
       body: parsed.data.body,
       published: parsed.data.published,
+      scheduled_date: parsed.data.scheduledDate || null,
       created_by: actor.authUser.id,
     })
     .select("*")
@@ -71,6 +73,7 @@ export async function updateBulletinPostAction(
       title: parsed.data.title,
       body: parsed.data.body,
       published: parsed.data.published,
+      scheduled_date: parsed.data.scheduledDate || null,
     })
     .eq("id", postId);
 

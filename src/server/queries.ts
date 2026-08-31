@@ -15,7 +15,10 @@ import type {
   ContentRow,
   ContentStatus,
   ContractStatus,
+  CurrencyCode,
   Database,
+  PlatformStats,
+  UserRole,
 } from "@/types/database";
 
 type Client = SupabaseClient<Database>;
@@ -173,6 +176,70 @@ export async function loadDashboardStats(supabase: Client): Promise<DashboardSta
   };
 }
 
+export interface AdminDashboardStats {
+  activeClients: number;
+  activeProfessionals: number;
+  approvedContents: number;
+  storageBytes: number;
+  paidRevenue: { currency: CurrencyCode; amount: number }[];
+}
+
+/**
+ * Dashboard do admin: visao de como os profissionais estao usando o app, nao
+ * de um cliente especifico — por isso nao repete os contadores de conteudo
+ * pendente/aguardando do dashboard do profissional.
+ */
+export async function loadAdminDashboardStats(supabase: Client): Promise<AdminDashboardStats> {
+  const [clients, professionals, approvedContents, platform, paidInvoices] = await Promise.all([
+    supabase.from("clients").select("id", { count: "exact", head: true }).eq("status", "active"),
+    supabase
+      .from("users")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "professional")
+      .eq("status", "active"),
+    supabase
+      .from("contents")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["approved", "published"] satisfies ContentStatus[]),
+    supabase.rpc("platform_stats"),
+    supabase.from("invoices").select("currency, amount").eq("status", "paid"),
+  ]);
+
+  const revenueByCurrency = new Map<CurrencyCode, number>();
+  for (const row of paidInvoices.data ?? []) {
+    revenueByCurrency.set(
+      row.currency,
+      (revenueByCurrency.get(row.currency) ?? 0) + Number(row.amount),
+    );
+  }
+
+  return {
+    activeClients: clients.count ?? 0,
+    activeProfessionals: professionals.count ?? 0,
+    approvedContents: approvedContents.count ?? 0,
+    storageBytes: (platform.data as PlatformStats | null)?.storage_bytes ?? 0,
+    paidRevenue: Array.from(revenueByCurrency.entries()).map(([currency, amount]) => ({
+      currency,
+      amount,
+    })),
+  };
+}
+
+/**
+ * Ids dos clientes de um profissional — usado pelo admin para filtrar
+ * Conteudos/Aprovacoes/Documentos/Cobrancas/Feed a partir de Profissionais.
+ */
+export async function loadProfessionalClientIds(
+  supabase: Client,
+  professionalId: string,
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("professional_id", professionalId);
+  return (data ?? []).map((row) => row.id);
+}
+
 /** Mapa id -> nome de empresa, para as listagens que cruzam clientes. */
 export async function loadClientNames(
   supabase: Client,
@@ -282,12 +349,18 @@ export interface NavBadges {
   invoices: number;
 }
 
-/** Equipe: o cliente respondeu (ou devolveu o contrato) e a bola voltou. */
-export async function loadStaffBadges(supabase: Client): Promise<NavBadges> {
+/**
+ * Equipe: o cliente respondeu (ou devolveu o contrato) e a bola voltou.
+ *
+ * O badge "Chat" muda de sentido por papel: o admin so conversa com
+ * profissionais (unread_staff_chat_count); o profissional conversa com
+ * clientes e tambem com o admin, entao o numero soma os dois.
+ */
+export async function loadStaffBadges(supabase: Client, role: UserRole): Promise<NavBadges> {
   const answered: ContentStatus[] = ["approved", "revision_requested", "rejected"];
   const returned: ContractStatus[] = ["signed", "under_review"];
 
-  const [contents, contracts, chat, invoices] = await Promise.all([
+  const [contents, contracts, chat, invoices, staffChat] = await Promise.all([
     supabase
       .from("contents")
       .select("id", { count: "exact", head: true })
@@ -298,12 +371,16 @@ export async function loadStaffBadges(supabase: Client): Promise<NavBadges> {
       .in("status", returned),
     supabase.rpc("unread_chat_count"),
     supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
+    supabase.rpc("unread_staff_chat_count"),
   ]);
+
+  const chatCount =
+    role === "admin" ? (staffChat.data ?? 0) : (chat.data ?? 0) + (staffChat.data ?? 0);
 
   return {
     approvals: contents.count ?? 0,
     contracts: contracts.count ?? 0,
-    chat: chat.data ?? 0,
+    chat: chatCount,
     invoices: invoices.count ?? 0,
   };
 }
@@ -404,6 +481,7 @@ export async function loadBulletinAdminList(
       id: post.id,
       title: post.title,
       body: post.body,
+      scheduled_date: post.scheduled_date,
       created_at: post.created_at,
       likes: counted?.likes ?? 0,
       dislikes: counted?.dislikes ?? 0,

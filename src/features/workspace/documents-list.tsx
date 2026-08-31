@@ -12,19 +12,34 @@ import { signedUrlMap } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { DOCUMENT_KIND_LABEL } from "@/lib/domain";
 import { formatDate } from "@/lib/utils";
-import { loadClientNames } from "@/server/queries";
+import { loadClientNames, loadProfessionalClientIds } from "@/server/queries";
 
-export async function DocumentsList({ clientId }: { clientId?: string } = {}) {
+export async function DocumentsList({
+  clientId,
+  professionalId,
+}: {
+  clientId?: string;
+  professionalId?: string;
+} = {}) {
   await requireStaff();
   const supabase = await createClient();
 
   let query = supabase.from("contracts").select("*").order("created_at", { ascending: false });
-  if (clientId) query = query.eq("client_id", clientId);
+  let clientsQuery = supabase
+    .from("clients")
+    .select("id, company_name")
+    .eq("status", "active")
+    .order("company_name");
 
-  const [{ data: contracts }, { data: clients }] = await Promise.all([
-    query,
-    supabase.from("clients").select("id, company_name").eq("status", "active").order("company_name"),
-  ]);
+  if (clientId) {
+    query = query.eq("client_id", clientId);
+  } else if (professionalId) {
+    const ids = await loadProfessionalClientIds(supabase, professionalId);
+    query = query.in("client_id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
+    clientsQuery = clientsQuery.eq("professional_id", professionalId);
+  }
+
+  const [{ data: contracts }, { data: clients }] = await Promise.all([query, clientsQuery]);
 
   const rows = contracts ?? [];
   const clientOptions = (clients ?? []).map((client) => ({

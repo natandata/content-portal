@@ -1,4 +1,5 @@
-import { UserCog, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, UserCog, UserPlus } from "lucide-react";
 
 import { AccessRequestActions } from "@/components/professionals/access-request-actions";
 import { ProfessionalFormModal } from "@/components/professionals/professional-form-modal";
@@ -99,10 +100,13 @@ export async function ProfessionalsList() {
                   {initials(professional.name)}
                 </span>
 
-                <div className="min-w-0 flex-1">
+                <Link
+                  href={`/admin/professionals/${professional.id}`}
+                  className="focus-ring min-w-0 flex-1 rounded"
+                >
                   <p className="truncate text-sm font-medium text-ink-900">{professional.name}</p>
                   <p className="truncate text-xs text-ink-500">{professional.email}</p>
-                </div>
+                </Link>
 
                 <span className="text-xs text-ink-500 tabular-nums">
                   {clientCount.get(professional.id) ?? 0} cliente(s)
@@ -115,6 +119,14 @@ export async function ProfessionalsList() {
                 )}
 
                 <ProfessionalFormModal professional={professional} />
+
+                <Link
+                  href={`/admin/professionals/${professional.id}`}
+                  aria-label={`Gerenciar ${professional.name}`}
+                  className="focus-ring rounded p-1 text-ink-400 hover:text-ink-900"
+                >
+                  <ChevronRight className="size-5" aria-hidden />
+                </Link>
               </li>
             ))}
           </ul>
