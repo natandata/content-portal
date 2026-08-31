@@ -1,6 +1,5 @@
 import "server-only";
 
-import { unstable_cache } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { FeedEntry } from "@/components/feed/feed-grid";
@@ -284,63 +283,55 @@ export interface NavBadges {
 }
 
 /** Equipe: o cliente respondeu (ou devolveu o contrato) e a bola voltou. */
-export const loadStaffBadges = unstable_cache(
-  async (supabase: Client): Promise<NavBadges> => {
-    const answered: ContentStatus[] = ["approved", "revision_requested", "rejected"];
-    const returned: ContractStatus[] = ["signed", "under_review"];
+export async function loadStaffBadges(supabase: Client): Promise<NavBadges> {
+  const answered: ContentStatus[] = ["approved", "revision_requested", "rejected"];
+  const returned: ContractStatus[] = ["signed", "under_review"];
 
-    const [contents, contracts, chat, invoices] = await Promise.all([
-      supabase
-        .from("contents")
-        .select("id", { count: "exact", head: true })
-        .in("status", answered),
-      supabase
-        .from("contracts")
-        .select("id", { count: "exact", head: true })
-        .in("status", returned),
-      supabase.rpc("unread_chat_count"),
-      supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
-    ]);
+  const [contents, contracts, chat, invoices] = await Promise.all([
+    supabase
+      .from("contents")
+      .select("id", { count: "exact", head: true })
+      .in("status", answered),
+    supabase
+      .from("contracts")
+      .select("id", { count: "exact", head: true })
+      .in("status", returned),
+    supabase.rpc("unread_chat_count"),
+    supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
+  ]);
 
-    return {
-      approvals: contents.count ?? 0,
-      contracts: contracts.count ?? 0,
-      chat: chat.data ?? 0,
-      invoices: invoices.count ?? 0,
-    };
-  },
-  ["nav-badges"],
-  { tags: ["nav-badges"] },
-);
+  return {
+    approvals: contents.count ?? 0,
+    contracts: contracts.count ?? 0,
+    chat: chat.data ?? 0,
+    invoices: invoices.count ?? 0,
+  };
+}
 
 /** Cliente: o que chegou para ele decidir ou assinar. */
-export const loadClientBadges = unstable_cache(
-  async (supabase: Client): Promise<NavBadges> => {
-    const waiting: ContentStatus[] = ["submitted", "awaiting_approval"];
+export async function loadClientBadges(supabase: Client): Promise<NavBadges> {
+  const waiting: ContentStatus[] = ["submitted", "awaiting_approval"];
 
-    const [contents, contracts, chat, invoices] = await Promise.all([
-      supabase
-        .from("contents")
-        .select("id", { count: "exact", head: true })
-        .in("status", waiting),
-      supabase
-        .from("contracts")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "awaiting_signature" satisfies ContractStatus),
-      supabase.rpc("unread_chat_count"),
-      supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
-    ]);
+  const [contents, contracts, chat, invoices] = await Promise.all([
+    supabase
+      .from("contents")
+      .select("id", { count: "exact", head: true })
+      .in("status", waiting),
+    supabase
+      .from("contracts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "awaiting_signature" satisfies ContractStatus),
+    supabase.rpc("unread_chat_count"),
+    supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
+  ]);
 
-    return {
-      approvals: contents.count ?? 0,
-      contracts: contracts.count ?? 0,
-      chat: chat.data ?? 0,
-      invoices: invoices.count ?? 0,
-    };
-  },
-  ["nav-badges"],
-  { tags: ["nav-badges"] },
-);
+  return {
+    approvals: contents.count ?? 0,
+    contracts: contracts.count ?? 0,
+    chat: chat.data ?? 0,
+    invoices: invoices.count ?? 0,
+  };
+}
 
 /** Itens do feed de um cliente, ja com capa assinada, na ordem publicada. */
 export async function loadFeedEntries(
