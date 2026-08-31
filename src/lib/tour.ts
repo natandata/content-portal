@@ -22,7 +22,7 @@ export interface TourStep {
 const STAFF_STEPS: TourStep[] = [
   {
     icon: "wave",
-    title: "Bem-vindo ao Content Portal",
+    title: "Bem-vindo ao Content",
     body: "Em um minuto voce ve como o portal organiza o caminho do conteudo: do cliente ao contrato, do envio a aprovacao, ate a montagem do feed.",
   },
   {

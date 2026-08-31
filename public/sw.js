@@ -1,5 +1,5 @@
 /*
- * Service worker do Content Portal.
+ * Service worker do Content.
  *
  * Deliberadamente conservador: esta e uma aplicacao autenticada, entao nada de
  * HTML de pagina ou resposta de API entra em cache — servir uma pagina de um
@@ -96,7 +96,7 @@ self.addEventListener("fetch", (event) => {
  * evita empilhar abas do portal quando a pessoa ja esta com uma aberta.
  */
 self.addEventListener("push", (event) => {
-  let payload = { title: "Content Portal", body: "Voce tem uma atualizacao." };
+  let payload = { title: "Content", body: "Voce tem uma atualizacao." };
   try {
     if (event.data) payload = { ...payload, ...event.data.json() };
   } catch {

@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Content Portal",
-    short_name: "Content Portal",
+    name: "Content",
+    short_name: "Content",
     description:
-      "Contratos, conteudos, aprovacoes e feed entre o gestor de conteudo e seus clientes.",
+      "Plataforma de contratos, conteudos, aprovacoes e feed entre gestores de conteudo e seus clientes.",
     lang: "pt-BR",
     // A raiz redireciona para /login ou para a area da role ja autenticada.
     start_url: "/",
@@ -19,6 +19,10 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+    screenshots: [
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", form_factor: "narrow" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", form_factor: "wide" },
     ],
   };
 }

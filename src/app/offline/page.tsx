@@ -15,7 +15,7 @@ export default function OfflinePage() {
       </div>
       <h1 className="text-lg font-semibold text-ink-900">Voce esta sem conexao</h1>
       <p className="mt-2 max-w-sm text-sm text-ink-500">
-        O Content Portal precisa de internet para carregar contratos, conteudos e aprovacoes.
+        O Content precisa de internet para carregar contratos, conteudos e aprovacoes.
         Assim que a conexao voltar, atualize a pagina.
       </p>
     </main>

@@ -118,7 +118,7 @@ export function WorkspaceShell({
             <span className="rounded-[2px] bg-on-ink/55" />
             <span className="rounded-[2px] bg-on-ink" />
           </span>
-          <span className="text-sm font-semibold tracking-tight text-ink-900">Content Portal</span>
+          <span className="text-sm font-semibold tracking-tight text-ink-900">Content</span>
         </Link>
 
         <div className="scroll-slim flex-1 overflow-y-auto">{nav}</div>
@@ -137,7 +137,7 @@ export function WorkspaceShell({
             <span className="rounded-[2px] bg-on-ink/55" />
             <span className="rounded-[2px] bg-on-ink" />
           </span>
-          <span className="truncate text-sm font-semibold text-ink-900">Content Portal</span>
+          <span className="truncate text-sm font-semibold text-ink-900">Content</span>
         </Link>
         <div className="flex shrink-0 items-center gap-1">
           <ReloadAppButton label="Recarregar o app" />

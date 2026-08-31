@@ -325,7 +325,7 @@ export interface Dictionary {
 const ptBR: Dictionary = {
   languageToggle: { brazilian: "Sou Brasileiro", notBrazilian: "I'm not Brazilian", label: "Idioma" },
   login: {
-    title: "Content Portal",
+    title: "Content",
     subtitle: "Acesse sua conta",
     tabStaff: "Sou Profissional",
     tabClient: "Sou Cliente",
@@ -645,7 +645,7 @@ const ptBR: Dictionary = {
 const en: Dictionary = {
   languageToggle: { brazilian: "Sou Brasileiro", notBrazilian: "I'm not Brazilian", label: "Language" },
   login: {
-    title: "Content Portal",
+    title: "Content",
     subtitle: "Sign in to your account",
     tabStaff: "I'm Staff",
     tabClient: "I'm a Client",

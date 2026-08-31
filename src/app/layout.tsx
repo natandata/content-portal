@@ -8,16 +8,16 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Content Portal",
-    template: "%s · Content Portal",
+    default: "Content",
+    template: "%s · Content",
   },
   description:
-    "Portal de contratos, conteudos e aprovacoes entre gestores de conteudo e seus clientes.",
+    "Plataforma de contratos, conteudos e aprovacoes entre gestores de conteudo e seus clientes.",
   robots: { index: false, follow: false },
-  applicationName: "Content Portal",
+  applicationName: "Content",
   appleWebApp: {
     capable: true,
-    title: "Content Portal",
+    title: "Content",
     statusBarStyle: "default",
   },
   icons: {
