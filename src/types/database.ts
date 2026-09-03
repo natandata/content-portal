@@ -40,7 +40,7 @@ export type ContentStatus =
 
 export type ApprovalStatus = "approved" | "rejected" | "revision_requested";
 
-export type TaskStatus = "pending" | "in_progress" | "done";
+export type TaskStatus = "pending" | "in_progress" | "waiting" | "done";
 
 export type UserRow = {
   id: string;
@@ -386,6 +386,8 @@ export type TaskRow = {
   description: string | null;
   status: TaskStatus;
   due_date: string | null;
+  /** Etiqueta curta e livre pro card do quadro (ex.: "Urgente", "Financeiro"). */
+  tag: string | null;
   created_at: string;
   updated_at: string;
 }

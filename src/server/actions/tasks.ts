@@ -13,6 +13,7 @@ const taskSchema = z.object({
   description: z.string().trim().max(2000).optional(),
   clientId: z.union([z.uuid(), z.literal("")]).optional(),
   dueDate: z.union([z.iso.date(), z.literal("")]).optional(),
+  tag: z.string().trim().max(40).optional(),
 });
 
 function revalidateTasks() {
@@ -39,6 +40,7 @@ export async function createTaskAction(
       description: parsed.data.description || null,
       client_id: parsed.data.clientId || null,
       due_date: parsed.data.dueDate || null,
+      tag: parsed.data.tag || null,
     })
     .select("*")
     .single();
@@ -70,6 +72,7 @@ export async function updateTaskAction(
       description: parsed.data.description || null,
       client_id: parsed.data.clientId || null,
       due_date: parsed.data.dueDate || null,
+      tag: parsed.data.tag || null,
     })
     .eq("id", taskId)
     .select("*")
