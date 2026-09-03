@@ -7,8 +7,9 @@ import { toast } from "sonner";
 
 import { Button, IconButton } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { IdeaFormModal } from "@/components/ideas/idea-form-modal";
+import { IdeaFormModal, type IdeaClientOption } from "@/components/ideas/idea-form-modal";
 import { deleteIdeaAction } from "@/server/actions/ideas";
+import { initials } from "@/lib/utils";
 import type { IdeaImageRow, IdeaRow } from "@/types/database";
 
 export function IdeaCard({
@@ -16,11 +17,15 @@ export function IdeaCard({
   images,
   imageUrls,
   professionalId,
+  clients,
+  clientName,
 }: {
   idea: IdeaRow;
   images: IdeaImageRow[];
   imageUrls: Map<string, string>;
   professionalId: string;
+  clients: IdeaClientOption[];
+  clientName?: string;
 }) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -61,6 +66,14 @@ export function IdeaCard({
       ) : null}
 
       <div className="min-w-0 flex-1">
+        {clientName ? (
+          <span className="mb-1.5 flex w-fit items-center gap-1.5 rounded-full bg-ink-100 py-0.5 pr-2.5 pl-0.5 text-[11px] font-medium text-ink-600">
+            <span className="flex size-4 items-center justify-center rounded-full bg-ink-900 text-[8px] font-semibold text-on-ink">
+              {initials(clientName)}
+            </span>
+            {clientName}
+          </span>
+        ) : null}
         <h3 className="truncate text-sm font-semibold text-ink-900">{idea.title}</h3>
         {idea.notes ? <p className="mt-1 line-clamp-3 text-sm text-ink-500">{idea.notes}</p> : null}
       </div>
@@ -88,6 +101,7 @@ export function IdeaCard({
           images={images}
           imageUrls={imageUrls}
           professionalId={professionalId}
+          clients={clients}
           trigger={(openModal) => (
             <IconButton label="Editar ideia" onClick={openModal}>
               <Pencil className="size-4" />

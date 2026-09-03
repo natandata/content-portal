@@ -8,19 +8,37 @@ import { requireStaff } from "@/lib/auth";
 import { BUCKETS } from "@/lib/paths";
 import { signedUrlMap } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
+import { loadClientNames } from "@/server/queries";
 import type { IdeaImageRow } from "@/types/database";
 
 export async function IdeasBoard() {
   const actor = await requireStaff();
   const supabase = await createClient();
 
-  const { data: ideas } = await supabase
-    .from("ideas")
-    .select("*")
-    .eq("professional_id", actor.authUser.id)
-    .order("created_at", { ascending: false });
+  const [{ data: ideas }, { data: clients }] = await Promise.all([
+    supabase
+      .from("ideas")
+      .select("*")
+      .eq("professional_id", actor.authUser.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("clients")
+      .select("id, company_name")
+      .eq("professional_id", actor.authUser.id)
+      .eq("status", "active")
+      .order("company_name"),
+  ]);
 
   const rows = ideas ?? [];
+  const clientOptions = (clients ?? []).map((client) => ({
+    id: client.id,
+    companyName: client.company_name,
+  }));
+
+  const clientNames = await loadClientNames(
+    supabase,
+    rows.map((idea) => idea.client_id).filter((id): id is string => Boolean(id)),
+  );
   const ideaIds = rows.map((idea) => idea.id);
 
   const { data: images } =
@@ -46,7 +64,7 @@ export async function IdeasBoard() {
       <PageHeader
         title="Banco de ideias"
         description="Anotacoes gerais com links de referencia e imagens de inspiracao."
-        actions={<IdeaFormModal professionalId={actor.authUser.id} />}
+        actions={<IdeaFormModal professionalId={actor.authUser.id} clients={clientOptions} />}
       />
 
       {rows.length === 0 ? (
@@ -54,7 +72,7 @@ export async function IdeasBoard() {
           icon={<Lightbulb className="size-5" />}
           title="Nenhuma ideia ainda"
           description="Guarde referencias, links e imagens de inspiracao para o proximo conteudo."
-          action={<IdeaFormModal professionalId={actor.authUser.id} />}
+          action={<IdeaFormModal professionalId={actor.authUser.id} clients={clientOptions} />}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -65,6 +83,8 @@ export async function IdeasBoard() {
               images={imagesByIdea.get(idea.id) ?? []}
               imageUrls={imageUrls}
               professionalId={actor.authUser.id}
+              clients={clientOptions}
+              clientName={idea.client_id ? clientNames.get(idea.client_id) : undefined}
             />
           ))}
         </div>

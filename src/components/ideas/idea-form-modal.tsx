@@ -6,7 +6,7 @@ import { ImagePlus, Link2, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button, IconButton } from "@/components/ui/button";
-import { Field, FormError, Input, Textarea } from "@/components/ui/form";
+import { Field, FormError, Input, Select, Textarea } from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
 import { ideaImagePath, BUCKETS } from "@/lib/paths";
 import { uploadToBucket, validateFile } from "@/lib/upload";
@@ -18,17 +18,24 @@ import {
 } from "@/server/actions/ideas";
 import type { IdeaImageRow, IdeaLink, IdeaRow } from "@/types/database";
 
+export interface IdeaClientOption {
+  id: string;
+  companyName: string;
+}
+
 export function IdeaFormModal({
   idea,
   images,
   imageUrls,
   professionalId,
+  clients,
   trigger,
 }: {
   idea?: IdeaRow;
   images?: IdeaImageRow[];
   imageUrls?: Map<string, string>;
   professionalId: string;
+  clients: IdeaClientOption[];
   trigger?: (open: () => void) => React.ReactNode;
 }) {
   const router = useRouter();
@@ -40,6 +47,7 @@ export function IdeaFormModal({
   const [title, setTitle] = useState(idea?.title ?? "");
   const [notes, setNotes] = useState(idea?.notes ?? "");
   const [links, setLinks] = useState<IdeaLink[]>(idea?.links ?? []);
+  const [clientId, setClientId] = useState(idea?.client_id ?? "");
   const [currentImages, setCurrentImages] = useState(images ?? []);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +58,7 @@ export function IdeaFormModal({
     setTitle("");
     setNotes("");
     setLinks([]);
+    setClientId("");
     setIdeaId(undefined);
     setCurrentImages([]);
   }
@@ -83,7 +92,7 @@ export function IdeaFormModal({
 
     setBusy(true);
     try {
-      const payload = { title, notes, links: cleanedLinks };
+      const payload = { title, notes, links: cleanedLinks, clientId };
       const result = idea
         ? await updateIdeaAction(idea.id, payload)
         : await createIdeaAction(payload);
@@ -121,7 +130,12 @@ export function IdeaFormModal({
       return null;
     }
 
-    const result = await createIdeaAction({ title, notes, links: links.filter((l) => l.label && l.url) });
+    const result = await createIdeaAction({
+      title,
+      notes,
+      links: links.filter((link) => link.label && link.url),
+      clientId,
+    });
     if (!result.ok) {
       setError(result.error);
       return null;
@@ -211,6 +225,22 @@ export function IdeaFormModal({
               disabled={busy}
               autoFocus
             />
+          </Field>
+
+          <Field label="Cliente (opcional)" htmlFor="idea-client" hint="Deixe em branco para uma ideia solta.">
+            <Select
+              id="idea-client"
+              value={clientId}
+              onChange={(event) => setClientId(event.target.value)}
+              disabled={busy}
+            >
+              <option value="">Sem cliente</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.companyName}
+                </option>
+              ))}
+            </Select>
           </Field>
 
           <Field label="Anotacoes" htmlFor="idea-notes">

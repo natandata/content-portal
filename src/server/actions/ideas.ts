@@ -23,6 +23,7 @@ const ideaSchema = z.object({
   title: z.string().trim().min(2, "Informe o titulo da ideia"),
   notes: z.string().trim().max(4000).optional(),
   links: z.array(linkSchema).max(20).optional(),
+  clientId: z.union([z.uuid(), z.literal("")]).optional(),
 });
 
 function revalidateIdeas() {
@@ -47,6 +48,7 @@ export async function createIdeaAction(
       title: parsed.data.title,
       notes: parsed.data.notes || null,
       links: parsed.data.links ?? [],
+      client_id: parsed.data.clientId || null,
     })
     .select("*")
     .single();
@@ -77,6 +79,7 @@ export async function updateIdeaAction(
       title: parsed.data.title,
       notes: parsed.data.notes || null,
       links: parsed.data.links ?? [],
+      client_id: parsed.data.clientId || null,
     })
     .eq("id", ideaId)
     .select("*")

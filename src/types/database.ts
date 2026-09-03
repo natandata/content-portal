@@ -401,6 +401,8 @@ export type IdeaLink = {
 export type IdeaRow = {
   id: string;
   professional_id: string;
+  /** Ideia solta (null) ou ligada a um cliente especifico. */
+  client_id: string | null;
   title: string;
   notes: string | null;
   links: IdeaLink[];

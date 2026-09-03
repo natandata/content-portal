@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
@@ -36,6 +36,37 @@ export function TaskBoard({
   const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
+  /**
+   * Coluna que o card ja "ocupa" na tela antes do servidor confirmar. Sem
+   * isso o card so pula de coluna depois do round-trip + refresh, o que da a
+   * sensacao de arrasto travado.
+   */
+  const [pendingMoves, setPendingMoves] = useState<Map<string, TaskStatus>>(new Map());
+
+  // Quando os dados do servidor chegam ja com o status novo, a marcacao
+  // local perde a razao de existir — descartar evita segurar dado velho.
+  useEffect(() => {
+    setPendingMoves((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Map(prev);
+      for (const task of tasks) {
+        if (next.get(task.id) === task.status) next.delete(task.id);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, [tasks]);
+
+  const visibleTasks = useMemo(
+    () =>
+      pendingMoves.size === 0
+        ? tasks
+        : tasks.map((task) => {
+            const moved = pendingMoves.get(task.id);
+            return moved ? { ...task, status: moved } : task;
+          }),
+    [tasks, pendingMoves],
+  );
+
   const tags = useMemo(() => {
     const set = new Set<string>();
     for (const task of tasks) {
@@ -46,7 +77,7 @@ export function TaskBoard({
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return tasks.filter((task) => {
+    return visibleTasks.filter((task) => {
       if (tagFilter && task.tag !== tagFilter) return false;
       if (!query) return true;
       const clientName = task.client_id ? (clientNames.get(task.client_id) ?? "") : "";
@@ -56,7 +87,7 @@ export function TaskBoard({
         (task.description ?? "").toLowerCase().includes(query)
       );
     });
-  }, [tasks, search, tagFilter, clientNames]);
+  }, [visibleTasks, search, tagFilter, clientNames]);
 
   const byStatus = useMemo(() => {
     const map = new Map<TaskStatus, TaskRow[]>();
@@ -67,16 +98,26 @@ export function TaskBoard({
     return map;
   }, [filtered]);
 
-  async function moveTask(taskId: string, status: TaskStatus) {
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task || task.status === status) return;
+  function moveTask(taskId: string, status: TaskStatus) {
+    const current = visibleTasks.find((task) => task.id === taskId);
+    if (!current || current.status === status) return;
 
-    const result = await setTaskStatusAction(taskId, status);
-    if (!result.ok) {
-      toast.error(result.error);
-      return;
-    }
-    router.refresh();
+    // Move na tela primeiro; o servidor confirma depois.
+    setPendingMoves((prev) => new Map(prev).set(taskId, status));
+
+    void setTaskStatusAction(taskId, status).then((result) => {
+      if (!result.ok) {
+        // Falhou: desfaz o movimento e devolve o card para a coluna original.
+        setPendingMoves((prev) => {
+          const next = new Map(prev);
+          next.delete(taskId);
+          return next;
+        });
+        toast.error(result.error);
+        return;
+      }
+      router.refresh();
+    });
   }
 
   return (
@@ -133,14 +174,17 @@ export function TaskBoard({
               key={column.status}
               onDragOver={(event) => {
                 event.preventDefault();
-                setDragOverStatus(column.status);
+                event.dataTransfer.dropEffect = "move";
+                // dragover dispara dezenas de vezes por segundo: so mexe no
+                // estado quando a coluna sob o cursor realmente muda.
+                setDragOverStatus((prev) => (prev === column.status ? prev : column.status));
               }}
               onDragLeave={() => setDragOverStatus((prev) => (prev === column.status ? null : prev))}
               onDrop={(event) => {
                 event.preventDefault();
                 setDragOverStatus(null);
                 const taskId = event.dataTransfer.getData("text/plain");
-                if (taskId) void moveTask(taskId, column.status);
+                if (taskId) moveTask(taskId, column.status);
               }}
               className={cn(
                 "flex w-72 shrink-0 flex-col rounded-xl border border-line bg-ink-50/40 p-2.5 transition",

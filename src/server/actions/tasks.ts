@@ -102,6 +102,32 @@ export async function setTaskStatusAction(
   return done();
 }
 
+/** Usado pelo Calendario: muda so o prazo, sem tocar no resto da tarefa. */
+export async function setTaskDueDateAction(
+  taskId: string,
+  dueDate: string | null,
+): Promise<ActionResult<null>> {
+  await requireStaff();
+
+  if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    return fail("Data invalida.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tasks")
+    .update({ due_date: dueDate })
+    .eq("id", taskId);
+
+  if (error) {
+    return fail(describeError(error, "Nao foi possivel alterar o prazo da tarefa."));
+  }
+
+  revalidateTasks();
+  revalidatePath("/professional/calendar");
+  return done();
+}
+
 export async function deleteTaskAction(taskId: string): Promise<ActionResult<null>> {
   await requireStaff();
   const supabase = await createClient();

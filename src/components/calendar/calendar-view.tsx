@@ -1,16 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarClock, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarClock, CheckSquare, ChevronLeft, ChevronRight, Images } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
-import { SchedulePostModal } from "@/components/calendar/schedule-post-modal";
-import { CONTENT_STATUS_TONE } from "@/lib/domain";
+import { RescheduleModal } from "@/components/calendar/reschedule-modal";
 import { cn } from "@/lib/utils";
-import type { CalendarPost } from "@/features/workspace/calendar-board";
+import type { BadgeTone } from "@/lib/domain";
+import type { CalendarEntry } from "@/features/workspace/calendar-board";
 
 type ViewMode = "month" | "week" | "day";
+type Source = "posts" | "tasks";
 
 const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 
@@ -35,7 +36,7 @@ function addDays(date: Date, amount: number): Date {
   return result;
 }
 
-const DOT_TONE: Record<string, string> = {
+const DOT_TONE: Record<BadgeTone, string> = {
   neutral: "bg-ink-400",
   info: "bg-accent",
   warning: "bg-amber-500",
@@ -43,8 +44,15 @@ const DOT_TONE: Record<string, string> = {
   danger: "bg-red-500",
 };
 
-function PostPill({ post, onClick, compact }: { post: CalendarPost; onClick: () => void; compact?: boolean }) {
-  const tone = CONTENT_STATUS_TONE[post.status];
+function EntryPill({
+  entry,
+  onClick,
+  compact,
+}: {
+  entry: CalendarEntry;
+  onClick: () => void;
+  compact?: boolean;
+}) {
   return (
     <button
       type="button"
@@ -54,41 +62,43 @@ function PostPill({ post, onClick, compact }: { post: CalendarPost; onClick: () 
         compact && "py-0.5",
       )}
     >
-      <span className={cn("size-1.5 shrink-0 rounded-full", DOT_TONE[tone])} aria-hidden />
-      {post.scheduledTime ? (
-        <span className="shrink-0 tabular-nums text-ink-400">{post.scheduledTime.slice(0, 5)}</span>
+      <span className={cn("size-1.5 shrink-0 rounded-full", DOT_TONE[entry.tone])} aria-hidden />
+      {entry.time ? (
+        <span className="shrink-0 tabular-nums text-ink-400">{entry.time.slice(0, 5)}</span>
       ) : null}
-      <span className="truncate font-medium text-ink-700">{post.title}</span>
+      <span className="truncate font-medium text-ink-700">{entry.title}</span>
     </button>
   );
 }
 
-export function CalendarView({ posts }: { posts: CalendarPost[] }) {
+export function CalendarView({ posts, tasks }: { posts: CalendarEntry[]; tasks: CalendarEntry[] }) {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [source, setSource] = useState<Source>("posts");
   const [referenceDate, setReferenceDate] = useState(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     return now;
   });
-  const [selectedPost, setSelectedPost] = useState<CalendarPost | null>(null);
+  const [selected, setSelected] = useState<CalendarEntry | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const postsByDay = useMemo(() => {
-    const map = new Map<string, CalendarPost[]>();
-    for (const post of posts) {
-      if (!post.scheduledDate) continue;
-      const list = map.get(post.scheduledDate) ?? [];
-      list.push(post);
-      map.set(post.scheduledDate, list);
+  const entries = source === "posts" ? posts : tasks;
+
+  const entriesByDay = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    for (const entry of entries) {
+      const list = map.get(entry.date) ?? [];
+      list.push(entry);
+      map.set(entry.date, list);
     }
     for (const list of map.values()) {
-      list.sort((a, b) => (a.scheduledTime ?? "99:99").localeCompare(b.scheduledTime ?? "99:99"));
+      list.sort((a, b) => (a.time ?? "99:99").localeCompare(b.time ?? "99:99"));
     }
     return map;
-  }, [posts]);
+  }, [entries]);
 
-  function openPost(post: CalendarPost) {
-    setSelectedPost(post);
+  function openEntry(entry: CalendarEntry) {
+    setSelected(entry);
     setModalOpen(true);
   }
 
@@ -115,8 +125,15 @@ export function CalendarView({ posts }: { posts: CalendarPost[] }) {
       const start = startOfWeek(referenceDate);
       const end = addDays(start, 6);
       const sameMonth = start.getMonth() === end.getMonth();
-      const startLabel = start.toLocaleDateString("pt-BR", { day: "2-digit", month: sameMonth ? undefined : "short" });
-      const endLabel = end.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+      const startLabel = start.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: sameMonth ? undefined : "short",
+      });
+      const endLabel = end.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      });
       return `${startLabel} – ${endLabel}`;
     }
     return referenceDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
@@ -124,6 +141,40 @@ export function CalendarView({ posts }: { posts: CalendarPost[] }) {
 
   return (
     <div>
+      {/* Posts x Tarefas: troca o que o calendario inteiro esta mostrando. */}
+      <div className="mb-4 flex w-fit rounded-lg border border-line bg-ink-50 p-0.5">
+        {([
+          { value: "posts", label: "Posts", icon: Images, count: posts.length },
+          { value: "tasks", label: "Tarefas", icon: CheckSquare, count: tasks.length },
+        ] as const).map((option) => {
+          const Icon = option.icon;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setSource(option.value)}
+              className={cn(
+                "focus-ring flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition",
+                source === option.value
+                  ? "bg-surface text-ink-900 shadow-sm"
+                  : "text-ink-500 hover:text-ink-800",
+              )}
+            >
+              <Icon className="size-4" aria-hidden />
+              {option.label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[11px] tabular-nums",
+                  source === option.value ? "bg-ink-100 text-ink-600" : "text-ink-400",
+                )}
+              >
+                {option.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={() => navigate(-1)}>
@@ -156,7 +207,9 @@ export function CalendarView({ posts }: { posts: CalendarPost[] }) {
               onClick={() => setViewMode(mode)}
               className={cn(
                 "focus-ring rounded-md px-3 py-1.5 text-xs font-medium transition",
-                viewMode === mode ? "bg-surface text-ink-900 shadow-sm" : "text-ink-500 hover:text-ink-800",
+                viewMode === mode
+                  ? "bg-surface text-ink-900 shadow-sm"
+                  : "text-ink-500 hover:text-ink-800",
               )}
             >
               {mode === "month" ? "Mes" : mode === "week" ? "Semana" : "Dia"}
@@ -166,26 +219,31 @@ export function CalendarView({ posts }: { posts: CalendarPost[] }) {
       </div>
 
       {viewMode === "month" ? (
-        <MonthGrid referenceDate={referenceDate} postsByDay={postsByDay} onSelect={openPost} />
+        <MonthGrid referenceDate={referenceDate} entriesByDay={entriesByDay} onSelect={openEntry} />
       ) : viewMode === "week" ? (
-        <WeekGrid referenceDate={referenceDate} postsByDay={postsByDay} onSelect={openPost} />
+        <WeekGrid referenceDate={referenceDate} entriesByDay={entriesByDay} onSelect={openEntry} />
       ) : (
-        <DayList referenceDate={referenceDate} postsByDay={postsByDay} onSelect={openPost} />
+        <DayList
+          referenceDate={referenceDate}
+          entriesByDay={entriesByDay}
+          onSelect={openEntry}
+          source={source}
+        />
       )}
 
-      <SchedulePostModal post={selectedPost} open={modalOpen} onClose={() => setModalOpen(false)} />
+      <RescheduleModal entry={selected} open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }
 
 function MonthGrid({
   referenceDate,
-  postsByDay,
+  entriesByDay,
   onSelect,
 }: {
   referenceDate: Date;
-  postsByDay: Map<string, CalendarPost[]>;
-  onSelect: (post: CalendarPost) => void;
+  entriesByDay: Map<string, CalendarEntry[]>;
+  onSelect: (entry: CalendarEntry) => void;
 }) {
   const firstOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
   const gridStart = startOfWeek(firstOfMonth);
@@ -197,7 +255,10 @@ function MonthGrid({
     <div className="card overflow-hidden p-0">
       <div className="grid grid-cols-7 border-b border-line bg-ink-50">
         {WEEKDAY_LABELS.map((label) => (
-          <div key={label} className="px-2 py-2 text-center text-[11px] font-semibold text-ink-500 uppercase">
+          <div
+            key={label}
+            className="px-2 py-2 text-center text-[11px] font-semibold text-ink-500 uppercase"
+          >
             {label}
           </div>
         ))}
@@ -206,14 +267,14 @@ function MonthGrid({
         {days.map((day) => {
           const key = toDateKey(day);
           const inMonth = day.getMonth() === referenceDate.getMonth();
-          const dayPosts = postsByDay.get(key) ?? [];
+          const dayEntries = entriesByDay.get(key) ?? [];
           const isToday = key === today;
 
           return (
             <div
               key={key}
               className={cn(
-                "min-h-[96px] border-b border-r border-line p-1.5 last:border-r-0",
+                "min-h-[96px] border-r border-b border-line p-1.5 last:border-r-0",
                 !inMonth && "bg-ink-50/40",
               )}
             >
@@ -226,11 +287,11 @@ function MonthGrid({
                 {day.getDate()}
               </span>
               <div className="space-y-0.5">
-                {dayPosts.slice(0, 3).map((post) => (
-                  <PostPill key={post.id} post={post} onClick={() => onSelect(post)} compact />
+                {dayEntries.slice(0, 3).map((entry) => (
+                  <EntryPill key={entry.id} entry={entry} onClick={() => onSelect(entry)} compact />
                 ))}
-                {dayPosts.length > 3 ? (
-                  <p className="px-1.5 text-[11px] text-ink-400">+{dayPosts.length - 3} mais</p>
+                {dayEntries.length > 3 ? (
+                  <p className="px-1.5 text-[11px] text-ink-400">+{dayEntries.length - 3} mais</p>
                 ) : null}
               </div>
             </div>
@@ -243,12 +304,12 @@ function MonthGrid({
 
 function WeekGrid({
   referenceDate,
-  postsByDay,
+  entriesByDay,
   onSelect,
 }: {
   referenceDate: Date;
-  postsByDay: Map<string, CalendarPost[]>;
-  onSelect: (post: CalendarPost) => void;
+  entriesByDay: Map<string, CalendarEntry[]>;
+  onSelect: (entry: CalendarEntry) => void;
 }) {
   const start = startOfWeek(referenceDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
@@ -258,7 +319,7 @@ function WeekGrid({
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-7">
       {days.map((day) => {
         const key = toDateKey(day);
-        const dayPosts = postsByDay.get(key) ?? [];
+        const dayEntries = entriesByDay.get(key) ?? [];
         const isToday = key === today;
 
         return (
@@ -277,11 +338,11 @@ function WeekGrid({
               </span>
             </div>
             <div className="space-y-1">
-              {dayPosts.length === 0 ? (
-                <p className="text-xs text-ink-300">Sem posts</p>
+              {dayEntries.length === 0 ? (
+                <p className="text-xs text-ink-300">Vazio</p>
               ) : (
-                dayPosts.map((post) => (
-                  <PostPill key={post.id} post={post} onClick={() => onSelect(post)} />
+                dayEntries.map((entry) => (
+                  <EntryPill key={entry.id} entry={entry} onClick={() => onSelect(entry)} />
                 ))
               )}
             </div>
@@ -294,42 +355,50 @@ function WeekGrid({
 
 function DayList({
   referenceDate,
-  postsByDay,
+  entriesByDay,
   onSelect,
+  source,
 }: {
   referenceDate: Date;
-  postsByDay: Map<string, CalendarPost[]>;
-  onSelect: (post: CalendarPost) => void;
+  entriesByDay: Map<string, CalendarEntry[]>;
+  onSelect: (entry: CalendarEntry) => void;
+  source: Source;
 }) {
   const key = toDateKey(referenceDate);
-  const dayPosts = postsByDay.get(key) ?? [];
+  const dayEntries = entriesByDay.get(key) ?? [];
 
-  if (dayPosts.length === 0) {
+  if (dayEntries.length === 0) {
     return (
       <EmptyState
         icon={<CalendarClock className="size-5" />}
-        title="Nenhum post agendado"
-        description="Nao ha conteudos agendados para este dia."
+        title={source === "posts" ? "Nenhum post agendado" : "Nenhuma tarefa com prazo"}
+        description={
+          source === "posts"
+            ? "Nao ha conteudos agendados para este dia."
+            : "Nenhuma tarefa vence neste dia."
+        }
       />
     );
   }
 
   return (
     <div className="card divide-y divide-line p-0">
-      {dayPosts.map((post) => (
+      {dayEntries.map((entry) => (
         <button
-          key={post.id}
+          key={entry.id}
           type="button"
-          onClick={() => onSelect(post)}
+          onClick={() => onSelect(entry)}
           className="focus-ring flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-ink-50"
         >
           <span className="w-14 shrink-0 tabular-nums text-sm text-ink-500">
-            {post.scheduledTime ? post.scheduledTime.slice(0, 5) : "—"}
+            {entry.time ? entry.time.slice(0, 5) : "—"}
           </span>
-          <span className={cn("size-2 shrink-0 rounded-full", DOT_TONE[CONTENT_STATUS_TONE[post.status]])} />
+          <span className={cn("size-2 shrink-0 rounded-full", DOT_TONE[entry.tone])} />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium text-ink-900">{post.title}</span>
-            <span className="block truncate text-xs text-ink-500">{post.clientName}</span>
+            <span className="block truncate text-sm font-medium text-ink-900">{entry.title}</span>
+            <span className="block truncate text-xs text-ink-500">
+              {entry.subtitle ?? entry.statusLabel}
+            </span>
           </span>
         </button>
       ))}
