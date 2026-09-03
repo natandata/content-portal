@@ -43,6 +43,40 @@ export function cronSecret(): string | null {
   return value && value.trim() !== "" ? value : null;
 }
 
+/**
+ * Chave secreta da Stripe. `null` = pagamento online desligado, e todo mundo
+ * que chama precisa tratar isso — mesmo contrato do `cronSecret()`.
+ *
+ * Proposital que a chave e o segredo do webhook sejam duas funcoes separadas:
+ * o Checkout nao pode quebrar porque falta o segredo do webhook, e o webhook
+ * nao pode aceitar trafego so porque a chave de API existe.
+ */
+export function stripeSecretKey(): string | null {
+  const value = process.env.STRIPE_SECRET_KEY;
+  return value && value.trim() !== "" ? value : null;
+}
+
+/** Segredo que assina os webhooks da Stripe. Sem ele o endpoint recusa tudo. */
+export function stripeWebhookSecret(): string | null {
+  const value = process.env.STRIPE_WEBHOOK_SECRET;
+  return value && value.trim() !== "" ? value : null;
+}
+
+/**
+ * Origem publica do app. A Stripe exige URL absoluta nos retornos do cadastro
+ * e do Checkout, e nao existe `request` na hora de montar essas URLs dentro de
+ * uma server action.
+ */
+export function appBaseUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL;
+  if (explicit && explicit.trim() !== "") return explicit.replace(/\/$/, "");
+
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (vercel && vercel.trim() !== "") return `https://${vercel}`;
+
+  return "http://localhost:3000";
+}
+
 export const isSupabaseConfigured =
   publicEnv.supabaseUrl.length > 0 && publicEnv.supabaseAnonKey.length > 0;
 

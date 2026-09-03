@@ -12,7 +12,7 @@ export type ClientStatus = "active" | "inactive";
 
 export type ChatLinkTarget = "dashboard" | "content" | "documents" | "feed";
 
-export type InvoiceMethod = "boleto" | "link" | "pix";
+export type InvoiceMethod = "boleto" | "link" | "pix" | "stripe";
 export type InvoiceStatus = "open" | "paid";
 export type CurrencyCode = "BRL" | "USD" | "EUR" | "GBP";
 
@@ -354,8 +354,45 @@ export type InvoiceRow = {
   paid_at: string | null;
   paid_by: string | null;
   last_reminder_sent_on: string | null;
+  /** Conta conectada que recebe esta cobranca. So preenchido em method 'stripe'. */
+  stripe_account_id: string | null;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  /** "paid" | "processing" | "failed" — estado na Stripe, mais granular que `status`. */
+  stripe_payment_status: string | null;
+  /** Pagina de pagamento hospedada. Reaberta enquanto nao expira (boleto/Pix). */
+  stripe_hosted_url: string | null;
+  stripe_hosted_url_expires_at: string | null;
+  application_fee_cents: number | null;
+  amount_paid_cents: number | null;
   created_at: string;
   updated_at: string;
+}
+
+export type ProfessionalPaymentAccountRow = {
+  user_id: string;
+  stripe_account_id: string | null;
+  charges_enabled: boolean;
+  payouts_enabled: boolean;
+  details_submitted: boolean;
+  requirements_disabled_reason: string | null;
+  /** Nome da capacidade -> "active" | "pending" | "inactive". */
+  capabilities: Record<string, string>;
+  platform_fee_percent: number;
+  onboarding_started_at: string | null;
+  account_synced_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Dedupe de webhook: a PK e o proprio id do evento na Stripe. */
+export type StripeEventRow = {
+  id: string;
+  type: string;
+  account_id: string | null;
+  received_at: string;
+  processed_at: string | null;
+  error: string | null;
 }
 
 export type ClientServiceRow = {
@@ -473,6 +510,8 @@ export type Database = {
         ClientMetricRow,
         'client_id' | 'metric_name' | 'metric_value' | 'period_date'
       >;
+      professional_payment_accounts: Table<ProfessionalPaymentAccountRow, 'user_id'>;
+      stripe_events: Table<StripeEventRow, 'id' | 'type'>;
     };
     Views: { [_ in never]: never };
     Functions: {

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Banknote, Link2, QrCode } from "lucide-react";
+import { Banknote, CreditCard, Link2, QrCode } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/layout";
@@ -8,7 +8,12 @@ import { DEFAULT_LOCALE, intlLocale, type Locale } from "@/lib/i18n/locale";
 import { formatDate } from "@/lib/utils";
 import type { InvoiceRow } from "@/types/database";
 
-const METHOD_ICON = { boleto: Banknote, link: Link2, pix: QrCode } as const;
+const METHOD_ICON = {
+  boleto: Banknote,
+  link: Link2,
+  pix: QrCode,
+  stripe: CreditCard,
+} as const;
 
 /**
  * Um cartao de cobranca — usado tanto na listagem da equipe quanto na do

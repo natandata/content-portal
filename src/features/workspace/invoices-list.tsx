@@ -1,8 +1,9 @@
-import { Banknote, Copy, Link2, QrCode } from "lucide-react";
+import { Banknote, Copy, CreditCard, Link2, QrCode } from "lucide-react";
 
 import { InvoiceCard } from "@/components/invoices/invoice-card";
 import { InvoiceCreateModal } from "@/components/invoices/invoice-create-modal";
 import { InvoiceStaffActions } from "@/components/invoices/invoice-staff-actions";
+import { StripeInvoiceStatus } from "@/components/invoices/stripe-invoice-status";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
 import { requireStaff } from "@/lib/auth";
@@ -12,7 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate, safeFileName } from "@/lib/utils";
 import { loadClientNames, loadProfessionalClientIds } from "@/server/queries";
 
-const METHOD_ICON = { boleto: Banknote, link: Link2, pix: QrCode };
+const METHOD_ICON = { boleto: Banknote, link: Link2, pix: QrCode, stripe: CreditCard };
 
 export async function InvoicesList({
   clientId,
@@ -106,11 +107,13 @@ export async function InvoicesList({
                       >
                         {invoice.payment_link}
                       </a>
-                    ) : (
+                    ) : invoice.method === "pix" ? (
                       <span className="flex min-w-0 items-center gap-1.5 truncate">
                         <Copy className="size-3.5 shrink-0" aria-hidden />
                         {invoice.pix_key}
                       </span>
+                    ) : (
+                      <StripeInvoiceStatus invoice={invoice} />
                     )}
                     {invoice.status === "paid" ? (
                       <span className="text-xs text-ink-400">

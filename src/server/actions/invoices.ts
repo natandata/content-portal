@@ -7,6 +7,7 @@ import { requireStaff } from "@/lib/auth";
 import { normalizeExternalUrl } from "@/lib/domain";
 import { BUCKETS } from "@/lib/paths";
 import { sendPushToClient } from "@/lib/push";
+import { canChargeWithStripe } from "@/lib/stripe/capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
@@ -16,7 +17,7 @@ const createSchema = z
   .object({
     clientId: z.uuid("Selecione um cliente"),
     title: z.string().trim().min(2, "Informe o titulo da cobranca"),
-    method: z.enum(["boleto", "link", "pix"]),
+    method: z.enum(["boleto", "link", "pix", "stripe"]),
     amount: z.coerce.number().positive("Informe um valor maior que zero"),
     currency: z.enum(["BRL", "USD", "EUR", "GBP"]),
     dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data de vencimento"),
@@ -35,6 +36,11 @@ const createSchema = z
   .refine((data) => data.method !== "pix" || Boolean(data.pixKey && data.pixKey.length > 0), {
     message: "Informe a chave Pix.",
     path: ["pixKey"],
+  })
+  // A Stripe desta integracao esta configurada para o Brasil e liquida em BRL.
+  .refine((data) => data.method !== "stripe" || data.currency === "BRL", {
+    message: "Pagamento online aceita apenas BRL.",
+    path: ["currency"],
   });
 
 function revalidateInvoices(clientId?: string) {
@@ -62,6 +68,19 @@ export async function createInvoiceAction(
   }
 
   const supabase = await createClient();
+
+  // Pagamento online precisa saber, ja na emissao, em qual conta conectada esta
+  // cobranca vai liquidar. Guardar o id aqui (em vez de resolver pelo
+  // clients.professional_id na hora de cobrar) mantem a cobranca liquidando na
+  // conta de quem a emitiu, mesmo que o cliente troque de responsavel depois.
+  let stripeAccountId: string | null = null;
+
+  if (parsed.data.method === "stripe") {
+    const resolved = await resolveStripeAccountForClient(supabase, parsed.data.clientId);
+    if (!resolved.ok) return resolved;
+    stripeAccountId = resolved.data;
+  }
+
   const { data, error } = await supabase
     .from("invoices")
     .insert({
@@ -73,6 +92,7 @@ export async function createInvoiceAction(
       due_date: parsed.data.dueDate,
       payment_link: parsed.data.method === "link" ? (parsed.data.paymentLink ?? null) : null,
       pix_key: parsed.data.method === "pix" ? (parsed.data.pixKey ?? null) : null,
+      stripe_account_id: stripeAccountId,
       created_by: actor.authUser.id,
     })
     .select("*")
@@ -90,6 +110,38 @@ export async function createInvoiceAction(
 
   revalidateInvoices(parsed.data.clientId);
   return ok(data);
+}
+
+/**
+ * Descobre a conta Connect que recebe as cobrancas deste cliente — a do
+ * profissional responsavel por ele — e recusa se ela ainda nao pode cobrar.
+ */
+async function resolveStripeAccountForClient(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clientId: string,
+): Promise<ActionResult<string>> {
+  const { data: client } = await supabase
+    .from("clients")
+    .select("professional_id")
+    .eq("id", clientId)
+    .maybeSingle();
+
+  if (!client?.professional_id) {
+    return fail("Este cliente nao tem profissional responsavel para receber o pagamento.");
+  }
+
+  const { data: account } = await supabase
+    .from("professional_payment_accounts")
+    .select("*")
+    .eq("user_id", client.professional_id)
+    .maybeSingle();
+
+  if (!canChargeWithStripe(account)) {
+    return fail("O profissional responsavel ainda nao ativou o pagamento online.");
+  }
+
+  // canChargeWithStripe ja garantiu que a conta existe e esta habilitada.
+  return ok(account!.stripe_account_id!);
 }
 
 async function notifyAndLog(

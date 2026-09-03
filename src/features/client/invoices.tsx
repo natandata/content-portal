@@ -72,9 +72,9 @@ export async function ClientInvoices() {
                       {dict.invoices.openLink}
                     </a>
                   </div>
-                ) : (
+                ) : invoice.method === "pix" ? (
                   <ClientCopyPixKey pixKey={invoice.pix_key ?? ""} label={dict.invoices.copyPix} />
-                )
+                ) : null
               }
             />
           ))}
