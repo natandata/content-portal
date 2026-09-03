@@ -2,7 +2,6 @@ import {
   Activity,
   Banknote,
   Calendar,
-  CheckCircle2,
   FileText,
   Lightbulb,
   Grid3x3,
