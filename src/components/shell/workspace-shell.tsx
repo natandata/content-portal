@@ -7,6 +7,7 @@ import { LogOut, Menu, X } from "lucide-react";
 
 import { NavBadge } from "@/components/shell/nav-badge";
 import { staffNavItems } from "@/components/shell/nav-items";
+import type { NavGroup, NavItem } from "@/components/shell/nav-items";
 import { ReloadAppButton } from "@/components/shell/reload-app-button";
 import { IconButton } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -30,7 +31,19 @@ export function WorkspaceShell({
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const items = staffNavItems(role);
+  const navData = staffNavItems(role);
+
+  // Helper para checar se é um NavGroup (tem label) ou array simples de NavItems
+  const isNavGroup = (item: unknown): item is NavGroup => {
+    return typeof item === "object" && item !== null && "items" in item;
+  };
+
+  // Converte a estrutura para um array consistente
+  const navGroups: NavGroup[] = Array.isArray(navData)
+    ? navData.map((item: unknown) =>
+        isNavGroup(item) ? item : { items: navData as NavItem[] }
+      )
+    : [{ items: navData as NavItem[] }];
 
   useEffect(() => {
     setMenuOpen(false);
@@ -54,30 +67,41 @@ export function WorkspaceShell({
     };
   }, [menuOpen]);
 
+  const renderNavItem = (item: NavItem) => {
+    const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "focus-ring flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
+          active
+            ? "bg-ink-900 text-on-ink"
+            : "text-ink-600 hover:bg-ink-100 hover:text-ink-900",
+        )}
+      >
+        <Icon className="size-[18px] shrink-0" aria-hidden />
+        <span className="truncate">{item.label}</span>
+        {item.badge ? (
+          <NavBadge count={badges[item.badge]} tone={active ? "onDark" : "default"} />
+        ) : null}
+      </Link>
+    );
+  };
+
   const nav = (
-    <nav className="flex flex-col gap-0.5">
-      {items.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "focus-ring flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
-              active
-                ? "bg-ink-900 text-on-ink"
-                : "text-ink-600 hover:bg-ink-100 hover:text-ink-900",
-            )}
-          >
-            <Icon className="size-[18px] shrink-0" aria-hidden />
-            <span className="truncate">{item.label}</span>
-            {item.badge ? (
-              <NavBadge count={badges[item.badge]} tone={active ? "onDark" : "default"} />
-            ) : null}
-          </Link>
-        );
-      })}
+    <nav className="flex flex-col gap-6">
+      {navGroups.map((group, groupIndex) => (
+        <div key={groupIndex} className="flex flex-col gap-0.5">
+          {group.label && (
+            <p className="px-3 py-2 text-xs font-semibold tracking-wide text-ink-500 uppercase">
+              {group.label}
+            </p>
+          )}
+          {group.items.map((item) => renderNavItem(item))}
+        </div>
+      ))}
     </nav>
   );
 
@@ -111,7 +135,7 @@ export function WorkspaceShell({
     <div className="min-h-dvh lg:flex">
       {/* Sidebar — desktop */}
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface p-4 lg:flex">
-        <Link href={items[0]?.href ?? "/"} className="mb-6 flex items-center gap-2.5 px-1">
+        <Link href={navGroups[0]?.items[0]?.href ?? "/"} className="mb-6 flex items-center gap-2.5 px-1">
           <span className="grid size-8 grid-cols-2 gap-[2px] rounded-lg bg-ink-900 p-[5px]">
             <span className="rounded-[2px] bg-on-ink" />
             <span className="rounded-[2px] bg-on-ink/55" />
@@ -130,7 +154,7 @@ export function WorkspaceShell({
 
       {/* Topbar — mobile */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-surface/95 py-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] backdrop-blur lg:hidden">
-        <Link href={items[0]?.href ?? "/"} className="flex min-w-0 items-center gap-2">
+        <Link href={navGroups[0]?.items[0]?.href ?? "/"} className="flex min-w-0 items-center gap-2">
           <span className="grid size-7 grid-cols-2 gap-[2px] rounded-md bg-ink-900 p-1">
             <span className="rounded-[2px] bg-on-ink" />
             <span className="rounded-[2px] bg-on-ink/55" />

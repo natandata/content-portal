@@ -1,8 +1,10 @@
 import {
   Activity,
   Banknote,
+  Calendar,
   CheckCircle2,
   FileText,
+  Lightbulb,
   Grid3x3,
   Images,
   LayoutDashboard,
@@ -11,6 +13,8 @@ import {
   Settings,
   UserCog,
   Users,
+  BarChart3,
+  CheckSquare,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,6 +32,11 @@ export interface NavItem {
    * itens que cabem sem cortar em 360-375px.
    */
   hideOnMobileNav?: boolean;
+}
+
+export interface NavGroup {
+  label?: string;
+  items: NavItem[];
 }
 
 /**
@@ -48,24 +57,43 @@ function adminNavItems(): NavItem[] {
   ];
 }
 
-function professionalNavItems(): NavItem[] {
+function professionalNavItems(): NavGroup[] {
   const base = "/professional";
 
   return [
-    { href: `${base}/dashboard`, label: "Dashboard", icon: LayoutDashboard },
-    { href: `${base}/clients`, label: "Clientes", icon: Users },
-    { href: `${base}/content`, label: "Conteudos", icon: Images },
-    { href: `${base}/approvals`, label: "Aprovacoes", icon: CheckCircle2, badge: "approvals" },
-    { href: `${base}/documents`, label: "Documentos", icon: FileText, badge: "contracts" },
-    { href: `${base}/payments`, label: "Cobrancas", icon: Banknote, badge: "invoices" },
-    { href: `${base}/feed`, label: "Feed", icon: Grid3x3 },
-    { href: `${base}/chat`, label: "Chat", icon: MessageCircle, badge: "chat" },
-    { href: `${base}/updates`, label: "Mural", icon: Megaphone },
-    { href: `${base}/settings`, label: "Configuracoes", icon: Settings },
+    {
+      label: "VISÃO GERAL",
+      items: [
+        { href: `${base}/dashboard`, label: "Visão Geral", icon: LayoutDashboard },
+        { href: `${base}/tasks`, label: "Tarefas", icon: CheckSquare },
+      ],
+    },
+    {
+      label: "PLANEJAMENTO",
+      items: [
+        { href: `${base}/calendar`, label: "Calendário", icon: Calendar },
+        { href: `${base}/ideas`, label: "Banco de Ideias", icon: Lightbulb },
+      ],
+    },
+    {
+      label: "GESTÃO",
+      items: [
+        { href: `${base}/clients`, label: "Clientes", icon: Users },
+        { href: `${base}/payments`, label: "Cobranças", icon: Banknote, badge: "invoices" },
+        { href: `${base}/documents`, label: "Documentos", icon: FileText, badge: "contracts" },
+        { href: `${base}/reports`, label: "Relatórios", icon: BarChart3 },
+      ],
+    },
+    {
+      label: "CONFIGURAÇÕES",
+      items: [
+        { href: `${base}/settings`, label: "Configurações", icon: Settings },
+      ],
+    },
   ];
 }
 
-export function staffNavItems(role: UserRole): NavItem[] {
+export function staffNavItems(role: UserRole): NavItem[] | NavGroup[] {
   return role === "admin" ? adminNavItems() : professionalNavItems();
 }
 
