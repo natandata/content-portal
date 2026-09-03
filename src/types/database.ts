@@ -40,6 +40,8 @@ export type ContentStatus =
 
 export type ApprovalStatus = "approved" | "rejected" | "revision_requested";
 
+export type TaskStatus = "pending" | "in_progress" | "done";
+
 export type UserRow = {
   id: string;
   name: string;
@@ -101,6 +103,8 @@ export type ContentRow = {
   type: ContentType;
   status: ContentStatus;
   scheduled_date: string | null;
+  /** Horario do post no dia agendado (HH:MM:SS). Nulo = sem hora definida. */
+  scheduled_time: string | null;
   caption: string | null;
   internal_notes: string | null;
   created_at: string;
@@ -374,6 +378,54 @@ export type ClientActivityRow = {
   created_at: string;
 }
 
+export type TaskRow = {
+  id: string;
+  professional_id: string;
+  client_id: string | null;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Um item da lista `links` (jsonb) de `ideas`. */
+export type IdeaLink = {
+  label: string;
+  url: string;
+}
+
+export type IdeaRow = {
+  id: string;
+  professional_id: string;
+  title: string;
+  notes: string | null;
+  links: IdeaLink[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type IdeaImageRow = {
+  id: string;
+  idea_id: string;
+  file_path: string;
+  created_at: string;
+}
+
+export type ClientMetricRow = {
+  id: string;
+  client_id: string;
+  created_by: string | null;
+  metric_name: string;
+  metric_value: number;
+  /** Mes de referencia (dia sempre 1). */
+  period_date: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -410,6 +462,13 @@ export type Database = {
       staff_chat_threads: Table<StaffChatThreadRow, 'professional_id'>;
       staff_chat_messages: Table<StaffChatMessageRow, 'thread_id' | 'sender_id' | 'body'>;
       staff_chat_reads: Table<StaffChatReadRow, 'thread_id' | 'user_id'>;
+      tasks: Table<TaskRow, 'professional_id' | 'title'>;
+      ideas: Table<IdeaRow, 'professional_id' | 'title'>;
+      idea_images: Table<IdeaImageRow, 'idea_id' | 'file_path'>;
+      client_metrics: Table<
+        ClientMetricRow,
+        'client_id' | 'metric_name' | 'metric_value' | 'period_date'
+      >;
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -521,6 +580,7 @@ export type Database = {
       content_type: ContentType;
       content_status: ContentStatus;
       approval_status: ApprovalStatus;
+      task_status: TaskStatus;
     };
     CompositeTypes: { [_ in never]: never };
   };

@@ -11,6 +11,7 @@ export const BUCKETS = {
   thumbnails: "thumbnails",
   profiles: "profiles",
   invoices: "invoices",
+  ideas: "ideas",
 } as const;
 
 export type BucketName = (typeof BUCKETS)[keyof typeof BUCKETS];
@@ -61,4 +62,9 @@ export function highlightCoverPath(
 ): string {
   const slot = String(position).padStart(2, "0");
   return `${clientId}/destaque-${slot}-${Date.now()}.${fileExtension(fileName)}`;
+}
+
+/** Bucket "ideas": primeiro segmento e o professional_id (dono da ideia). */
+export function ideaImagePath(professionalId: string, ideaId: string, fileName: string): string {
+  return `${professionalId}/${ideaId}/${Date.now()}-${safeFileName(fileName)}`;
 }

@@ -335,6 +335,45 @@ export async function setContentPublishedAction(
   return done();
 }
 
+const scheduleSchema = z.object({
+  scheduledDate: z.union([z.iso.date(), z.literal("")]).optional(),
+  scheduledTime: z.union([z.string().regex(/^\d{2}:\d{2}$/), z.literal("")]).optional(),
+});
+
+/** Usado pelo Calendario: move um post para outra data/hora sem tocar no
+ * resto do conteudo (titulo, arquivos, status). */
+export async function updateContentScheduleAction(
+  contentId: string,
+  input: z.input<typeof scheduleSchema>,
+): Promise<ActionResult<ContentRow>> {
+  await requireStaff();
+
+  const parsed = scheduleSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(firstIssue(parsed.error.issues, "Dados invalidos."));
+  }
+
+  const supabase = await createClient();
+  const { data: content, error } = await supabase
+    .from("contents")
+    .update({
+      scheduled_date: parsed.data.scheduledDate || null,
+      scheduled_time: parsed.data.scheduledTime ? `${parsed.data.scheduledTime}:00` : null,
+    })
+    .eq("id", contentId)
+    .select("*")
+    .single();
+
+  if (error || !content) {
+    return fail(describeError(error, "Nao foi possivel reagendar o conteudo."));
+  }
+
+  revalidateContents(content.client_id, contentId);
+  revalidatePath("/professional/calendar");
+  revalidatePath("/admin/content");
+  return ok(content);
+}
+
 export async function deleteContentAction(contentId: string): Promise<ActionResult<null>> {
   await requireStaff();
   const supabase = await createClient();
