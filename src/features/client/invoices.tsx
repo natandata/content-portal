@@ -1,10 +1,11 @@
-import { Banknote } from "lucide-react";
+import { Banknote, Clock } from "lucide-react";
 
 import {
   ClientBoletoDownload,
   ClientCopyLink,
   ClientCopyPixKey,
 } from "@/components/invoices/client-invoice-actions";
+import { ClientStripePayButton } from "@/components/invoices/client-stripe-pay-button";
 import { InvoiceCard } from "@/components/invoices/invoice-card";
 import { EmptyState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/layout";
@@ -14,6 +15,53 @@ import { BUCKETS } from "@/lib/paths";
 import { signedDownloadUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { safeFileName } from "@/lib/utils";
+import type { InvoiceRow } from "@/types/database";
+
+/**
+ * Boleto e Pix ficam ate dois dias uteis entre "cliente concluiu o checkout" e
+ * "dinheiro confirmado". Sem dizer isso, o cliente acha que o pagamento nao
+ * pegou e paga de novo.
+ */
+function ClientStripeState({
+  invoice,
+  dict,
+}: {
+  invoice: InvoiceRow;
+  dict: { payProcessing: string; payProcessingHint: string; payFailed: string; payReopen: string };
+}) {
+  const hostedStillValid =
+    invoice.stripe_hosted_url &&
+    invoice.stripe_hosted_url_expires_at &&
+    new Date(invoice.stripe_hosted_url_expires_at).getTime() > Date.now();
+
+  if (invoice.stripe_payment_status === "processing") {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <p className="flex items-center gap-1.5 text-sm font-medium text-amber-600">
+          <Clock className="size-4 shrink-0" aria-hidden />
+          {dict.payProcessing}
+        </p>
+        <p className="text-xs text-ink-500">{dict.payProcessingHint}</p>
+        {hostedStillValid ? (
+          <a
+            href={invoice.stripe_hosted_url ?? "#"}
+            target="_blank"
+            rel="noreferrer"
+            className="focus-ring text-sm font-medium text-accent"
+          >
+            {dict.payReopen}
+          </a>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (invoice.stripe_payment_status === "failed") {
+    return <p className="text-sm text-red-600">{dict.payFailed}</p>;
+  }
+
+  return null;
+}
 
 export async function ClientInvoices() {
   await requireClientActor();
@@ -74,7 +122,18 @@ export async function ClientInvoices() {
                   </div>
                 ) : invoice.method === "pix" ? (
                   <ClientCopyPixKey pixKey={invoice.pix_key ?? ""} label={dict.invoices.copyPix} />
+                ) : invoice.status === "open" && invoice.stripe_payment_status !== "processing" ? (
+                  <ClientStripePayButton
+                    invoiceId={invoice.id}
+                    label={dict.invoices.payNow}
+                    processingLabel={dict.invoices.payOpening}
+                  />
                 ) : null
+              }
+              secondaryActions={
+                invoice.method === "stripe" && invoice.status === "open" ? (
+                  <ClientStripeState invoice={invoice} dict={dict.invoices} />
+                ) : undefined
               }
             />
           ))}

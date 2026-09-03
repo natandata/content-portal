@@ -122,7 +122,13 @@ export async function InvoicesList({
                     ) : null}
                   </div>
                 }
-                secondaryActions={<InvoiceStaffActions invoiceId={invoice.id} status={invoice.status} />}
+                secondaryActions={
+                  <InvoiceStaffActions
+                    invoiceId={invoice.id}
+                    status={invoice.status}
+                    method={invoice.method}
+                  />
+                }
               />
             );
           })}

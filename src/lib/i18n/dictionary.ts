@@ -314,6 +314,12 @@ export interface Dictionary {
     copyLink: string;
     openLink: string;
     copyPix: string;
+    payNow: string;
+    payOpening: string;
+    payProcessing: string;
+    payProcessingHint: string;
+    payFailed: string;
+    payReopen: string;
   };
   dashboardWidgets: {
     calendarTitle: string;
@@ -637,6 +643,12 @@ const ptBR: Dictionary = {
     copyLink: "Copiar link",
     openLink: "Abrir link de pagamento",
     copyPix: "Copiar chave Pix",
+    payNow: "Pagar agora",
+    payOpening: "Abrindo pagamento...",
+    payProcessing: "Pagamento em processamento",
+    payProcessingHint: "Boleto e Pix levam ate 2 dias uteis para confirmar.",
+    payFailed: "O pagamento nao foi concluido. Voce pode tentar de novo.",
+    payReopen: "Ver instrucoes de pagamento",
   },
   dashboardWidgets: {
     calendarTitle: "Calendario de publicacoes",
@@ -966,6 +978,12 @@ const en: Dictionary = {
     copyLink: "Copy link",
     openLink: "Open payment link",
     copyPix: "Copy Pix key",
+    payNow: "Pay now",
+    payOpening: "Opening payment...",
+    payProcessing: "Payment processing",
+    payProcessingHint: "Boleto and Pix take up to 2 business days to confirm.",
+    payFailed: "The payment did not go through. You can try again.",
+    payReopen: "View payment instructions",
   },
   dashboardWidgets: {
     calendarTitle: "Publishing calendar",

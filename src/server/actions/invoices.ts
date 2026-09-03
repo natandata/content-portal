@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
@@ -10,6 +9,7 @@ import { sendPushToClient } from "@/lib/push";
 import { canChargeWithStripe } from "@/lib/stripe/capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { logClientActivity } from "@/server/activity";
+import { revalidateInvoices } from "@/server/invoices/revalidate";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { InvoiceRow } from "@/types/database";
 
@@ -42,19 +42,6 @@ const createSchema = z
     message: "Pagamento online aceita apenas BRL.",
     path: ["currency"],
   });
-
-function revalidateInvoices(clientId?: string) {
-  revalidatePath("/admin/payments");
-  revalidatePath("/professional/payments");
-  revalidatePath("/client/payments");
-  revalidatePath("/client/dashboard");
-  revalidatePath("/admin/dashboard");
-  revalidatePath("/professional/dashboard");
-  if (clientId) {
-    revalidatePath(`/admin/clients/${clientId}`);
-    revalidatePath(`/professional/clients/${clientId}`);
-  }
-}
 
 /** Cria a cobranca. Boleto ainda sem arquivo — vem depois via attachBoletoAction. */
 export async function createInvoiceAction(

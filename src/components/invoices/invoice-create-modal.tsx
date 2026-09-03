@@ -169,7 +169,16 @@ export function InvoiceCreateModal({
             />
           </Field>
 
-          <Field label="Forma de cobranca" htmlFor="invoice-method" required>
+          <Field
+            label="Forma de cobranca"
+            htmlFor="invoice-method"
+            hint={
+              method === "stripe"
+                ? "O cliente paga dentro do portal e a cobranca se marca como paga sozinha."
+                : undefined
+            }
+            required
+          >
             <Select
               id="invoice-method"
               value={method}
@@ -183,6 +192,12 @@ export function InvoiceCreateModal({
               ))}
             </Select>
           </Field>
+
+          {/* Pagamento online liquida em BRL na conta conectada; as outras
+              moedas seguem valendo para os metodos manuais. */}
+          {method === "stripe" && currency !== "BRL" ? (
+            <FormError>Pagamento online aceita apenas cobrancas em BRL.</FormError>
+          ) : null}
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Valor" htmlFor="invoice-amount" required>
