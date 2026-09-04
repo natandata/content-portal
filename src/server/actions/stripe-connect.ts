@@ -14,13 +14,19 @@ import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/
 const SETTINGS_PATH = "/professional/settings/payments";
 const STRIPE_OFF = "Pagamento online ainda nao esta configurado nesta instalacao.";
 
-/** Capacidades pedidas no cadastro. Pix costuma ficar inativo no Brasil (e por
- * convite) — pedir mesmo assim nao quebra a criacao da conta. */
+/**
+ * Capacidades pedidas no cadastro. Pix e por convite no Brasil — diferente do
+ * que a suposicao original deste codigo dizia, pedir `pix_payments` sem a
+ * plataforma ter sido liberada NAO fica so "inativo": a Stripe rejeita a
+ * criacao da conta inteira com "The pix_payments capability is not
+ * requestable for accounts in BR". Por isso fica de fora daqui; quando o
+ * convite for aceito, passa a entrar por uma chamada de account update
+ * separada (nao implementada ainda).
+ */
 const REQUESTED_CAPABILITIES = {
   card_payments: { requested: true },
   transfers: { requested: true },
   boleto_payments: { requested: true },
-  pix_payments: { requested: true },
 } as const;
 
 /** Achata `account.capabilities` para o formato que guardamos em jsonb. */
