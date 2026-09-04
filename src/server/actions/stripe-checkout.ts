@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { paymentMethodTypesFor, type StripeMethod } from "@/lib/stripe/capabilities";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { markInvoicePaidFromStripe } from "@/server/invoices/mark-paid";
 import { describeError, fail, ok, type ActionResult } from "@/server/result";
 
 /** Boleto vence junto da cobranca, com um dia de folga. */
@@ -61,23 +62,37 @@ export async function startInvoiceCheckoutAction(
 
   // Reabre a MESMA sessao enquanto ela vale. Importa muito em boleto e Pix: o
   // cliente precisa voltar ao mesmo documento, nao gerar um novo a cada toque.
-  if (invoice.stripe_checkout_session_id && invoice.stripe_hosted_url_expires_at) {
-    const stillValid =
-      new Date(invoice.stripe_hosted_url_expires_at).getTime() > Date.now() + 5 * 60_000;
+  if (invoice.stripe_checkout_session_id) {
+    try {
+      const existing = await stripe.checkout.sessions.retrieve(
+        invoice.stripe_checkout_session_id,
+        {},
+        { stripeAccount },
+      );
 
-    if (stillValid) {
-      try {
-        const existing = await stripe.checkout.sessions.retrieve(
-          invoice.stripe_checkout_session_id,
-          {},
-          { stripeAccount },
-        );
-        if (existing.status === "open" && existing.url) {
-          return ok({ url: existing.url });
-        }
-      } catch {
-        // Sessao sumiu ou nao pode ser lida: segue e cria outra.
+      // Rede de seguranca contra o webhook atrasar ou falhar: se a Stripe ja
+      // diz que esta sessao foi paga e o nosso banco ainda nao sabe, reconcilia
+      // AGORA em vez de deixar cair no fluxo abaixo e abrir uma segunda sessao
+      // -- que criaria uma cobranca real duplicada, sem nenhum aviso ao cliente.
+      if (existing.payment_status === "paid") {
+        const intent = existing.payment_intent;
+        await markInvoicePaidFromStripe(admin, invoice, {
+          paymentIntentId: typeof intent === "string" ? intent : (intent?.id ?? null),
+          amountPaidCents: existing.amount_total ?? null,
+          applicationFeeCents: invoice.application_fee_cents,
+        });
+        return fail("Esta cobranca ja foi paga.");
       }
+
+      const stillValid =
+        invoice.stripe_hosted_url_expires_at &&
+        new Date(invoice.stripe_hosted_url_expires_at).getTime() > Date.now() + 5 * 60_000;
+
+      if (stillValid && existing.status === "open" && existing.url) {
+        return ok({ url: existing.url });
+      }
+    } catch {
+      // Sessao sumiu ou nao pode ser lida: segue e cria outra.
     }
   }
 
