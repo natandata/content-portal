@@ -87,6 +87,9 @@ export async function startConnectOnboardingAction(): Promise<ActionResult<{ url
       });
       accountId = account.id;
     } catch (error) {
+      // Sem isso o motivo real nunca chega aos logs: describeError so devolve
+      // uma mensagem generica para o usuario, e a excecao morre aqui.
+      console.error("[stripe-connect] accounts.create falhou:", error);
       return fail(describeError(error as Error, "Nao foi possivel criar a conta na Stripe."));
     }
 
@@ -116,6 +119,7 @@ export async function startConnectOnboardingAction(): Promise<ActionResult<{ url
 
     return ok({ url: link.url });
   } catch (error) {
+    console.error("[stripe-connect] accountLinks.create falhou:", error);
     return fail(describeError(error as Error, "Nao foi possivel abrir o cadastro da Stripe."));
   }
 }
