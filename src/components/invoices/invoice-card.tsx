@@ -3,7 +3,8 @@ import { Banknote, CreditCard, Link2, QrCode } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/layout";
-import { dueDateLabel, formatMoney, INVOICE_METHOD_LABEL } from "@/lib/domain";
+import { dueDateLabel, formatMoney, invoiceMethodLabelFor } from "@/lib/domain";
+import { getDictionary } from "@/lib/i18n/dictionary";
 import { DEFAULT_LOCALE, intlLocale, type Locale } from "@/lib/i18n/locale";
 import { formatDate } from "@/lib/utils";
 import type { InvoiceRow } from "@/types/database";
@@ -34,7 +35,8 @@ export function InvoiceCard({
   secondaryActions?: ReactNode;
 }) {
   const Icon = METHOD_ICON[invoice.method];
-  const due = dueDateLabel(invoice.due_date, invoice.status);
+  const due = dueDateLabel(invoice.due_date, invoice.status, locale);
+  const dict = getDictionary(locale);
 
   return (
     <Card padded={false}>
@@ -44,7 +46,7 @@ export function InvoiceCard({
             <h3 className="truncate text-sm font-semibold text-ink-900">{invoice.title}</h3>
             <Badge tone="neutral">
               <Icon className="size-3.5" aria-hidden />
-              {INVOICE_METHOD_LABEL[invoice.method]}
+              {invoiceMethodLabelFor(invoice.method, locale)}
             </Badge>
           </div>
           <p className="mt-0.5 text-sm text-ink-500">
@@ -54,7 +56,7 @@ export function InvoiceCard({
                 <span className="text-ink-300"> · </span>
               </>
             ) : null}
-            Vencimento em {formatDate(invoice.due_date, intlLocale(locale))}
+            {dict.invoices.dueOn(formatDate(invoice.due_date, intlLocale(locale)))}
           </p>
           <p className="mt-1 text-lg font-semibold text-ink-900 tabular-nums">
             {formatMoney(invoice.amount, invoice.currency, locale)}

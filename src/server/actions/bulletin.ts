@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getActor, requireAdmin } from "@/lib/auth";
+import { pickLocale } from "@/lib/i18n/locale";
+import { getLocale } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { BulletinPostRow } from "@/types/database";
@@ -104,7 +106,8 @@ export async function voteOnBulletinPostAction(
   vote: -1 | 0 | 1,
 ): Promise<ActionResult<null>> {
   const actor = await getActor();
-  if (!actor) return fail("Sessao expirada.");
+  const locale = await getLocale();
+  if (!actor) return fail(pickLocale(locale, "Sessao expirada.", "Session expired."));
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("vote_on_bulletin_post", {
@@ -113,7 +116,9 @@ export async function voteOnBulletinPostAction(
   });
 
   if (error) {
-    return fail(describeError(error, "Nao foi possivel registrar o voto."));
+    return fail(
+      describeError(error, pickLocale(locale, "Nao foi possivel registrar o voto.", "Could not register the vote.")),
+    );
   }
 
   revalidateBulletin();

@@ -3,9 +3,13 @@ import type { Metadata } from "next";
 import { LoginForm } from "@/components/auth/login-form";
 import { LanguageToggle } from "@/components/ui/language-toggle";
 import { isSupabaseConfigured } from "@/lib/env";
+import { pickLocale } from "@/lib/i18n/locale";
 import { getServerDictionary } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Acesso" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { locale } = await getServerDictionary();
+  return { title: pickLocale(locale, "Acesso", "Sign in") };
+}
 
 export default async function LoginPage() {
   const { locale, dict } = await getServerDictionary();

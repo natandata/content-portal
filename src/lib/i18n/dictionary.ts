@@ -309,11 +309,14 @@ export interface Dictionary {
     subtitle: string;
     empty: string;
     emptyBody: string;
+    dueOn: (date: string) => string;
     downloadBoleto: string;
     boletoUnavailable: string;
     copyLink: string;
     openLink: string;
     copyPix: string;
+    copied: string;
+    copyFailed: string;
     payNow: string;
     payOpening: string;
     payProcessing: string;
@@ -638,11 +641,14 @@ const ptBR: Dictionary = {
     subtitle: "Boleto, link de pagamento ou chave Pix — tudo que esta em aberto com voce.",
     empty: "Nenhuma cobranca por aqui",
     emptyBody: "Quando seu profissional enviar uma cobranca, ela aparece aqui.",
+    dueOn: (date) => `Vencimento em ${date}`,
     downloadBoleto: "Baixar boleto",
     boletoUnavailable: "Boleto ainda nao disponivel",
     copyLink: "Copiar link",
     openLink: "Abrir link de pagamento",
     copyPix: "Copiar chave Pix",
+    copied: "Copiado.",
+    copyFailed: "Nao foi possivel copiar. Copie manualmente.",
     payNow: "Pagar agora",
     payOpening: "Abrindo pagamento...",
     payProcessing: "Pagamento em processamento",
@@ -973,11 +979,14 @@ const en: Dictionary = {
     subtitle: "Boleto, payment link or Pix key — everything open with you.",
     empty: "No charges yet",
     emptyBody: "When your content manager sends a charge, it shows up here.",
+    dueOn: (date) => `Due on ${date}`,
     downloadBoleto: "Download boleto",
     boletoUnavailable: "Boleto not available yet",
     copyLink: "Copy link",
     openLink: "Open payment link",
     copyPix: "Copy Pix key",
+    copied: "Copied.",
+    copyFailed: "Could not copy. Copy it manually.",
     payNow: "Pay now",
     payOpening: "Opening payment...",
     payProcessing: "Payment processing",

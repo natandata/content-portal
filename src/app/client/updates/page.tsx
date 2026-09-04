@@ -5,7 +5,10 @@ import { requireClientActor } from "@/lib/auth";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Mural" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { dict } = await getServerDictionary();
+  return { title: dict.bulletin.dashboardTitle };
+}
 
 export default async function Page() {
   await requireClientActor();

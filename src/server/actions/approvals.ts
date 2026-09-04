@@ -4,34 +4,44 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireClientActor } from "@/lib/auth";
+import { pickLocale, type Locale } from "@/lib/i18n/locale";
+import { getLocale } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { resolveClientStaffIds, sendPushToUsers } from "@/lib/push";
 import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, type ActionResult } from "@/server/result";
 
-const schema = z
-  .object({
-    contentId: z.uuid(),
-    status: z.enum(["approved", "rejected", "revision_requested"]),
-    comment: z.string().trim().max(2000).optional(),
-  })
-  .refine(
-    (value) => value.status === "approved" || (value.comment && value.comment.length >= 3),
-    { message: "Descreva o motivo para o profissional entender o que ajustar.", path: ["comment"] },
-  );
+/** Schema por idioma: a mensagem do `.refine` precisa nascer no idioma certo. */
+function buildSchema(locale: Locale) {
+  return z
+    .object({
+      contentId: z.uuid(),
+      status: z.enum(["approved", "rejected", "revision_requested"]),
+      comment: z.string().trim().max(2000).optional(),
+    })
+    .refine((value) => value.status === "approved" || (value.comment && value.comment.length >= 3), {
+      message: pickLocale(
+        locale,
+        "Descreva o motivo para o profissional entender o que ajustar.",
+        "Describe the reason so the professional understands what to adjust.",
+      ),
+      path: ["comment"],
+    });
+}
 
 /**
  * Aprovar / reprovar / solicitar alteracao.
  * Toda a transacao (approval + status + historico) acontece no RPC.
  */
 export async function submitApprovalAction(
-  input: z.input<typeof schema>,
+  input: z.input<ReturnType<typeof buildSchema>>,
 ): Promise<ActionResult<null>> {
   const actor = await requireClientActor();
+  const locale = await getLocale();
 
-  const parsed = schema.safeParse(input);
+  const parsed = buildSchema(locale).safeParse(input);
   if (!parsed.success) {
-    return fail(firstIssue(parsed.error.issues, "Dados invalidos."));
+    return fail(firstIssue(parsed.error.issues, pickLocale(locale, "Dados invalidos.", "Invalid data.")));
   }
 
   const supabase = await createClient();
@@ -42,7 +52,12 @@ export async function submitApprovalAction(
   });
 
   if (error) {
-    return fail(describeError(error, "Nao foi possivel registrar sua resposta."));
+    return fail(
+      describeError(
+        error,
+        pickLocale(locale, "Nao foi possivel registrar sua resposta.", "Could not record your response."),
+      ),
+    );
   }
 
   revalidatePath("/client/content");

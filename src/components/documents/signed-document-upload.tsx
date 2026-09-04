@@ -82,7 +82,7 @@ export function SignedDocumentUpload({
           event.target.value = "";
           if (!selected) return;
 
-          const message = validateFile(selected, "pdf");
+          const message = validateFile(selected, "pdf", locale);
           if (message) {
             setError(message);
             return;

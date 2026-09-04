@@ -11,3 +11,13 @@ export function isLocale(value: string | undefined | null): value is Locale {
 export function intlLocale(locale: Locale): string {
   return locale === "en" ? "en-US" : "pt-BR";
 }
+
+/**
+ * Escolhe a string certa pro idioma — para mensagens curtas de servidor
+ * (erros de acao, toasts) que nao justificam uma entrada no dicionario
+ * grande de `dictionary.ts` (esse e para arvore de componentes). Usado
+ * direto nas server actions que o cliente pode disparar.
+ */
+export function pickLocale(locale: Locale, pt: string, en: string): string {
+  return locale === "en" ? en : pt;
+}

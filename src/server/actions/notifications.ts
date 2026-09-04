@@ -3,6 +3,8 @@
 import { z } from "zod";
 
 import { getActor } from "@/lib/auth";
+import { pickLocale } from "@/lib/i18n/locale";
+import { getLocale } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { describeError, done, fail, firstIssue, type ActionResult } from "@/server/result";
 
@@ -19,11 +21,12 @@ export async function subscribeToPushAction(
   input: z.input<typeof subscriptionSchema>,
 ): Promise<ActionResult<null>> {
   const actor = await getActor();
-  if (!actor) return fail("Sessao expirada.");
+  const locale = await getLocale();
+  if (!actor) return fail(pickLocale(locale, "Sessao expirada.", "Session expired."));
 
   const parsed = subscriptionSchema.safeParse(input);
   if (!parsed.success) {
-    return fail(firstIssue(parsed.error.issues, "Inscricao invalida."));
+    return fail(firstIssue(parsed.error.issues, pickLocale(locale, "Inscricao invalida.", "Invalid subscription.")));
   }
 
   const supabase = await createClient();
@@ -39,7 +42,9 @@ export async function subscribeToPushAction(
   );
 
   if (error) {
-    return fail(describeError(error, "Nao foi possivel ativar as notificacoes."));
+    return fail(
+      describeError(error, pickLocale(locale, "Nao foi possivel ativar as notificacoes.", "Could not enable notifications.")),
+    );
   }
 
   return done();
@@ -48,7 +53,8 @@ export async function subscribeToPushAction(
 /** Remove a inscricao deste navegador — usado ao desativar ou trocar de conta. */
 export async function unsubscribeFromPushAction(endpoint: string): Promise<ActionResult<null>> {
   const actor = await getActor();
-  if (!actor) return fail("Sessao expirada.");
+  const locale = await getLocale();
+  if (!actor) return fail(pickLocale(locale, "Sessao expirada.", "Session expired."));
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -58,7 +64,9 @@ export async function unsubscribeFromPushAction(endpoint: string): Promise<Actio
     .eq("user_id", actor.authUser.id);
 
   if (error) {
-    return fail(describeError(error, "Nao foi possivel desativar as notificacoes."));
+    return fail(
+      describeError(error, pickLocale(locale, "Nao foi possivel desativar as notificacoes.", "Could not disable notifications.")),
+    );
   }
 
   return done();
@@ -67,11 +75,12 @@ export async function unsubscribeFromPushAction(endpoint: string): Promise<Actio
 /** Marca que a pessoa ja respondeu (ou dispensou) o convite pos-tour. */
 export async function dismissNotificationPromptAction(): Promise<ActionResult<null>> {
   const actor = await getActor();
-  if (!actor) return fail("Sessao expirada.");
+  const locale = await getLocale();
+  if (!actor) return fail(pickLocale(locale, "Sessao expirada.", "Session expired."));
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("mark_notifications_prompted");
 
-  if (error) return fail(error.message);
+  if (error) return fail(pickLocale(locale, "Nao foi possivel salvar.", "Could not save."));
   return done();
 }

@@ -7,37 +7,56 @@ import {
   MAX_PDF_BYTES,
   MAX_VIDEO_BYTES,
 } from "@/lib/domain";
+import { pickLocale, type Locale } from "@/lib/i18n/locale";
 import type { BucketName } from "@/lib/paths";
 import { createClient } from "@/lib/supabase/client";
 import { formatBytes } from "@/lib/utils";
 
 export type UploadKind = "image" | "video" | "pdf";
 
-/** Validacao no browser; o Storage tambem impoe tipo e tamanho por bucket. */
-export function validateFile(file: File, kind: UploadKind): string | null {
+/**
+ * Validacao no browser; o Storage tambem impoe tipo e tamanho por bucket.
+ * `locale` default pt-BR: so a tela do cliente passa ingles, o resto do app
+ * (todo staff) continua recebendo portugues sem precisar mudar nada.
+ */
+export function validateFile(file: File, kind: UploadKind, locale: Locale = "pt-BR"): string | null {
   if (kind === "pdf") {
-    if (file.type !== "application/pdf") return "Envie um arquivo PDF.";
+    if (file.type !== "application/pdf") {
+      return pickLocale(locale, "Envie um arquivo PDF.", "Upload a PDF file.");
+    }
     if (file.size > MAX_PDF_BYTES) {
-      return `O PDF excede o limite de ${formatBytes(MAX_PDF_BYTES)}.`;
+      return pickLocale(
+        locale,
+        `O PDF excede o limite de ${formatBytes(MAX_PDF_BYTES)}.`,
+        `The PDF exceeds the ${formatBytes(MAX_PDF_BYTES)} limit.`,
+      );
     }
     return null;
   }
 
   if (kind === "image") {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      return "Formatos aceitos: JPG, PNG ou WEBP.";
+      return pickLocale(locale, "Formatos aceitos: JPG, PNG ou WEBP.", "Accepted formats: JPG, PNG or WEBP.");
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      return `A imagem excede o limite de ${formatBytes(MAX_IMAGE_BYTES)}.`;
+      return pickLocale(
+        locale,
+        `A imagem excede o limite de ${formatBytes(MAX_IMAGE_BYTES)}.`,
+        `The image exceeds the ${formatBytes(MAX_IMAGE_BYTES)} limit.`,
+      );
     }
     return null;
   }
 
   if (!ACCEPTED_VIDEO_TYPES.includes(file.type)) {
-    return "Formatos aceitos: MP4, MOV ou WEBM.";
+    return pickLocale(locale, "Formatos aceitos: MP4, MOV ou WEBM.", "Accepted formats: MP4, MOV or WEBM.");
   }
   if (file.size > MAX_VIDEO_BYTES) {
-    return `O video excede o limite de ${formatBytes(MAX_VIDEO_BYTES)}.`;
+    return pickLocale(
+      locale,
+      `O video excede o limite de ${formatBytes(MAX_VIDEO_BYTES)}.`,
+      `The video exceeds the ${formatBytes(MAX_VIDEO_BYTES)} limit.`,
+    );
   }
   return null;
 }

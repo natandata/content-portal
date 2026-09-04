@@ -4,26 +4,30 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getActor } from "@/lib/auth";
+import { pickLocale, type Locale } from "@/lib/i18n/locale";
+import { getLocale } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { ChatMessageRow } from "@/types/database";
 
-const sendSchema = z
-  .object({
-    clientId: z.uuid(),
-    body: z.string().trim().max(4000).optional(),
-    linkTargetType: z.enum(["dashboard", "content", "documents", "feed"]).optional(),
-    linkTargetId: z.uuid().optional(),
-    linkLabel: z.string().trim().max(80).optional(),
-  })
-  .refine((data) => Boolean(data.body?.trim()) || Boolean(data.linkTargetType), {
-    message: "Escreva uma mensagem ou anexe um link.",
-    path: ["body"],
-  })
-  .refine((data) => data.linkTargetType !== "content" || Boolean(data.linkTargetId), {
-    message: "Selecione o conteudo.",
-    path: ["linkTargetId"],
-  });
+function buildSendSchema(locale: Locale) {
+  return z
+    .object({
+      clientId: z.uuid(),
+      body: z.string().trim().max(4000).optional(),
+      linkTargetType: z.enum(["dashboard", "content", "documents", "feed"]).optional(),
+      linkTargetId: z.uuid().optional(),
+      linkLabel: z.string().trim().max(80).optional(),
+    })
+    .refine((data) => Boolean(data.body?.trim()) || Boolean(data.linkTargetType), {
+      message: pickLocale(locale, "Escreva uma mensagem ou anexe um link.", "Write a message or attach a link."),
+      path: ["body"],
+    })
+    .refine((data) => data.linkTargetType !== "content" || Boolean(data.linkTargetId), {
+      message: pickLocale(locale, "Selecione o conteudo.", "Select the content."),
+      path: ["linkTargetId"],
+    });
+}
 
 function revalidateChat(clientId: string) {
   revalidatePath("/admin/chat");
@@ -37,14 +41,20 @@ function revalidateChat(clientId: string) {
 }
 
 export async function sendChatMessageAction(
-  input: z.input<typeof sendSchema>,
+  input: z.input<ReturnType<typeof buildSendSchema>>,
 ): Promise<ActionResult<ChatMessageRow>> {
   const actor = await getActor();
-  if (!actor) return fail("Sessao expirada.");
+  const locale = await getLocale();
+  if (!actor) return fail(pickLocale(locale, "Sessao expirada.", "Session expired."));
 
-  const parsed = sendSchema.safeParse(input);
+  const parsed = buildSendSchema(locale).safeParse(input);
   if (!parsed.success) {
-    return fail(firstIssue(parsed.error.issues, "Nao foi possivel enviar a mensagem."));
+    return fail(
+      firstIssue(
+        parsed.error.issues,
+        pickLocale(locale, "Nao foi possivel enviar a mensagem.", "Could not send the message."),
+      ),
+    );
   }
 
   const data = parsed.data;
@@ -59,7 +69,9 @@ export async function sendChatMessageAction(
   });
 
   if (error || !message) {
-    return fail(describeError(error, "Nao foi possivel enviar a mensagem."));
+    return fail(
+      describeError(error, pickLocale(locale, "Nao foi possivel enviar a mensagem.", "Could not send the message.")),
+    );
   }
 
   revalidateChat(data.clientId);
@@ -68,12 +80,17 @@ export async function sendChatMessageAction(
 
 export async function markChatReadAction(clientId: string): Promise<ActionResult<null>> {
   const actor = await getActor();
-  if (!actor) return fail("Sessao expirada.");
+  const locale = await getLocale();
+  if (!actor) return fail(pickLocale(locale, "Sessao expirada.", "Session expired."));
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("mark_chat_read", { p_client_id: clientId });
 
-  if (error) return fail(describeError(error, "Nao foi possivel marcar como lido."));
+  if (error) {
+    return fail(
+      describeError(error, pickLocale(locale, "Nao foi possivel marcar como lido.", "Could not mark as read.")),
+    );
+  }
 
   revalidatePath("/admin/chat");
   revalidatePath("/professional/chat");

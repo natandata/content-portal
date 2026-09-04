@@ -1,3 +1,4 @@
+import type { Locale } from "@/lib/i18n/locale";
 import type {
   ContentStatus,
   ContentType,
@@ -262,6 +263,21 @@ export const INVOICE_METHOD_LABEL: Record<InvoiceMethod, string> = {
   stripe: "Pagamento online",
 };
 
+const INVOICE_METHOD_LABEL_EN: Record<InvoiceMethod, string> = {
+  boleto: "Boleto",
+  link: "Payment link",
+  pix: "Pix key",
+  stripe: "Online payment",
+};
+
+/**
+ * Mesmo rotulo que `INVOICE_METHOD_LABEL`, mas no idioma certo — a tela do
+ * cliente e a unica que precisa disso; a da equipe fica so em portugues.
+ */
+export function invoiceMethodLabelFor(method: InvoiceMethod, locale: Locale): string {
+  return locale === "en" ? INVOICE_METHOD_LABEL_EN[method] : INVOICE_METHOD_LABEL[method];
+}
+
 export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
   open: "Em aberto",
   paid: "Paga",
@@ -287,13 +303,33 @@ export function daysUntil(dateValue: string): number {
   return Math.round((anchor.getTime() - today.getTime()) / 86_400_000);
 }
 
-/** Rotulo curto do prazo — usado no badge de status da cobranca. */
-export function dueDateLabel(dateValue: string, status: InvoiceStatus): { text: string; tone: BadgeTone } {
-  if (status === "paid") return { text: "Paga", tone: "success" };
+/**
+ * Rotulo curto do prazo — usado no badge de status da cobranca. `locale`
+ * default pt-BR: a listagem da equipe nunca passa, so a do cliente.
+ */
+export function dueDateLabel(
+  dateValue: string,
+  status: InvoiceStatus,
+  locale: Locale = "pt-BR",
+): { text: string; tone: BadgeTone } {
+  const en = locale === "en";
+
+  if (status === "paid") return { text: en ? "Paid" : "Paga", tone: "success" };
 
   const diff = daysUntil(dateValue);
-  if (diff < 0) return { text: `Vencida ha ${Math.abs(diff)} dia${Math.abs(diff) === 1 ? "" : "s"}`, tone: "danger" };
-  if (diff === 0) return { text: "Vence hoje", tone: "warning" };
-  if (diff <= 5) return { text: `Vence em ${diff} dia${diff === 1 ? "" : "s"}`, tone: "warning" };
-  return { text: "Em aberto", tone: "neutral" };
+  if (diff < 0) {
+    const days = Math.abs(diff);
+    return {
+      text: en ? `Overdue ${days} day${days === 1 ? "" : "s"}` : `Vencida ha ${days} dia${days === 1 ? "" : "s"}`,
+      tone: "danger",
+    };
+  }
+  if (diff === 0) return { text: en ? "Due today" : "Vence hoje", tone: "warning" };
+  if (diff <= 5) {
+    return {
+      text: en ? `Due in ${diff} day${diff === 1 ? "" : "s"}` : `Vence em ${diff} dia${diff === 1 ? "" : "s"}`,
+      tone: "warning",
+    };
+  }
+  return { text: en ? "Open" : "Em aberto", tone: "neutral" };
 }

@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireClientActor, requireStaff } from "@/lib/auth";
+import { getLocale } from "@/lib/i18n/server";
+import { pickLocale } from "@/lib/i18n/locale";
 import { BUCKETS } from "@/lib/paths";
 import { createClient } from "@/lib/supabase/server";
 import { resolveClientStaffIds, sendPushToClient, sendPushToUsers } from "@/lib/push";
@@ -180,6 +182,7 @@ export async function submitSignedDocumentAction(
 ): Promise<ActionResult<null>> {
   const actor = await requireClientActor();
   const supabase = await createClient();
+  const locale = await getLocale();
 
   const { data: contract, error } = await supabase.rpc("submit_signed_contract", {
     p_contract_id: contractId,
@@ -187,7 +190,12 @@ export async function submitSignedDocumentAction(
   });
 
   if (error) {
-    return fail(describeError(error, "Nao foi possivel enviar o documento assinado."));
+    return fail(
+      describeError(
+        error,
+        pickLocale(locale, "Nao foi possivel enviar o documento assinado.", "Could not submit the signed document."),
+      ),
+    );
   }
 
   revalidateDocuments();

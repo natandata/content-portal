@@ -110,7 +110,11 @@ export async function ClientInvoices() {
                   />
                 ) : invoice.method === "link" ? (
                   <div className="space-y-2">
-                    <ClientCopyLink link={invoice.payment_link ?? ""} label={dict.invoices.copyLink} />
+                    <ClientCopyLink
+                      link={invoice.payment_link ?? ""}
+                      label={dict.invoices.copyLink}
+                      strings={{ copied: dict.invoices.copied, copyFailed: dict.invoices.copyFailed }}
+                    />
                     <a
                       href={invoice.payment_link ?? "#"}
                       target="_blank"
@@ -121,7 +125,11 @@ export async function ClientInvoices() {
                     </a>
                   </div>
                 ) : invoice.method === "pix" ? (
-                  <ClientCopyPixKey pixKey={invoice.pix_key ?? ""} label={dict.invoices.copyPix} />
+                  <ClientCopyPixKey
+                    pixKey={invoice.pix_key ?? ""}
+                    label={dict.invoices.copyPix}
+                    strings={{ copied: dict.invoices.copied, copyFailed: dict.invoices.copyFailed }}
+                  />
                 ) : invoice.status === "open" && invoice.stripe_payment_status !== "processing" ? (
                   <ClientStripePayButton
                     invoiceId={invoice.id}

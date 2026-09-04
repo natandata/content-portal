@@ -3,6 +3,8 @@
 import { requireClientActor } from "@/lib/auth";
 import { daysUntil } from "@/lib/domain";
 import { appBaseUrl } from "@/lib/env";
+import { pickLocale } from "@/lib/i18n/locale";
+import { getLocale } from "@/lib/i18n/server";
 import { applicationFeeCents, toCents } from "@/lib/money";
 import { rateLimit } from "@/lib/rate-limit";
 import { paymentMethodTypesFor, type StripeMethod } from "@/lib/stripe/capabilities";
@@ -27,15 +29,24 @@ export async function startInvoiceCheckoutAction(
   invoiceId: string,
 ): Promise<ActionResult<{ url: string }>> {
   const actor = await requireClientActor();
+  const locale = await getLocale();
 
   // Cria objeto remoto a cada clique: merece o mesmo freio das rotas de login.
   const limit = rateLimit(`checkout:${actor.client.id}`, 10, 60_000);
   if (!limit.allowed) {
-    return fail(`Muitas tentativas. Tente novamente em ${limit.retryAfterSeconds}s.`);
+    return fail(
+      pickLocale(
+        locale,
+        `Muitas tentativas. Tente novamente em ${limit.retryAfterSeconds}s.`,
+        `Too many attempts. Try again in ${limit.retryAfterSeconds}s.`,
+      ),
+    );
   }
 
   const stripe = getStripe();
-  if (!stripe) return fail("Pagamento online indisponivel no momento.");
+  if (!stripe) {
+    return fail(pickLocale(locale, "Pagamento online indisponivel no momento.", "Online payment is unavailable right now."));
+  }
 
   // Leitura pela RLS de proposito: `invoices_select_scoped` E a autorizacao.
   // Id de cobranca de outro cliente simplesmente nao volta nenhuma linha.
@@ -46,10 +57,14 @@ export async function startInvoiceCheckoutAction(
     .eq("id", invoiceId)
     .maybeSingle();
 
-  if (!invoice) return fail("Cobranca nao encontrada.");
-  if (invoice.status === "paid") return fail("Esta cobranca ja foi paga.");
+  if (!invoice) return fail(pickLocale(locale, "Cobranca nao encontrada.", "Invoice not found."));
+  if (invoice.status === "paid") {
+    return fail(pickLocale(locale, "Esta cobranca ja foi paga.", "This invoice has already been paid."));
+  }
   if (invoice.method !== "stripe" || !invoice.stripe_account_id) {
-    return fail("Esta cobranca nao aceita pagamento online.");
+    return fail(
+      pickLocale(locale, "Esta cobranca nao aceita pagamento online.", "This invoice does not accept online payment."),
+    );
   }
 
   const stripeAccount = invoice.stripe_account_id;
@@ -81,7 +96,7 @@ export async function startInvoiceCheckoutAction(
           amountPaidCents: existing.amount_total ?? null,
           applicationFeeCents: invoice.application_fee_cents,
         });
-        return fail("Esta cobranca ja foi paga.");
+        return fail(pickLocale(locale, "Esta cobranca ja foi paga.", "This invoice has already been paid."));
       }
 
       const stillValid =
@@ -104,14 +119,20 @@ export async function startInvoiceCheckoutAction(
 
   const methods: StripeMethod[] = paymentMethodTypesFor(account);
   if (methods.length === 0) {
-    return fail("O pagamento online deste profissional esta indisponivel no momento.");
+    return fail(
+      pickLocale(
+        locale,
+        "O pagamento online deste profissional esta indisponivel no momento.",
+        "Online payment from this professional is unavailable right now.",
+      ),
+    );
   }
 
   let amountCents: number;
   try {
     amountCents = toCents(invoice.amount);
   } catch (error) {
-    return fail(describeError(error as Error, "Valor da cobranca invalido."));
+    return fail(describeError(error as Error, pickLocale(locale, "Valor da cobranca invalido.", "Invalid invoice amount.")));
   }
 
   const feeCents = applicationFeeCents(amountCents, account?.platform_fee_percent ?? 0);
@@ -146,6 +167,10 @@ export async function startInvoiceCheckoutAction(
         },
         client_reference_id: invoice.id,
         metadata: { invoice_id: invoice.id, client_id: invoice.client_id },
+        // A propria pagina hospedada da Stripe (campos, botao, avisos de
+        // erro do cartao) segue este idioma -- sem isso ela cai no idioma do
+        // navegador do cliente, que pode nao bater com o resto do portal.
+        locale: locale === "en" ? "en" : "pt-BR",
         success_url: `${appBaseUrl()}/client/payments?pago=1`,
         cancel_url: `${appBaseUrl()}/client/payments`,
       },
@@ -158,7 +183,11 @@ export async function startInvoiceCheckoutAction(
       },
     );
 
-    if (!session.url) return fail("A Stripe nao devolveu a pagina de pagamento.");
+    if (!session.url) {
+      return fail(
+        pickLocale(locale, "A Stripe nao devolveu a pagina de pagamento.", "Stripe did not return the payment page."),
+      );
+    }
 
     // Cliente nao tem policy de UPDATE em invoices: so a serviceRole grava.
     const { error } = await admin
@@ -175,11 +204,15 @@ export async function startInvoiceCheckoutAction(
       .eq("id", invoice.id);
 
     if (error) {
-      return fail(describeError(error, "Nao foi possivel registrar o pagamento."));
+      return fail(
+        describeError(error, pickLocale(locale, "Nao foi possivel registrar o pagamento.", "Could not record the payment.")),
+      );
     }
 
     return ok({ url: session.url });
   } catch (error) {
-    return fail(describeError(error as Error, "Nao foi possivel abrir o pagamento."));
+    return fail(
+      describeError(error as Error, pickLocale(locale, "Nao foi possivel abrir o pagamento.", "Could not open the payment page.")),
+    );
   }
 }
