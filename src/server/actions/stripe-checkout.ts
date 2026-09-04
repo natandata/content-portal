@@ -52,6 +52,12 @@ export async function startInvoiceCheckoutAction(
   }
 
   const stripeAccount = invoice.stripe_account_id;
+  // A leitura de professional_payment_accounts que vem a seguir precisa da
+  // serviceRole: a policy de SELECT dessa tabela so libera o profissional
+  // dono ou admin, nunca o cliente que esta pagando -- pela RLS normal essa
+  // consulta sempre voltaria vazia aqui, derrubando o checkout com
+  // "indisponivel" mesmo com a conta 100% ativa.
+  const admin = createAdminClient();
 
   // Reabre a MESMA sessao enquanto ela vale. Importa muito em boleto e Pix: o
   // cliente precisa voltar ao mesmo documento, nao gerar um novo a cada toque.
@@ -75,7 +81,7 @@ export async function startInvoiceCheckoutAction(
     }
   }
 
-  const { data: account } = await supabase
+  const { data: account } = await admin
     .from("professional_payment_accounts")
     .select("*")
     .eq("stripe_account_id", stripeAccount)
@@ -140,7 +146,6 @@ export async function startInvoiceCheckoutAction(
     if (!session.url) return fail("A Stripe nao devolveu a pagina de pagamento.");
 
     // Cliente nao tem policy de UPDATE em invoices: so a serviceRole grava.
-    const admin = createAdminClient();
     const { error } = await admin
       .from("invoices")
       .update({
