@@ -5,8 +5,9 @@ import { InvoiceCreateModal } from "@/components/invoices/invoice-create-modal";
 import { InvoiceStaffActions } from "@/components/invoices/invoice-staff-actions";
 import { StripeInvoiceStatus } from "@/components/invoices/stripe-invoice-status";
 import { EmptyState } from "@/components/ui/feedback";
-import { PageHeader } from "@/components/ui/layout";
+import { Card, PageHeader, StatCard } from "@/components/ui/layout";
 import { requireStaff } from "@/lib/auth";
+import { formatMoney } from "@/lib/domain";
 import { BUCKETS } from "@/lib/paths";
 import { signedDownloadUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -43,6 +44,22 @@ export async function InvoicesList({
   const [{ data: invoices }, { data: clients }] = await Promise.all([query, clientsQuery]);
 
   const rows = invoices ?? [];
+
+  // Metodo stripe so aceita BRL na criacao (createInvoiceAction recusa outra
+  // moeda), entao somar direto aqui e seguro. Vem do mesmo `rows` que a
+  // pagina ja releu nesta visita -- atualiza sozinho a cada entrada na tela,
+  // sem chamada extra a Stripe.
+  const stripeRows = rows.filter((row) => row.method === "stripe");
+  const stripeReceivable = stripeRows
+    .filter((row) => row.status === "open")
+    .reduce((sum, row) => sum + Number(row.amount), 0);
+  const stripeReceived = stripeRows
+    .filter((row) => row.status === "paid")
+    .reduce(
+      (sum, row) => sum + (row.amount_paid_cents != null ? row.amount_paid_cents / 100 : Number(row.amount)),
+      0,
+    );
+
   const clientOptions = (clients ?? []).map((client) => ({
     id: client.id,
     companyName: client.company_name,
@@ -68,6 +85,26 @@ export async function InvoicesList({
         description="Boleto, link de pagamento ou chave Pix — envie e acompanhe o que esta em aberto."
         actions={<InvoiceCreateModal clients={clientOptions} defaultClientId={clientId} />}
       />
+
+      {!clientId ? (
+        <Card className="mb-6">
+          <h2 className="mb-4 text-sm font-semibold text-ink-900">Informacoes de pagamento online</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <StatCard
+              label="A receber"
+              value={formatMoney(stripeReceivable, "BRL")}
+              hint="Cobrancas com pagamento online ainda em aberto"
+              tone="warning"
+            />
+            <StatCard
+              label="Pagas"
+              value={formatMoney(stripeReceived, "BRL")}
+              hint="Ja confirmadas pela Stripe"
+              tone="success"
+            />
+          </div>
+        </Card>
+      ) : null}
 
       {rows.length === 0 ? (
         <EmptyState

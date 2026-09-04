@@ -13,8 +13,8 @@
 /** Comissao inicial de todo profissional novo. Espelha o default da coluna. */
 export const DEFAULT_PLATFORM_FEE_PERCENT = 1;
 
-/** Teto de digitacao no painel do admin — trava de dedo gordo, nao regra de negocio. */
-export const MAX_PLATFORM_FEE_PERCENT = 20;
+/** Teto de digitacao no painel do admin. Espelha o check da coluna: 0 a 100. */
+export const MAX_PLATFORM_FEE_PERCENT = 100;
 
 /** Acima disso a Stripe recusa a cobranca; falhar aqui e melhor que falhar la. */
 const MAX_AMOUNT_CENTS = 99_999_999;
