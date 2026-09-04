@@ -3,6 +3,7 @@ import "server-only";
 import webpush from "web-push";
 
 import { vapidConfig } from "@/lib/env";
+import { isLocale, type Locale } from "@/lib/i18n/locale";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export interface PushPayload {
@@ -83,16 +84,31 @@ export async function sendPushToUsers(userIds: string[], payload: PushPayload): 
   await Promise.all(unique.map((id) => sendPushToUser(id, payload)));
 }
 
-/** Cliente identificado pelo id de `clients` — resolve para o auth user dele. */
-export async function sendPushToClient(clientId: string, payload: PushPayload): Promise<void> {
+/**
+ * Cliente identificado pelo id de `clients` — resolve para o auth user dele.
+ *
+ * `payload` aceita uma funcao de `(locale) => PushPayload` quando o texto
+ * precisa respeitar o idioma do cliente: aqui e o unico lugar do envio que
+ * conhece esse idioma (persistido em `clients.preferred_locale`, ja que uma
+ * notificacao e composta no servidor sem navegador nenhum por perto para ler
+ * o cookie). Passar um objeto estatico continua funcionando normalmente.
+ */
+export async function sendPushToClient(
+  clientId: string,
+  payload: PushPayload | ((locale: Locale) => PushPayload),
+): Promise<void> {
   const admin = createAdminClient();
   const { data: client } = await admin
     .from("clients")
-    .select("auth_user_id")
+    .select("auth_user_id, preferred_locale")
     .eq("id", clientId)
     .maybeSingle();
 
-  if (client?.auth_user_id) await sendPushToUser(client.auth_user_id, payload);
+  if (!client?.auth_user_id) return;
+
+  const locale: Locale = isLocale(client.preferred_locale) ? client.preferred_locale : "pt-BR";
+  const resolved = typeof payload === "function" ? payload(locale) : payload;
+  await sendPushToUser(client.auth_user_id, resolved);
 }
 
 export interface ClientStaffIds {

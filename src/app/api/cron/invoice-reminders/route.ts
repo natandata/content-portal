@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { cronSecret } from "@/lib/env";
 import { daysUntil } from "@/lib/domain";
+import { intlLocale } from "@/lib/i18n/locale";
 import { sendPushToClient } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -40,29 +41,34 @@ export async function GET(request: Request) {
     if (invoice.last_reminder_sent_on === today) continue;
 
     const diff = daysUntil(invoice.due_date);
-    const dueDateLabel = invoice.due_date.split("-").reverse().join("/");
+    if (diff !== 5 && diff !== 0 && diff >= 0) continue;
 
-    let notice: { title: string; body: string } | null = null;
-    if (diff === 5) {
-      notice = {
-        title: "Cobranca vence em 5 dias",
-        body: `"${invoice.title}" vence em ${dueDateLabel}.`,
-      };
-    } else if (diff === 0) {
-      notice = { title: "Cobranca vence hoje", body: `"${invoice.title}" vence hoje.` };
-    } else if (diff < 0) {
-      notice = {
-        title: "Cobranca vencida",
-        body: `"${invoice.title}" venceu em ${dueDateLabel} e ainda esta em aberto.`,
-      };
-    }
+    await sendPushToClient(invoice.client_id, (locale) => {
+      const en = locale === "en";
+      const due = new Date(`${invoice.due_date}T12:00:00Z`);
+      const dueLabel = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "short", timeZone: "UTC" }).format(
+        due,
+      );
 
-    if (!notice) continue;
+      const notice =
+        diff === 5
+          ? {
+              title: en ? "Invoice due in 5 days" : "Cobranca vence em 5 dias",
+              body: en ? `"${invoice.title}" is due on ${dueLabel}.` : `"${invoice.title}" vence em ${dueLabel}.`,
+            }
+          : diff === 0
+            ? {
+                title: en ? "Invoice due today" : "Cobranca vence hoje",
+                body: en ? `"${invoice.title}" is due today.` : `"${invoice.title}" vence hoje.`,
+              }
+            : {
+                title: en ? "Overdue invoice" : "Cobranca vencida",
+                body: en
+                  ? `"${invoice.title}" was due on ${dueLabel} and is still open.`
+                  : `"${invoice.title}" venceu em ${dueLabel} e ainda esta em aberto.`,
+              };
 
-    await sendPushToClient(invoice.client_id, {
-      ...notice,
-      url: "/client/payments",
-      tag: `invoice-${invoice.id}`,
+      return { ...notice, url: "/client/payments", tag: `invoice-${invoice.id}` };
     }).catch(() => {});
 
     await admin.from("invoices").update({ last_reminder_sent_on: today }).eq("id", invoice.id);

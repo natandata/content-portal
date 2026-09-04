@@ -107,20 +107,25 @@ export async function attachDocumentFileAction(
 
   revalidateDocuments(data.client_id);
 
-  const title = document?.title ?? "Documento";
-  await sendPushToClient(data.client_id, requiresSignature
-    ? {
-        title: "Novo documento para assinatura",
-        body: `"${title}" chegou e esta esperando sua assinatura.`,
-        url: "/client/documents",
-        tag: `document-${contractId}`,
-      }
-    : {
-        title: "Novo documento para visualizar",
-        body: `"${title}" ja esta disponivel para voce ver.`,
-        url: "/client/documents",
-        tag: `document-${contractId}`,
-      }).catch(() => {});
+  await sendPushToClient(data.client_id, (locale) => {
+    const en = locale === "en";
+    const title = document?.title ?? (en ? "Document" : "Documento");
+    return requiresSignature
+      ? {
+          title: en ? "New document for signature" : "Novo documento para assinatura",
+          body: en
+            ? `"${title}" arrived and is waiting for your signature.`
+            : `"${title}" chegou e esta esperando sua assinatura.`,
+          url: "/client/documents",
+          tag: `document-${contractId}`,
+        }
+      : {
+          title: en ? "New document to view" : "Novo documento para visualizar",
+          body: en ? `"${title}" is now available for you to view.` : `"${title}" ja esta disponivel para voce ver.`,
+          url: "/client/documents",
+          tag: `document-${contractId}`,
+        };
+  }).catch(() => {});
 
   return done();
 }

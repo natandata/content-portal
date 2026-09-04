@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
 import { normalizeExternalUrl } from "@/lib/domain";
+import { intlLocale } from "@/lib/i18n/locale";
 import { BUCKETS } from "@/lib/paths";
 import { sendPushToClient } from "@/lib/push";
 import { canChargeWithStripe } from "@/lib/stripe/capabilities";
@@ -137,11 +138,22 @@ async function notifyAndLog(
   actorName: string,
 ) {
   await logClientActivity(supabase, invoice.client_id, actorName, `Enviou uma cobranca: "${invoice.title}"`);
-  await sendPushToClient(invoice.client_id, {
-    title: "Nova cobranca",
-    body: `"${invoice.title}" chegou — vencimento em ${invoice.due_date.split("-").reverse().join("/")}.`,
-    url: "/client/payments",
-    tag: `invoice-${invoice.id}`,
+  await sendPushToClient(invoice.client_id, (locale) => {
+    const due = new Date(`${invoice.due_date}T12:00:00Z`);
+    const dueLabel = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "short", timeZone: "UTC" }).format(due);
+    return locale === "en"
+      ? {
+          title: "New invoice",
+          body: `"${invoice.title}" is due on ${dueLabel}.`,
+          url: "/client/payments",
+          tag: `invoice-${invoice.id}`,
+        }
+      : {
+          title: "Nova cobranca",
+          body: `"${invoice.title}" chegou — vencimento em ${dueLabel}.`,
+          url: "/client/payments",
+          tag: `invoice-${invoice.id}`,
+        };
   }).catch(() => {});
 }
 

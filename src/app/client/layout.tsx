@@ -10,10 +10,17 @@ import { loadClientBadges } from "@/server/queries";
 export default async function ClientLayout({ children }: { children: ReactNode }) {
   const actor = await requireClientActor();
 
-  const [badges, locale] = await Promise.all([
-    loadClientBadges(await createClient()),
-    getLocale(),
-  ]);
+  const supabase = await createClient();
+  const [badges, locale] = await Promise.all([loadClientBadges(supabase), getLocale()]);
+
+  // Sincroniza o cookie (a fonte da verdade de tela) para a conta, silenciosamente
+  // -- e o unico jeito de uma notificacao push, composta depois sem navegador
+  // nenhum por perto, saber em que idioma o cliente prefere ler.
+  if (actor.client.preferred_locale !== locale) {
+    void supabase.rpc("set_preferred_locale", { p_locale: locale }).then(({ error }) => {
+      if (error) console.error("[client-layout] set_preferred_locale falhou:", error);
+    });
+  }
 
   return (
     <ClientShell

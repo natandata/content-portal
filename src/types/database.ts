@@ -71,6 +71,8 @@ export type ClientRow = {
   cover_position_y: number;
   tour_seen_at: string | null;
   notifications_prompted_at: string | null;
+  /** "pt-BR" | "en" — sincronizado do cookie de idioma via `set_preferred_locale`. */
+  preferred_locale: string;
   created_at: string;
   updated_at: string;
 }
@@ -541,6 +543,10 @@ export type Database = {
       };
       mark_notifications_prompted: {
         Args: Record<string, never>;
+        Returns: void;
+      };
+      set_preferred_locale: {
+        Args: { p_locale: string };
         Returns: void;
       };
       platform_stats: {

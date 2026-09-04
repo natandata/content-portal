@@ -297,19 +297,27 @@ export async function submitContentAction(contentId: string): Promise<ActionResu
   // Aguardado: em serverless, um fire-and-forget pode ser cortado quando a
   // funcao termina antes da promessa — nunca sabemos se a notificacao saiu.
   // Falha aqui nunca derruba a acao: o conteudo ja foi enviado de verdade.
-  await sendPushToClient(data.client_id, wasAdjustment
-    ? {
-        title: "Ajuste feito",
-        body: `"${before?.title ?? "Conteudo"}" foi atualizado e esta pronto para sua revisao.`,
-        url: `/client/content/${contentId}`,
-        tag: `content-${contentId}`,
-      }
-    : {
-        title: "Novo conteudo para aprovar",
-        body: `"${before?.title ?? "Conteudo"}" chegou e esta esperando sua avaliacao.`,
-        url: `/client/content/${contentId}`,
-        tag: `content-${contentId}`,
-      }).catch(() => {});
+  await sendPushToClient(data.client_id, (locale) => {
+    const en = locale === "en";
+    const title = before?.title ?? (en ? "Content" : "Conteudo");
+    return wasAdjustment
+      ? {
+          title: en ? "Adjustment made" : "Ajuste feito",
+          body: en
+            ? `"${title}" was updated and is ready for your review.`
+            : `"${title}" foi atualizado e esta pronto para sua revisao.`,
+          url: `/client/content/${contentId}`,
+          tag: `content-${contentId}`,
+        }
+      : {
+          title: en ? "New content to approve" : "Novo conteudo para aprovar",
+          body: en
+            ? `"${title}" arrived and is waiting for your review.`
+            : `"${title}" chegou e esta esperando sua avaliacao.`,
+          url: `/client/content/${contentId}`,
+          tag: `content-${contentId}`,
+        };
+  }).catch(() => {});
   return done();
 }
 

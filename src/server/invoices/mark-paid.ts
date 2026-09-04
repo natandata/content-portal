@@ -53,12 +53,15 @@ export async function markInvoicePaidFromStripe(
 
   // Recibo para o cliente e aviso para quem atende — o profissional precisa
   // saber que o dinheiro entrou sem ficar conferindo o painel.
-  await sendPushToClient(invoice.client_id, {
-    title: "Pagamento confirmado",
-    body: `"${invoice.title}" foi paga. Obrigado!`,
+  await sendPushToClient(invoice.client_id, (locale) => ({
+    title: locale === "en" ? "Payment confirmed" : "Pagamento confirmado",
+    body:
+      locale === "en"
+        ? `"${invoice.title}" has been paid. Thank you!`
+        : `"${invoice.title}" foi paga. Obrigado!`,
     url: "/client/payments",
     tag: `invoice-${invoice.id}`,
-  }).catch(() => {});
+  })).catch(() => {});
 
   await sendPushToClientStaff(invoice.client_id, {
     title: "Cobranca paga",
