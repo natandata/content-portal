@@ -38,12 +38,13 @@ export function WorkspaceShell({
     return typeof item === "object" && item !== null && "items" in item;
   };
 
-  // Converte a estrutura para um array consistente
-  const navGroups: NavGroup[] = Array.isArray(navData)
-    ? navData.map((item: unknown) =>
-        isNavGroup(item) ? item : { items: navData as NavItem[] }
-      )
-    : [{ items: navData as NavItem[] }];
+  // Converte para um array de grupos consistente. O admin devolve uma lista
+  // plana de NavItem; o profissional ja devolve NavGroup[]. So precisa olhar
+  // o PRIMEIRO elemento para saber qual formato veio -- mapear item por item
+  // e embrulhar o array inteiro a cada iteracao repete o menu inteiro uma vez
+  // por item (bug corrigido aqui).
+  const navGroups: NavGroup[] =
+    navData.length > 0 && isNavGroup(navData[0]) ? (navData as NavGroup[]) : [{ items: navData as NavItem[] }];
 
   useEffect(() => {
     setMenuOpen(false);
