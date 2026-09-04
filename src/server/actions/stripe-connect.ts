@@ -167,7 +167,12 @@ export async function refreshConnectStatusAction(): Promise<ActionResult<null>> 
     return fail(describeError(error as Error, "Nao foi possivel consultar a Stripe."));
   }
 
-  revalidatePath(SETTINGS_PATH);
+  // Sem revalidatePath aqui de proposito: esta acao roda tanto no clique do
+  // botao "Atualizar status" (o client ja chama router.refresh() depois)
+  // quanto direto durante o RENDER da propria pagina, no retorno do
+  // onboarding (`?done=1`) -- e o Next.js proibe revalidatePath durante
+  // render, so aceita a partir de uma Server Action disparada por interacao.
+  // A pagina ja le a linha fresca na sequencia, entao nao falta nada.
   return done();
 }
 
