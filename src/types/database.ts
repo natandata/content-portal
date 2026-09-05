@@ -81,6 +81,38 @@ export type ClientRow = {
   updated_at: string;
 }
 
+/** Sem policy de RLS de proposito -- guarda token de OAuth, so a serviceRole le. */
+export type ProfessionalGoogleAccountRow = {
+  user_id: string;
+  google_email: string;
+  refresh_token: string;
+  access_token: string | null;
+  access_token_expires_at: string | null;
+  calendar_id: string;
+  connected_at: string;
+}
+
+export type MeetingRequestedBy = "client" | "professional";
+export type MeetingStatus = "pending" | "approved" | "declined" | "cancelled";
+
+export type MeetingRequestRow = {
+  id: string;
+  client_id: string;
+  professional_id: string;
+  requested_by: MeetingRequestedBy;
+  contact_email: string;
+  proposed_date: string;
+  proposed_time: string;
+  message: string | null;
+  status: MeetingStatus;
+  responded_at: string | null;
+  google_event_id: string | null;
+  meet_link: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ContractRow = {
   id: string;
   client_id: string;
@@ -530,6 +562,17 @@ export type Database = {
       >;
       client_profiles: Table<ClientProfileRow, 'client_id'>;
       client_branding: Table<ClientBrandingRow, 'client_id'>;
+      professional_google_accounts: Table<ProfessionalGoogleAccountRow, 'user_id' | 'google_email' | 'refresh_token'>;
+      meeting_requests: Table<
+        MeetingRequestRow,
+        | 'client_id'
+        | 'professional_id'
+        | 'requested_by'
+        | 'contact_email'
+        | 'proposed_date'
+        | 'proposed_time'
+        | 'created_by'
+      >;
       profile_highlights: Table<ProfileHighlightRow, 'client_id' | 'title' | 'position'>;
       approvals: Table<ApprovalRow, 'content_id' | 'client_id' | 'status'>;
       approval_history: Table<ApprovalHistoryRow, 'content_id' | 'action'>;

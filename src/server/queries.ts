@@ -717,6 +717,16 @@ export async function loadUpcomingContents(
   return data ?? [];
 }
 
+/** Pedidos de reuniao de um cliente, mais recentes primeiro — usado dos dois lados. */
+export async function loadClientMeetings(supabase: Client, clientId: string) {
+  const { data } = await supabase
+    .from("meeting_requests")
+    .select("*")
+    .eq("client_id", clientId)
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
 export interface ClientCalendarPost {
   id: string;
   title: string;

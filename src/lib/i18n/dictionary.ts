@@ -93,6 +93,7 @@ export interface Dictionary {
     payments: string;
     settings: string;
     calendar: string;
+    meetings: string;
   };
   dashboard: {
     hello: (name: string) => string;
@@ -342,6 +343,35 @@ export interface Dictionary {
     emptyBody: string;
     today: string;
   };
+  meetings: {
+    title: string;
+    subtitle: string;
+    notConnectedWarning: string;
+    requestButton: string;
+    modalTitle: string;
+    modalDescription: string;
+    fieldDate: string;
+    fieldTime: string;
+    fieldEmail: string;
+    fieldMessage: string;
+    submit: string;
+    cancel: string;
+    sentToast: string;
+    emptyTitle: string;
+    emptyBody: string;
+    contactLabel: string;
+    approve: string;
+    decline: string;
+    cancelMeeting: string;
+    joinMeet: string;
+    approvedToast: string;
+    declinedToast: string;
+    cancelledToast: string;
+    statusPending: string;
+    statusApproved: string;
+    statusDeclined: string;
+    statusCancelled: string;
+  };
 }
 
 const ptBR: Dictionary = {
@@ -448,6 +478,7 @@ const ptBR: Dictionary = {
     payments: "Cobrancas",
     settings: "Configuracoes",
     calendar: "Calendario",
+    meetings: "Reunioes",
   },
   dashboard: {
     hello: (name) => `Ola, ${name}`,
@@ -684,6 +715,37 @@ const ptBR: Dictionary = {
     emptyBody: "Assim que um conteudo ganhar data marcada, ele aparece aqui.",
     today: "Hoje",
   },
+  meetings: {
+    title: "Reunioes",
+    subtitle: "Peca uma reuniao com seu profissional ou responda a um pedido dele.",
+    notConnectedWarning:
+      "Seu profissional ainda nao conectou a agenda do Google. Voce ainda pode pedir uma reuniao — ela so vai gerar o link do Meet quando ele conectar e aprovar.",
+    requestButton: "Solicitar reuniao",
+    modalTitle: "Solicitar reuniao",
+    modalDescription:
+      "A outra parte recebe o pedido e aprova ou recusa. Aprovando, o Google Meet e criado sozinho.",
+    fieldDate: "Data",
+    fieldTime: "Horario",
+    fieldEmail: "Seu e-mail",
+    fieldMessage: "Assunto (opcional)",
+    submit: "Enviar pedido",
+    cancel: "Cancelar",
+    sentToast: "Pedido de reuniao enviado.",
+    emptyTitle: "Nenhuma reuniao ainda",
+    emptyBody: "Peca uma reuniao ou aguarde um pedido chegar.",
+    contactLabel: "Contato",
+    approve: "Aprovar",
+    decline: "Recusar",
+    cancelMeeting: "Cancelar",
+    joinMeet: "Entrar no Google Meet",
+    approvedToast: "Reuniao confirmada.",
+    declinedToast: "Pedido recusado.",
+    cancelledToast: "Reuniao cancelada.",
+    statusPending: "Aguardando resposta",
+    statusApproved: "Confirmada",
+    statusDeclined: "Recusada",
+    statusCancelled: "Cancelada",
+  },
 };
 
 const en: Dictionary = {
@@ -790,6 +852,7 @@ const en: Dictionary = {
     payments: "Payments",
     settings: "Settings",
     calendar: "Calendar",
+    meetings: "Meetings",
   },
   dashboard: {
     hello: (name) => `Hi, ${name}`,
@@ -1031,6 +1094,36 @@ const en: Dictionary = {
     empty: "No posts scheduled",
     emptyBody: "As soon as a piece of content gets a scheduled date, it shows up here.",
     today: "Today",
+  },
+  meetings: {
+    title: "Meetings",
+    subtitle: "Request a meeting with your professional or respond to one they sent.",
+    notConnectedWarning:
+      "Your professional hasn't connected their Google Calendar yet. You can still request a meeting — the Meet link will only be created once they connect and approve it.",
+    requestButton: "Request meeting",
+    modalTitle: "Request a meeting",
+    modalDescription: "The other side gets the request and approves or declines it. Approving creates the Google Meet automatically.",
+    fieldDate: "Date",
+    fieldTime: "Time",
+    fieldEmail: "Your email",
+    fieldMessage: "Subject (optional)",
+    submit: "Send request",
+    cancel: "Cancel",
+    sentToast: "Meeting request sent.",
+    emptyTitle: "No meetings yet",
+    emptyBody: "Request a meeting or wait for one to come in.",
+    contactLabel: "Contact",
+    approve: "Approve",
+    decline: "Decline",
+    cancelMeeting: "Cancel",
+    joinMeet: "Join Google Meet",
+    approvedToast: "Meeting confirmed.",
+    declinedToast: "Request declined.",
+    cancelledToast: "Meeting cancelled.",
+    statusPending: "Awaiting response",
+    statusApproved: "Confirmed",
+    statusDeclined: "Declined",
+    statusCancelled: "Cancelled",
   },
 };
 

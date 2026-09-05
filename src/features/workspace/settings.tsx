@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Video } from "lucide-react";
 
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { NotificationSettings } from "@/components/notifications/notification-settings";
@@ -58,6 +58,22 @@ export async function WorkspaceSettings() {
             >
               <CreditCard className="size-4" aria-hidden />
               Abrir configuracao de pagamento
+            </Link>
+          </Card>
+        ) : null}
+
+        {actor.role === "professional" ? (
+          <Card>
+            <CardHeader
+              title="Reunioes por Google Meet"
+              description="Conecte sua agenda para o cliente marcar reuniao direto pelo portal."
+            />
+            <Link
+              href="/professional/settings/meetings"
+              className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-ink-800 transition hover:bg-ink-50"
+            >
+              <Video className="size-4" aria-hidden />
+              Abrir configuracao de reunioes
             </Link>
           </Card>
         ) : null}

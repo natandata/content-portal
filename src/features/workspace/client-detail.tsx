@@ -13,6 +13,8 @@ import { ClientContentCalendar } from "@/components/calendar/client-content-cale
 import { ContentCard } from "@/components/content/content-card";
 import { StaffContentActions } from "@/components/content/staff-content-actions";
 import { DocumentUploadModal } from "@/components/documents/document-upload-modal";
+import { MeetingRequestForm } from "@/components/meetings/meeting-request-form";
+import { MeetingRequestsList } from "@/components/meetings/meeting-requests-list";
 import { ClientServicesCard } from "@/components/services/client-services-card";
 import { Badge, ContractStatusBadge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
@@ -25,6 +27,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import {
   loadClientContentCalendar,
+  loadClientMeetings,
   loadClientServices,
   loadContentFileCounts,
   loadContentPreviews,
@@ -92,11 +95,12 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
 
   const rows = contents ?? [];
   const ids = rows.map((row) => row.id);
-  const [previews, counts, calendarPosts, { data: branding }] = await Promise.all([
+  const [previews, counts, calendarPosts, { data: branding }, meetings] = await Promise.all([
     loadContentPreviews(supabase, ids),
     loadContentFileCounts(supabase, ids),
     loadClientContentCalendar(supabase, clientId),
     supabase.from("client_branding").select("*").eq("client_id", clientId).maybeSingle(),
+    loadClientMeetings(supabase, clientId),
   ]);
 
   const activeContract = (contracts ?? [])[0];
@@ -284,6 +288,18 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
             id: "calendario",
             label: "Calendario",
             content: <ClientContentCalendar posts={calendarPosts} basePath={base} />,
+          },
+          {
+            id: "reunioes",
+            label: "Reunioes",
+            content: (
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <MeetingRequestForm clientId={client.id} defaultEmail={actor.authUser.email ?? undefined} />
+                </div>
+                <MeetingRequestsList meetings={meetings} currentSide="professional" />
+              </div>
+            ),
           },
           {
             id: "branding",

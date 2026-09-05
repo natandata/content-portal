@@ -77,6 +77,21 @@ export function appBaseUrl(): string {
   return "http://localhost:3000";
 }
 
+/**
+ * Credenciais OAuth do Google Calendar. `null` = reunioes por Meet desligadas,
+ * mesmo contrato do `stripeSecretKey()`. O redirect URI e fixo (nao vem de
+ * `appBaseUrl()` calculado na hora) porque o Google exige que ele esteja
+ * cadastrado nas credenciais do projeto — precisa ser sempre o mesmo valor.
+ */
+export function googleOAuthConfig(): { clientId: string; clientSecret: string; redirectUri: string } | null {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId?.trim() || !clientSecret?.trim()) return null;
+
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI?.trim() || `${appBaseUrl()}/api/auth/google/callback`;
+  return { clientId, clientSecret, redirectUri };
+}
+
 export const isSupabaseConfigured =
   publicEnv.supabaseUrl.length > 0 && publicEnv.supabaseAnonKey.length > 0;
 

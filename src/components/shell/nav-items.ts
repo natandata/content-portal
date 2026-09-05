@@ -14,6 +14,7 @@ import {
   Users,
   BarChart3,
   CheckSquare,
+  Video,
   type LucideIcon,
 } from "lucide-react";
 
@@ -104,6 +105,12 @@ export const clientNavItems: NavItem[] = [
     href: "/client/calendar",
     label: "Calendario",
     icon: Calendar,
+    hideOnMobileNav: true,
+  },
+  {
+    href: "/client/meetings",
+    label: "Reunioes",
+    icon: Video,
     hideOnMobileNav: true,
   },
   { href: "/client/documents", label: "Documentos", icon: FileText, badge: "contracts" },

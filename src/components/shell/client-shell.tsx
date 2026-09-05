@@ -40,6 +40,7 @@ export function ClientShell({
     "/client/content": dict.nav.content,
     "/client/feed": dict.nav.feed,
     "/client/calendar": dict.nav.calendar,
+    "/client/meetings": dict.nav.meetings,
     "/client/documents": dict.nav.documents,
     "/client/chat": dict.nav.chat,
     "/client/payments": dict.nav.payments,
