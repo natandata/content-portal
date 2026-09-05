@@ -16,6 +16,7 @@ import type {
   ContentFileRow,
   ContentRow,
   ContentStatus,
+  ContentType,
   ContractStatus,
   CurrencyCode,
   Database,
@@ -714,6 +715,54 @@ export async function loadUpcomingContents(
     .order("scheduled_date", { ascending: true })
     .limit(limit);
   return data ?? [];
+}
+
+export interface ClientCalendarPost {
+  id: string;
+  title: string;
+  caption: string | null;
+  type: ContentType;
+  status: ContentStatus;
+  date: string;
+  time: string | null;
+  previewUrl: string | null;
+}
+
+/**
+ * Agenda de posts de UM cliente — usada tanto na aba Calendario que o
+ * profissional ve dentro do cliente quanto na tela de calendario do proprio
+ * cliente. So conteudo com data marcada entra; sem data fica de fora do
+ * grid (aparece nas outras listagens normalmente).
+ */
+export async function loadClientContentCalendar(
+  supabase: Client,
+  clientId: string,
+): Promise<ClientCalendarPost[]> {
+  const { data: contents } = await supabase
+    .from("contents")
+    .select("id, title, caption, type, status, scheduled_date, scheduled_time")
+    .eq("client_id", clientId)
+    .not("scheduled_date", "is", null)
+    .order("scheduled_date", { ascending: true });
+
+  const rows = contents ?? [];
+  if (rows.length === 0) return [];
+
+  const previews = await loadContentPreviews(
+    supabase,
+    rows.map((row) => row.id),
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    caption: row.caption,
+    type: row.type,
+    status: row.status,
+    date: row.scheduled_date as string,
+    time: row.scheduled_time,
+    previewUrl: previews.get(row.id) ?? null,
+  }));
 }
 
 /**

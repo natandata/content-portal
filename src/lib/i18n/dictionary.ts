@@ -92,6 +92,7 @@ export interface Dictionary {
     chat: string;
     payments: string;
     settings: string;
+    calendar: string;
   };
   dashboard: {
     hello: (name: string) => string;
@@ -334,6 +335,13 @@ export interface Dictionary {
     activityTitle: string;
     activityEmpty: string;
   };
+  postCalendar: {
+    title: string;
+    subtitle: string;
+    empty: string;
+    emptyBody: string;
+    today: string;
+  };
 }
 
 const ptBR: Dictionary = {
@@ -439,6 +447,7 @@ const ptBR: Dictionary = {
     chat: "Chat",
     payments: "Cobrancas",
     settings: "Configuracoes",
+    calendar: "Calendario",
   },
   dashboard: {
     hello: (name) => `Ola, ${name}`,
@@ -668,6 +677,13 @@ const ptBR: Dictionary = {
     activityTitle: "Atividades recentes",
     activityEmpty: "Nenhuma atividade registrada ainda.",
   },
+  postCalendar: {
+    title: "Calendario",
+    subtitle: "Veja o que esta agendado para publicar.",
+    empty: "Nenhum post agendado",
+    emptyBody: "Assim que um conteudo ganhar data marcada, ele aparece aqui.",
+    today: "Hoje",
+  },
 };
 
 const en: Dictionary = {
@@ -773,6 +789,7 @@ const en: Dictionary = {
     chat: "Chat",
     payments: "Payments",
     settings: "Settings",
+    calendar: "Calendar",
   },
   dashboard: {
     hello: (name) => `Hi, ${name}`,
@@ -1007,6 +1024,13 @@ const en: Dictionary = {
     projectsEmpty: "No service registered yet.",
     activityTitle: "Recent activity",
     activityEmpty: "No activity logged yet.",
+  },
+  postCalendar: {
+    title: "Calendar",
+    subtitle: "See what's scheduled to post.",
+    empty: "No posts scheduled",
+    emptyBody: "As soon as a piece of content gets a scheduled date, it shows up here.",
+    today: "Today",
   },
 };
 

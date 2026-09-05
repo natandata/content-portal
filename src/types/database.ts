@@ -165,6 +165,41 @@ export type ClientProfileRow = {
   updated_at: string;
 }
 
+export type BrandArchetype =
+  | "heroi"
+  | "mago"
+  | "sabio"
+  | "criador"
+  | "governante"
+  | "cara_comum"
+  | "amante"
+  | "prestativo"
+  | "inocente"
+  | "explorador"
+  | "rebelde"
+  | "bobo_da_corte";
+
+/** Ferramenta de estrategia da equipe — um registro por cliente, staff-only. */
+export type ClientBrandingRow = {
+  client_id: string;
+  essence_persona: string | null;
+  essence_defends: string | null;
+  essence_rejects: string | null;
+  essence_missed: string | null;
+  essence_word: string | null;
+  archetype: BrandArchetype | null;
+  archetype_notes: string | null;
+  voice_tone: string | null;
+  color_palette: string | null;
+  typography: string | null;
+  visual_references: string | null;
+  target_audience: string | null;
+  value_proposition: string | null;
+  differentiators: string | null;
+  content_pillars: string | null;
+  updated_at: string;
+}
+
 export type ProfileHighlightRow = {
   id: string;
   client_id: string;
@@ -494,6 +529,7 @@ export type Database = {
         'database_bytes' | 'storage_bytes' | 'users_count' | 'clients_count' | 'contents_count'
       >;
       client_profiles: Table<ClientProfileRow, 'client_id'>;
+      client_branding: Table<ClientBrandingRow, 'client_id'>;
       profile_highlights: Table<ProfileHighlightRow, 'client_id' | 'title' | 'position'>;
       approvals: Table<ApprovalRow, 'content_id' | 'client_id' | 'status'>;
       approval_history: Table<ApprovalHistoryRow, 'content_id' | 'action'>;

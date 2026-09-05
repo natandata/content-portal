@@ -100,6 +100,12 @@ export const clientNavItems: NavItem[] = [
   { href: "/client/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/client/content", label: "Conteudos", icon: Images, badge: "approvals" },
   { href: "/client/feed", label: "Feed", icon: Grid3x3 },
+  {
+    href: "/client/calendar",
+    label: "Calendario",
+    icon: Calendar,
+    hideOnMobileNav: true,
+  },
   { href: "/client/documents", label: "Documentos", icon: FileText, badge: "contracts" },
   { href: "/client/chat", label: "Chat", icon: MessageCircle, badge: "chat" },
   {

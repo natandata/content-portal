@@ -39,6 +39,7 @@ export function ClientShell({
     "/client/dashboard": dict.nav.home,
     "/client/content": dict.nav.content,
     "/client/feed": dict.nav.feed,
+    "/client/calendar": dict.nav.calendar,
     "/client/documents": dict.nav.documents,
     "/client/chat": dict.nav.chat,
     "/client/payments": dict.nav.payments,

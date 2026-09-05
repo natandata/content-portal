@@ -3,10 +3,13 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, FileText, Grid3x3, Images } from "lucide-react";
 
 import { ClientAvatarUpload } from "@/components/clients/client-avatar-upload";
+import { ClientBrandingForm } from "@/components/clients/client-branding-form";
 import { ClientCoverPicker } from "@/components/clients/client-cover-picker";
 import { ClientDeleteButton } from "@/components/clients/client-delete-button";
+import { ClientDetailTabs } from "@/components/clients/client-detail-tabs";
 import { ClientFormModal } from "@/components/clients/client-form-modal";
 import { CopyCode } from "@/components/clients/copy-code";
+import { ClientContentCalendar } from "@/components/calendar/client-content-calendar";
 import { ContentCard } from "@/components/content/content-card";
 import { StaffContentActions } from "@/components/content/staff-content-actions";
 import { DocumentUploadModal } from "@/components/documents/document-upload-modal";
@@ -21,6 +24,7 @@ import { signedUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import {
+  loadClientContentCalendar,
   loadClientServices,
   loadContentFileCounts,
   loadContentPreviews,
@@ -88,9 +92,11 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
 
   const rows = contents ?? [];
   const ids = rows.map((row) => row.id);
-  const [previews, counts] = await Promise.all([
+  const [previews, counts, calendarPosts, { data: branding }] = await Promise.all([
     loadContentPreviews(supabase, ids),
     loadContentFileCounts(supabase, ids),
+    loadClientContentCalendar(supabase, clientId),
+    supabase.from("client_branding").select("*").eq("client_id", clientId).maybeSingle(),
   ]);
 
   const activeContract = (contracts ?? [])[0];
@@ -163,9 +169,15 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
         <StatCard label="Aprovados" value={tally(["approved", "published"])} tone="success" />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-5">
-          <Card padded={false}>
+      <ClientDetailTabs
+        tabs={[
+          {
+            id: "visao-geral",
+            label: "Visao Geral",
+            content: (
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="space-y-5">
+                  <Card padded={false}>
             <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-4">
               <h2 className="text-sm font-semibold text-ink-900">Conteudos recentes</h2>
               <Link
@@ -263,9 +275,23 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
             </Link>
           </Card>
 
-          <ClientServicesCard clientId={client.id} services={services} />
-        </div>
-      </div>
+                  <ClientServicesCard clientId={client.id} services={services} />
+                </div>
+              </div>
+            ),
+          },
+          {
+            id: "calendario",
+            label: "Calendario",
+            content: <ClientContentCalendar posts={calendarPosts} basePath={base} />,
+          },
+          {
+            id: "branding",
+            label: "Branding",
+            content: <ClientBrandingForm clientId={client.id} branding={branding} basePath={base} />,
+          },
+        ]}
+      />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n/locale";
 import type {
+  BrandArchetype,
   ContentStatus,
   ContentType,
   ContractStatus,
@@ -105,6 +106,37 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   professional: "Profissional",
   client: "Cliente",
 };
+
+/** Os 12 arquetipos de marca classicos (Mark & Pearson) usados no Branding do cliente. */
+export const BRAND_ARCHETYPE_LABEL: Record<BrandArchetype, string> = {
+  heroi: "Heroi",
+  mago: "Mago",
+  sabio: "Sabio",
+  criador: "Criador",
+  governante: "Governante",
+  cara_comum: "Cara Comum",
+  amante: "Amante",
+  prestativo: "Prestativo",
+  inocente: "Inocente",
+  explorador: "Explorador",
+  rebelde: "Rebelde",
+  bobo_da_corte: "Bobo da Corte",
+};
+
+export const BRAND_ARCHETYPES: BrandArchetype[] = [
+  "heroi",
+  "mago",
+  "sabio",
+  "criador",
+  "governante",
+  "cara_comum",
+  "amante",
+  "prestativo",
+  "inocente",
+  "explorador",
+  "rebelde",
+  "bobo_da_corte",
+];
 
 /** Status em que o conteudo esta com o cliente. */
 export const AWAITING_CLIENT_STATUSES: ContentStatus[] = ["submitted", "awaiting_approval"];
