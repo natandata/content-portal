@@ -188,6 +188,8 @@ export interface Dictionary {
     dark: string;
     system: string;
     notifications: string;
+    photo: string;
+    photoHint: string;
   };
   status: {
     content: {
@@ -535,6 +537,8 @@ const ptBR: Dictionary = {
     dark: "Escuro",
     system: "Sistema",
     notifications: "Notificacoes",
+    photo: "Foto de perfil",
+    photoHint: "Aparece no seu card para a equipe e no seu perfil.",
   },
   status: {
     content: {
@@ -866,6 +870,8 @@ const en: Dictionary = {
     dark: "Dark",
     system: "System",
     notifications: "Notifications",
+    photo: "Profile photo",
+    photoHint: "Shows up on your card for the team and on your profile.",
   },
   status: {
     content: {

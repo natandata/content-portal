@@ -38,6 +38,7 @@ export function ClientFormModal({ role, professionals, client, label, defaultPro
     client?.professional_id ?? defaultProfessionalId ?? "",
   );
   const [status, setStatus] = useState<"active" | "inactive">(client?.status ?? "active");
+  const [tag, setTag] = useState(client?.tag ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -48,6 +49,7 @@ export function ClientFormModal({ role, professionals, client, label, defaultPro
     setEmail("");
     setPhone("");
     setProfessionalId(defaultProfessionalId ?? "");
+    setTag("");
   }
 
   async function submit() {
@@ -55,7 +57,7 @@ export function ClientFormModal({ role, professionals, client, label, defaultPro
     setBusy(true);
 
     try {
-      const payload = { name, companyName, email, phone, professionalId };
+      const payload = { name, companyName, email, phone, professionalId, tag };
 
       const result = isEdit
         ? await updateClientAction({ ...payload, id: client!.id, status })
@@ -146,6 +148,17 @@ export function ClientFormModal({ role, professionals, client, label, defaultPro
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               placeholder="(11) 90000-0000"
+              disabled={busy}
+            />
+          </Field>
+
+          <Field label="Etiqueta (opcional)" htmlFor="client-tag">
+            <Input
+              id="client-tag"
+              value={tag}
+              onChange={(event) => setTag(event.target.value)}
+              placeholder="Financas, Psicologia, Estetica..."
+              maxLength={40}
               disabled={busy}
             />
           </Field>

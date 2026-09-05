@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, FileText, Grid3x3, Images } from "lucide-react";
 
-import { ClientCoverUpload } from "@/components/clients/client-cover-upload";
+import { ClientAvatarUpload } from "@/components/clients/client-avatar-upload";
+import { ClientCoverPicker } from "@/components/clients/client-cover-picker";
 import { ClientDeleteButton } from "@/components/clients/client-delete-button";
 import { ClientFormModal } from "@/components/clients/client-form-modal";
 import { CopyCode } from "@/components/clients/copy-code";
@@ -57,10 +58,14 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
       .eq("client_id", clientId),
   ]);
 
-  const [services, coverUrl] = await Promise.all([
+  const [services, { data: clientProfile }] = await Promise.all([
     loadClientServices(supabase, clientId),
-    signedUrl(supabase, BUCKETS.profiles, client.cover_path),
+    supabase.from("client_profiles").select("avatar_path").eq("client_id", clientId).maybeSingle(),
   ]);
+
+  const avatarUrl = clientProfile?.avatar_path
+    ? await signedUrl(supabase, BUCKETS.profiles, clientProfile.avatar_path)
+    : null;
 
   const professionals =
     actor.role === "admin"
@@ -92,12 +97,17 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
 
   return (
     <>
-      <ClientCoverUpload
-        clientId={client.id}
-        coverUrl={coverUrl}
-        coverPositionY={client.cover_position_y}
-        className="mb-5 h-32 sm:h-44"
-      />
+      <div className="mb-5">
+        <ClientCoverPicker clientId={client.id} color={client.cover_color} className="h-24 w-full sm:h-32" />
+        <div className="-mt-8 ml-4 sm:-mt-10">
+          <ClientAvatarUpload
+            clientId={client.id}
+            name={client.company_name}
+            avatarUrl={avatarUrl}
+            size="size-16 sm:size-20"
+          />
+        </div>
+      </div>
 
       <PageHeader
         breadcrumb={

@@ -12,7 +12,9 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
+import { coverGradientClass } from "@/lib/cover-palette";
 import type { BadgeTone } from "@/lib/domain";
+import { tagColorClass } from "@/lib/tag-colors";
 import { cn, initials } from "@/lib/utils";
 import type { ClientGalleryRow } from "@/server/queries";
 
@@ -26,6 +28,21 @@ const STATUS_META: Record<DisplayStatus, { label: string; tone: BadgeTone }> = {
 };
 
 const STATUS_ORDER: DisplayStatus[] = ["ajuste", "aguardando", "ok", "inativo"];
+
+/** Bolinha de sinal ao lado do nome — mesmo status da galeria, so como cor. */
+const STATUS_DOT: Record<DisplayStatus, string> = {
+  ajuste: "bg-red-500",
+  aguardando: "bg-amber-500",
+  ok: "bg-emerald-500",
+  inativo: "bg-ink-300",
+};
+
+const CONTENT_STAT_META = [
+  { key: "draft", label: "Rascunho", dot: "bg-ink-500" },
+  { key: "adjustment", label: "Ajuste", dot: "bg-orange-500" },
+  { key: "awaitingApproval", label: "Aprovacao", dot: "bg-orange-400" },
+  { key: "approved", label: "Aprovados", dot: "bg-emerald-500" },
+] as const;
 
 function displayStatus(client: ClientGalleryRow): DisplayStatus {
   if (client.status === "inactive") return "inativo";
@@ -90,41 +107,61 @@ function ClientCard({
     );
   }
 
+  const isActive = client.status === "active";
+
   return (
     <Link
       href={href}
+      title={attentionReason(client) || undefined}
       className="focus-ring group flex flex-col overflow-hidden rounded-xl border border-line bg-surface transition hover:border-ink-300 hover:shadow-sm"
     >
-      {/* Mesma capa da tela do cliente, recortada baixa e larga aqui. */}
-      <div className="relative h-16 w-full shrink-0 bg-ink-100">
-        {client.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={client.coverUrl}
-            alt=""
-            loading="lazy"
-            className="size-full object-cover"
-            style={{ objectPosition: `50% ${client.coverPositionY}%` }}
-          />
-        ) : (
-          <div className="size-full bg-gradient-to-br from-ink-100 to-ink-50" />
-        )}
-        <span className="absolute -bottom-4 left-3 flex size-9 shrink-0 items-center justify-center rounded-full bg-ink-100 text-xs font-semibold text-ink-600 ring-2 ring-surface">
-          {initials(client.companyName)}
+      {/* So cor — a mesma escolhida na tela do cliente. */}
+      <div className={cn("relative h-16 w-full shrink-0 bg-gradient-to-br", coverGradientClass(client.coverColor))}>
+        <span
+          className={cn(
+            "absolute top-2.5 right-2.5 rounded-full px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm",
+            isActive ? "bg-violet-600/90" : "bg-ink-900/60",
+          )}
+        >
+          {isActive ? "Ativo" : "Inativo"}
+        </span>
+
+        <span className="absolute -bottom-4 left-3 flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-ink-100 text-xs font-semibold text-ink-600 ring-2 ring-surface">
+          {client.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={client.avatarUrl} alt="" loading="lazy" className="size-full object-cover" />
+          ) : (
+            initials(client.companyName)
+          )}
         </span>
       </div>
 
       <div className="min-w-0 flex-1 p-4 pt-6">
-        <p className="truncate text-sm font-semibold text-ink-900">{client.companyName}</p>
-        <p className="truncate text-xs text-ink-500">{client.name}</p>
+        <div className="flex items-center gap-1.5">
+          <span className={cn("size-2 shrink-0 rounded-full", STATUS_DOT[status])} aria-hidden />
+          <p className="truncate text-sm font-semibold text-ink-900">{client.companyName}</p>
+        </div>
+        <p className="truncate text-xs text-ink-500">{client.handle}</p>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Badge tone={meta.tone}>{meta.label}</Badge>
-          {client.pendingApprovalCount > 0 ? (
-            <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-semibold text-ink-600 tabular-nums">
-              {client.pendingApprovalCount} pendente(s)
-            </span>
-          ) : null}
+        {client.tag ? (
+          <span
+            className={cn(
+              "mt-2 inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset",
+              tagColorClass(client.tag),
+            )}
+          >
+            {client.tag}
+          </span>
+        ) : null}
+
+        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
+          {CONTENT_STAT_META.map((stat) => (
+            <div key={stat.key} className="flex items-center gap-1.5 text-xs text-ink-600">
+              <span className={cn("size-1.5 shrink-0 rounded-full", stat.dot)} aria-hidden />
+              <span className="tabular-nums">{client.contentCounts[stat.key]}</span>
+              <span className="truncate text-ink-500">{stat.label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </Link>

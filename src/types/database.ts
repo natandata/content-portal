@@ -69,6 +69,10 @@ export type ClientRow = {
   status: ClientStatus;
   cover_path: string | null;
   cover_position_y: number;
+  /** Chave da paleta em src/lib/cover-palette.ts — capa e so cor, sem upload. */
+  cover_color: string;
+  /** Rotulo livre exibido como etiqueta no card (segmento/nicho do cliente). */
+  tag: string | null;
   tour_seen_at: string | null;
   notifications_prompted_at: string | null;
   /** "pt-BR" | "en" — sincronizado do cookie de idioma via `set_preferred_locale`. */
@@ -547,6 +551,10 @@ export type Database = {
       };
       set_preferred_locale: {
         Args: { p_locale: string };
+        Returns: void;
+      };
+      set_client_avatar: {
+        Args: { p_avatar_path: string | null };
         Returns: void;
       };
       platform_stats: {

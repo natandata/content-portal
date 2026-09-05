@@ -285,6 +285,14 @@ export interface ClientGalleryRow {
   coverUrl: string | null;
   /** Ancoragem vertical do recorte (0 = topo, 50 = centro, 100 = base). */
   coverPositionY: number;
+  /** Chave da paleta em lib/cover-palette.ts. */
+  coverColor: string;
+  /** Foto de perfil — vem de `client_profiles`, editavel pelo cliente ou pela equipe. */
+  avatarUrl: string | null;
+  /** @handle exibido no card: `client_profiles.username` ou derivado do nome. */
+  handle: string;
+  /** Etiqueta livre (segmento/nicho), se cadastrada. */
+  tag: string | null;
   /** Conteudos aguardando decisao do cliente (submitted/awaiting_approval). */
   pendingApprovalCount: number;
   /** Tem conteudo com alteracao solicitada ou reprovado, esperando a equipe. */
@@ -293,6 +301,18 @@ export interface ClientGalleryRow {
   overdueInvoice: boolean;
   /** Cliente antigo (30+ dias) sem nenhum conteudo ou atividade nos ultimos 30 dias. */
   staleActivity: boolean;
+  /** Contagem por status, para o card (rascunho / ajuste / aguardando aprovacao / aprovados). */
+  contentCounts: { draft: number; adjustment: number; awaitingApproval: number; approved: number };
+}
+
+/** "@handle" de exibicao a partir do nome de contato — so cosmetico, nunca usado para auth. */
+function handleFromName(name: string): string {
+  const slug = name
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "") // remove acentos ja separados pelo NFD
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+  return `@${slug || "cliente"}`;
 }
 
 /**
@@ -317,7 +337,7 @@ export async function loadClientsGallery(
     Date.now() - STALE_ACTIVITY_DAYS * 24 * 60 * 60 * 1000,
   ).toISOString();
 
-  const [{ data: contents }, { data: overdueInvoices }, { data: activities }, coverUrls] =
+  const [{ data: contents }, { data: overdueInvoices }, { data: activities }, { data: profiles }, coverUrls] =
     await Promise.all([
       supabase.from("contents").select("client_id, status, updated_at").in("client_id", ids),
       supabase
@@ -331,6 +351,7 @@ export async function loadClientsGallery(
         .select("client_id, created_at")
         .in("client_id", ids)
         .order("created_at", { ascending: false }),
+      supabase.from("client_profiles").select("client_id, username, avatar_path").in("client_id", ids),
       signedUrlMap(
         supabase,
         BUCKETS.profiles,
@@ -338,19 +359,42 @@ export async function loadClientsGallery(
       ),
     ]);
 
+  const avatarUrls = await signedUrlMap(
+    supabase,
+    BUCKETS.profiles,
+    (profiles ?? []).map((profile) => profile.avatar_path),
+  );
+
   const pendingByClient = new Map<string, number>();
   const adjustmentByClient = new Set<string>();
   const lastContentByClient = new Map<string, string>();
+  const contentCountsByClient = new Map<
+    string,
+    { draft: number; adjustment: number; awaitingApproval: number; approved: number }
+  >();
 
   for (const row of contents ?? []) {
-    if (AWAITING_CLIENT_STATUSES.includes(row.status as ContentStatus)) {
+    const status = row.status as ContentStatus;
+    if (AWAITING_CLIENT_STATUSES.includes(status)) {
       pendingByClient.set(row.client_id, (pendingByClient.get(row.client_id) ?? 0) + 1);
     }
-    if (NEEDS_TEAM_ACTION_STATUSES.includes(row.status as ContentStatus)) {
+    if (NEEDS_TEAM_ACTION_STATUSES.includes(status)) {
       adjustmentByClient.add(row.client_id);
     }
     const current = lastContentByClient.get(row.client_id);
     if (!current || row.updated_at > current) lastContentByClient.set(row.client_id, row.updated_at);
+
+    const counts = contentCountsByClient.get(row.client_id) ?? {
+      draft: 0,
+      adjustment: 0,
+      awaitingApproval: 0,
+      approved: 0,
+    };
+    if (status === "draft") counts.draft += 1;
+    else if (NEEDS_TEAM_ACTION_STATUSES.includes(status)) counts.adjustment += 1;
+    else if (AWAITING_CLIENT_STATUSES.includes(status)) counts.awaitingApproval += 1;
+    else if (status === "approved" || status === "published") counts.approved += 1;
+    contentCountsByClient.set(row.client_id, counts);
   }
 
   const overdueSet = new Set((overdueInvoices ?? []).map((row) => row.client_id));
@@ -360,6 +404,8 @@ export async function loadClientsGallery(
     if (!lastActivityByClient.has(row.client_id)) lastActivityByClient.set(row.client_id, row.created_at);
   }
 
+  const profileByClient = new Map((profiles ?? []).map((profile) => [profile.client_id, profile]));
+
   return rows.map((client) => {
     const lastTouch = [lastContentByClient.get(client.id), lastActivityByClient.get(client.id)]
       .filter((value): value is string => Boolean(value))
@@ -367,12 +413,23 @@ export async function loadClientsGallery(
       .at(-1);
     const clientIsOldEnough = client.created_at < staleThreshold;
     const staleActivity = clientIsOldEnough && (!lastTouch || lastTouch < staleThreshold);
+    const profile = profileByClient.get(client.id);
 
     return {
       id: client.id,
       companyName: client.company_name,
       name: client.name,
       accessCode: client.access_code,
+      coverColor: client.cover_color,
+      avatarUrl: profile?.avatar_path ? (avatarUrls.get(profile.avatar_path) ?? null) : null,
+      handle: profile?.username ? `@${profile.username}` : handleFromName(client.name),
+      tag: client.tag,
+      contentCounts: contentCountsByClient.get(client.id) ?? {
+        draft: 0,
+        adjustment: 0,
+        awaitingApproval: 0,
+        approved: 0,
+      },
       status: client.status,
       coverUrl: client.cover_path ? (coverUrls.get(client.cover_path) ?? null) : null,
       coverPositionY: client.cover_position_y,

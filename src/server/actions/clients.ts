@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireStaff } from "@/lib/auth";
+import { getActor, requireStaff } from "@/lib/auth";
+import { COVER_PALETTE } from "@/lib/cover-palette";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { ClientRow } from "@/types/database";
@@ -17,6 +18,7 @@ const createSchema = z.object({
   email: z.union([z.email("Email invalido"), z.literal("")]).optional(),
   phone: z.string().trim().max(30).optional(),
   professionalId: z.union([z.uuid(), z.literal("")]).optional(),
+  tag: z.string().trim().max(40).optional(),
 });
 
 const updateSchema = createSchema.extend({
@@ -41,7 +43,7 @@ export async function createClientAction(
     return fail(firstIssue(parsed.error.issues, "Dados invalidos."));
   }
 
-  const { name, companyName, email, phone, professionalId } = parsed.data;
+  const { name, companyName, email, phone, professionalId, tag } = parsed.data;
   const supabase = await createClient();
   const admin = createAdminClient();
 
@@ -86,6 +88,7 @@ export async function createClientAction(
       access_code: accessCode,
       professional_id: ownerId,
       auth_user_id: authUserId,
+      tag: tag || null,
     })
     .select("*")
     .single();
@@ -126,7 +129,7 @@ export async function updateClientAction(
     return fail(firstIssue(parsed.error.issues, "Dados invalidos."));
   }
 
-  const { id, name, companyName, email, phone, professionalId, status } = parsed.data;
+  const { id, name, companyName, email, phone, professionalId, status, tag } = parsed.data;
   const supabase = await createClient();
 
   const payload: Partial<ClientRow> = {
@@ -135,6 +138,7 @@ export async function updateClientAction(
     email: email ? email.toLowerCase() : null,
     phone: phone || null,
     status,
+    tag: tag || null,
   };
 
   // Apenas o admin remaneja clientes entre profissionais.
@@ -212,21 +216,25 @@ export async function deleteClientAction(id: string): Promise<ActionResult<null>
   return done();
 }
 
-/** Capa do cliente: mesma imagem no card da galeria e no topo da tela do cliente. */
-export async function updateClientCoverAction(
+/**
+ * Capa do cliente: mesma cor exibida no card da galeria e no topo da tela do
+ * cliente. So cor de proposito — nada de upload de imagem aqui.
+ */
+export async function updateClientCoverColorAction(
   clientId: string,
-  coverPath: string | null,
+  color: string,
 ): Promise<ActionResult<null>> {
   await requireStaff();
 
+  if (!Object.hasOwn(COVER_PALETTE, color)) {
+    return fail("Cor invalida.");
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("clients")
-    .update({ cover_path: coverPath })
-    .eq("id", clientId);
+  const { error } = await supabase.from("clients").update({ cover_color: color }).eq("id", clientId);
 
   if (error) {
-    return fail(describeError(error, "Nao foi possivel salvar a capa."));
+    return fail(describeError(error, "Nao foi possivel salvar a cor da capa."));
   }
 
   revalidateClients();
@@ -235,27 +243,39 @@ export async function updateClientCoverAction(
   return done();
 }
 
-/** Ponto vertical de ancoragem da capa (0 = topo, 50 = centro, 100 = base). */
-export async function updateClientCoverPositionAction(
+/**
+ * Foto de perfil do cliente. Fica em `client_profiles.avatar_path` — o mesmo
+ * registro da simulacao do feed — para nao duplicar coluna. Quem chama pode
+ * ser a equipe (gerenciando qualquer cliente dela) ou o proprio cliente
+ * (so a propria conta, via RPC porque ele nao tem policy de escrita direta
+ * em `client_profiles`).
+ */
+export async function updateClientAvatarAction(
   clientId: string,
-  positionY: number,
+  avatarPath: string | null,
 ): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await getActor();
+  if (!actor) return fail("Sessao expirada.");
 
-  const clamped = Math.round(Math.min(100, Math.max(0, positionY)));
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("clients")
-    .update({ cover_position_y: clamped })
-    .eq("id", clientId);
-
-  if (error) {
-    return fail(describeError(error, "Nao foi possivel salvar o ajuste da capa."));
+  if (actor.role === "client") {
+    if (!actor.client || actor.client.id !== clientId) {
+      return fail("Voce so pode editar a propria foto.");
+    }
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("set_client_avatar", { p_avatar_path: avatarPath });
+    if (error) return fail(describeError(error, "Nao foi possivel salvar a foto."));
+  } else {
+    if (actor.role !== "admin" && actor.role !== "professional") return fail("Sem permissao.");
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("client_profiles")
+      .upsert({ client_id: clientId, avatar_path: avatarPath }, { onConflict: "client_id" });
+    if (error) return fail(describeError(error, "Nao foi possivel salvar a foto."));
   }
 
   revalidateClients();
   revalidatePath(`/admin/clients/${clientId}`);
   revalidatePath(`/professional/clients/${clientId}`);
+  revalidatePath("/client/settings");
   return done();
 }
