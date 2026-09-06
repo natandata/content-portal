@@ -6,6 +6,7 @@ import { Card, PageHeader } from "@/components/ui/layout";
 import { requireClientActor } from "@/lib/auth";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
+import { loadCalendlyConnectionStatus } from "@/server/actions/calendly-connect";
 import { loadGoogleConnectionStatus } from "@/server/actions/google-connect";
 import { loadClientMeetings } from "@/server/queries";
 
@@ -14,18 +15,26 @@ export async function ClientMeetings() {
   const { locale, dict } = await getServerDictionary();
   const supabase = await createClient();
 
-  const [meetings, connection] = await Promise.all([
+  const [meetings, googleStatus, calendlyStatus] = await Promise.all([
     loadClientMeetings(supabase, actor.client.id),
     actor.client.professional_id
       ? loadGoogleConnectionStatus(actor.client.professional_id)
       : Promise.resolve({ connected: false, googleEmail: null }),
+    actor.client.professional_id
+      ? loadCalendlyConnectionStatus(actor.client.professional_id)
+      : Promise.resolve({ connected: false, eventTypeUri: null, eventTypeName: null, eventTypeDuration: null }),
   ]);
+
+  const calendlyEventType =
+    calendlyStatus.connected && calendlyStatus.eventTypeName && calendlyStatus.eventTypeDuration
+      ? { name: calendlyStatus.eventTypeName, durationMinutes: calendlyStatus.eventTypeDuration }
+      : null;
 
   return (
     <>
       <PageHeader title={dict.meetings.title} description={dict.meetings.subtitle} />
 
-      {!connection.connected ? (
+      {!googleStatus.connected && !calendlyEventType ? (
         <Card className="mb-4 border-amber-200 bg-amber-50">
           <div className="flex gap-3">
             <AlertTriangle className="size-5 shrink-0 text-amber-600" aria-hidden />
@@ -35,7 +44,12 @@ export async function ClientMeetings() {
       ) : null}
 
       <div className="mb-4 flex justify-end">
-        <MeetingRequestForm clientId={actor.client.id} defaultEmail={actor.client.email ?? undefined} locale={locale} />
+        <MeetingRequestForm
+          clientId={actor.client.id}
+          defaultEmail={actor.client.email ?? undefined}
+          locale={locale}
+          calendlyEventType={calendlyEventType}
+        />
       </div>
 
       <MeetingRequestsList meetings={meetings} currentSide="client" locale={locale} />

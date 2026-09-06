@@ -15,15 +15,22 @@ import { requestMeetingAction } from "@/server/actions/meetings";
 /**
  * Um unico formulario serve os dois lados: quem abre e que vira
  * `requested_by` na action (ela le a sessao, nao um parametro daqui).
+ *
+ * Com `calendlyEventType` preenchido, o profissional ja tem Calendly
+ * conectado com um tipo de reuniao escolhido — os campos de data/hora somem
+ * porque a pessoa vai escolher um horario livre direto na Calendly, so
+ * precisa confirmar o e-mail de contato.
  */
 export function MeetingRequestForm({
   clientId,
   defaultEmail,
   locale = "pt-BR",
+  calendlyEventType = null,
 }: {
   clientId: string;
   defaultEmail?: string;
   locale?: Locale;
+  calendlyEventType?: { name: string; durationMinutes: number } | null;
 }) {
   const dict = getDictionary(locale).meetings;
   const router = useRouter();
@@ -41,8 +48,8 @@ export function MeetingRequestForm({
       const result = await requestMeetingAction({
         clientId,
         contactEmail: email,
-        proposedDate: date,
-        proposedTime: time,
+        proposedDate: calendlyEventType ? undefined : date,
+        proposedTime: calendlyEventType ? undefined : time,
         message,
       });
 
@@ -62,7 +69,7 @@ export function MeetingRequestForm({
     <>
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
         <CalendarPlus className="size-4" aria-hidden />
-        {dict.requestButton}
+        {calendlyEventType ? dict.calendlyRequestButton : dict.requestButton}
       </Button>
 
       <Modal
@@ -82,24 +89,35 @@ export function MeetingRequestForm({
         }
       >
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={dict.fieldDate} htmlFor="meeting-date" required>
-            <Input
-              id="meeting-date"
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              disabled={pending}
-            />
-          </Field>
-          <Field label={dict.fieldTime} htmlFor="meeting-time" required>
-            <Input
-              id="meeting-time"
-              type="time"
-              value={time}
-              onChange={(event) => setTime(event.target.value)}
-              disabled={pending}
-            />
-          </Field>
+          {calendlyEventType ? (
+            <div className="rounded-lg border border-line bg-canvas p-3 text-sm text-ink-600 sm:col-span-2">
+              <p className="font-medium text-ink-900">{calendlyEventType.name}</p>
+              <p className="text-xs text-ink-500">
+                {calendlyEventType.durationMinutes} min · {dict.calendlyEventSummary}
+              </p>
+            </div>
+          ) : (
+            <>
+              <Field label={dict.fieldDate} htmlFor="meeting-date" required>
+                <Input
+                  id="meeting-date"
+                  type="date"
+                  value={date}
+                  onChange={(event) => setDate(event.target.value)}
+                  disabled={pending}
+                />
+              </Field>
+              <Field label={dict.fieldTime} htmlFor="meeting-time" required>
+                <Input
+                  id="meeting-time"
+                  type="time"
+                  value={time}
+                  onChange={(event) => setTime(event.target.value)}
+                  disabled={pending}
+                />
+              </Field>
+            </>
+          )}
           <Field label={dict.fieldEmail} htmlFor="meeting-email" required className="sm:col-span-2">
             <Input
               id="meeting-email"

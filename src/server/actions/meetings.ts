@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getActor } from "@/lib/auth";
+import { cancelCalendlyEvent, createSingleUseSchedulingLink } from "@/lib/calendly/api";
 import { cancelMeetEvent, createMeetEvent } from "@/lib/google/calendar";
 import { sendPushToClient, sendPushToClientStaff } from "@/lib/push";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { loadCalendlyConnectionStatus } from "@/server/actions/calendly-connect";
 import { describeError, done, fail, firstIssue, type ActionResult } from "@/server/result";
 
 const MEETING_DURATION_MINUTES = 30;
@@ -20,8 +22,10 @@ function revalidateMeetings(clientId: string) {
 const requestSchema = z.object({
   clientId: z.uuid(),
   contactEmail: z.email("Informe um e-mail valido."),
-  proposedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data da reuniao."),
-  proposedTime: z.string().regex(/^\d{2}:\d{2}$/, "Informe o horario da reuniao."),
+  // So obrigatorios no metodo google_meet — no metodo calendly a pessoa
+  // escolhe o horario livre direto na Calendly, nao aqui.
+  proposedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data da reuniao.").optional(),
+  proposedTime: z.string().regex(/^\d{2}:\d{2}$/, "Informe o horario da reuniao.").optional(),
   message: z
     .string()
     .trim()
@@ -31,8 +35,13 @@ const requestSchema = z.object({
 });
 
 /**
- * Cliente ou equipe propoe data/hora — a outra parte e quem aprova. Guarda so
- * a proposta; o evento no Google so nasce na aprovacao (`respondMeetingRequestAction`).
+ * Cliente ou equipe pede uma reuniao. Se o profissional tem o Calendly
+ * conectado com um tipo de reuniao escolhido, gera um link de uso unico e a
+ * pessoa marca um horario que ja esta livre — sem etapa de aprovacao,
+ * porque a disponibilidade real e a propria aprovacao (o webhook em
+ * `api/webhooks/calendly` confirma quando alguem realmente marca). Sem
+ * Calendly conectado, continua o fluxo de sempre: propoe data/hora e a
+ * outra parte aprova (`respondMeetingRequestAction`).
  */
 export async function requestMeetingAction(
   input: z.input<typeof requestSchema>,
@@ -68,11 +77,63 @@ export async function requestMeetingAction(
     return fail("Este cliente ainda nao tem um profissional responsavel para a reuniao.");
   }
 
+  const calendly = await loadCalendlyConnectionStatus(professionalId);
   const admin = createAdminClient();
+
+  if (calendly.connected && calendly.eventTypeUri) {
+    const link = await createSingleUseSchedulingLink(professionalId, calendly.eventTypeUri);
+    if (!link.ok) return fail(link.error);
+
+    const bookingUrl = new URL(link.data);
+    bookingUrl.searchParams.set("email", contactEmail);
+
+    const { error } = await admin.from("meeting_requests").insert({
+      client_id: clientId,
+      professional_id: professionalId,
+      requested_by: requestedBy,
+      method: "calendly",
+      contact_email: contactEmail,
+      message: message ?? null,
+      calendly_booking_url: bookingUrl.toString(),
+      created_by: actor.authUser.id,
+    });
+
+    if (error) {
+      return fail(describeError(error, "Nao foi possivel enviar o pedido de reuniao."));
+    }
+
+    if (requestedBy === "client") {
+      await sendPushToClientStaff(clientId, {
+        title: "Pedido de reuniao",
+        body: "O cliente vai escolher um horario livre pelo Calendly.",
+        url: `/professional/clients/${clientId}`,
+        tag: `meeting-request-${clientId}`,
+      }).catch(() => {});
+    } else {
+      await sendPushToClient(clientId, (locale) => ({
+        title: locale === "en" ? "Meeting request" : "Pedido de reuniao",
+        body:
+          locale === "en"
+            ? "Your professional sent a scheduling link — pick a time that works."
+            : "Seu profissional enviou um link de agendamento — escolha um horario.",
+        url: "/client/meetings",
+        tag: `meeting-request-${clientId}`,
+      })).catch(() => {});
+    }
+
+    revalidateMeetings(clientId);
+    return done();
+  }
+
+  if (!proposedDate || !proposedTime) {
+    return fail("Informe a data e o horario da reuniao.");
+  }
+
   const { error } = await admin.from("meeting_requests").insert({
     client_id: clientId,
     professional_id: professionalId,
     requested_by: requestedBy,
+    method: "google_meet",
     contact_email: contactEmail,
     proposed_date: proposedDate,
     proposed_time: proposedTime,
@@ -245,6 +306,9 @@ export async function cancelMeetingRequestAction(requestId: string): Promise<Act
 
   if (meeting.google_event_id) {
     await cancelMeetEvent(meeting.professional_id, meeting.google_event_id);
+  }
+  if (meeting.method === "calendly" && meeting.calendly_event_uri) {
+    await cancelCalendlyEvent(meeting.professional_id, meeting.calendly_event_uri, "Cancelado pelo portal.");
   }
 
   const { error } = await admin

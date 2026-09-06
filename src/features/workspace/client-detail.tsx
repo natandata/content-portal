@@ -25,6 +25,7 @@ import { BUCKETS } from "@/lib/paths";
 import { signedUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
+import { loadCalendlyConnectionStatus } from "@/server/actions/calendly-connect";
 import {
   loadClientContentCalendar,
   loadClientMeetings,
@@ -95,13 +96,21 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
 
   const rows = contents ?? [];
   const ids = rows.map((row) => row.id);
-  const [previews, counts, calendarPosts, { data: branding }, meetings] = await Promise.all([
+  const [previews, counts, calendarPosts, { data: branding }, meetings, calendlyStatus] = await Promise.all([
     loadContentPreviews(supabase, ids),
     loadContentFileCounts(supabase, ids),
     loadClientContentCalendar(supabase, clientId),
     supabase.from("client_branding").select("*").eq("client_id", clientId).maybeSingle(),
     loadClientMeetings(supabase, clientId),
+    client.professional_id
+      ? loadCalendlyConnectionStatus(client.professional_id)
+      : Promise.resolve({ connected: false, eventTypeUri: null, eventTypeName: null, eventTypeDuration: null }),
   ]);
+
+  const calendlyEventType =
+    calendlyStatus.connected && calendlyStatus.eventTypeName && calendlyStatus.eventTypeDuration
+      ? { name: calendlyStatus.eventTypeName, durationMinutes: calendlyStatus.eventTypeDuration }
+      : null;
 
   const activeContract = (contracts ?? [])[0];
 
@@ -295,7 +304,11 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
             content: (
               <div className="space-y-4">
                 <div className="flex justify-end">
-                  <MeetingRequestForm clientId={client.id} defaultEmail={actor.authUser.email ?? undefined} />
+                  <MeetingRequestForm
+                    clientId={client.id}
+                    defaultEmail={actor.authUser.email ?? undefined}
+                    calendlyEventType={calendlyEventType}
+                  />
                 </div>
                 <MeetingRequestsList meetings={meetings} currentSide="professional" />
               </div>

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Check, Clock, ExternalLink, Video, X } from "lucide-react";
+import { CalendarClock, Check, Clock, ExternalLink, Video, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -47,9 +47,14 @@ function MeetingRow({
   const [pending, start] = useTransition();
   const meta = statusMeta(dict)[meeting.status];
 
-  // "isMine" = fui eu que pedi. So quem NAO pediu ve aprovar/recusar.
-  const canRespond = meeting.status === "pending" && !isMine;
-  const canCancel = meeting.status === "pending" || meeting.status === "approved";
+  // "isMine" = fui eu que pedi. So quem NAO pediu ve aprovar/recusar — e so
+  // existe aprovar/recusar no metodo google_meet: no metodo calendly a
+  // disponibilidade real ja e a aprovacao, confirmada pelo webhook.
+  const canRespond = meeting.method === "google_meet" && meeting.status === "pending" && !isMine;
+  const canCancel =
+    meeting.method === "calendly"
+      ? meeting.status === "pending" || meeting.status === "scheduled"
+      : meeting.status === "pending" || meeting.status === "approved";
 
   function respond(decision: "approved" | "declined") {
     start(async () => {
@@ -98,7 +103,20 @@ function MeetingRow({
       </p>
       {meeting.message ? <p className="text-sm text-ink-600">{meeting.message}</p> : null}
 
-      {meeting.status === "approved" && meeting.meet_link ? (
+      {meeting.method === "calendly" && meeting.status === "pending" && meeting.calendly_booking_url ? (
+        <a
+          href={meeting.calendly_booking_url}
+          target="_blank"
+          rel="noreferrer"
+          className="focus-ring flex w-fit items-center gap-1.5 rounded-lg bg-ink-900 px-3 py-1.5 text-xs font-medium text-on-ink transition hover:bg-ink-800"
+        >
+          <CalendarClock className="size-3.5" aria-hidden />
+          {dict.calendlyOpenButton}
+          <ExternalLink className="size-3" aria-hidden />
+        </a>
+      ) : null}
+
+      {(meeting.status === "approved" || meeting.status === "scheduled") && meeting.meet_link ? (
         <a
           href={meeting.meet_link}
           target="_blank"
