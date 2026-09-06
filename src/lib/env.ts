@@ -92,6 +92,21 @@ export function googleOAuthConfig(): { clientId: string; clientSecret: string; r
   return { clientId, clientSecret, redirectUri };
 }
 
+/**
+ * Credenciais OAuth do Calendly. `null` = reunioes por Calendly desligadas,
+ * mesmo contrato de `googleOAuthConfig()`. A API da Calendly e REST simples
+ * (sem SDK) — este modulo so guarda as tres variaveis, quem monta a URL e
+ * troca o code por token e `src/lib/calendly/client.ts`.
+ */
+export function calendlyOAuthConfig(): { clientId: string; clientSecret: string; redirectUri: string } | null {
+  const clientId = process.env.CALENDLY_CLIENT_ID;
+  const clientSecret = process.env.CALENDLY_CLIENT_SECRET;
+  if (!clientId?.trim() || !clientSecret?.trim()) return null;
+
+  const redirectUri = process.env.CALENDLY_REDIRECT_URI?.trim() || `${appBaseUrl()}/api/auth/calendly/callback`;
+  return { clientId, clientSecret, redirectUri };
+}
+
 export const isSupabaseConfigured =
   publicEnv.supabaseUrl.length > 0 && publicEnv.supabaseAnonKey.length > 0;
 

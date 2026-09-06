@@ -92,22 +92,62 @@ export type ProfessionalGoogleAccountRow = {
   connected_at: string;
 }
 
+/**
+ * Sem policy de RLS de proposito -- guarda token de OAuth, so a serviceRole
+ * le. Convive com `ProfessionalGoogleAccountRow`: um profissional pode ter
+ * as duas contas conectadas, ou so uma, ou nenhuma.
+ */
+export type ProfessionalCalendlyAccountRow = {
+  user_id: string;
+  calendly_uri: string;
+  calendly_email: string;
+  scheduling_url: string;
+  organization_uri: string | null;
+  event_type_uri: string | null;
+  event_type_name: string | null;
+  event_type_scheduling_url: string | null;
+  event_type_duration: number | null;
+  webhook_subscription_uri: string | null;
+  webhook_signing_key: string | null;
+  access_token: string;
+  refresh_token: string;
+  access_token_expires_at: string | null;
+  connected_at: string;
+}
+
+/** Idempotencia do webhook da Calendly -- mesmo padrao claim-then-process de `StripeEventRow`. */
+export type CalendlyWebhookEventRow = {
+  id: string;
+  event_type: string;
+  received_at: string;
+  processed_at: string | null;
+  error: string | null;
+}
+
 export type MeetingRequestedBy = "client" | "professional";
-export type MeetingStatus = "pending" | "approved" | "declined" | "cancelled";
+export type MeetingStatus = "pending" | "approved" | "declined" | "cancelled" | "scheduled";
+export type MeetingMethod = "google_meet" | "calendly";
 
 export type MeetingRequestRow = {
   id: string;
   client_id: string;
   professional_id: string;
   requested_by: MeetingRequestedBy;
+  method: MeetingMethod;
   contact_email: string;
-  proposed_date: string;
-  proposed_time: string;
+  /** So preenchido no metodo google_meet — proposta manual de data/hora. */
+  proposed_date: string | null;
+  proposed_time: string | null;
   message: string | null;
   status: MeetingStatus;
   responded_at: string | null;
   google_event_id: string | null;
   meet_link: string | null;
+  /** So preenchidos no metodo calendly, pelo webhook, quando a pessoa marca de verdade. */
+  calendly_booking_url: string | null;
+  calendly_event_uri: string | null;
+  scheduled_start: string | null;
+  scheduled_end: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -563,15 +603,14 @@ export type Database = {
       client_profiles: Table<ClientProfileRow, 'client_id'>;
       client_branding: Table<ClientBrandingRow, 'client_id'>;
       professional_google_accounts: Table<ProfessionalGoogleAccountRow, 'user_id' | 'google_email' | 'refresh_token'>;
+      professional_calendly_accounts: Table<
+        ProfessionalCalendlyAccountRow,
+        'user_id' | 'calendly_uri' | 'calendly_email' | 'scheduling_url' | 'access_token' | 'refresh_token'
+      >;
+      calendly_webhook_events: Table<CalendlyWebhookEventRow, 'id' | 'event_type'>;
       meeting_requests: Table<
         MeetingRequestRow,
-        | 'client_id'
-        | 'professional_id'
-        | 'requested_by'
-        | 'contact_email'
-        | 'proposed_date'
-        | 'proposed_time'
-        | 'created_by'
+        'client_id' | 'professional_id' | 'requested_by' | 'contact_email' | 'created_by'
       >;
       profile_highlights: Table<ProfileHighlightRow, 'client_id' | 'title' | 'position'>;
       approvals: Table<ApprovalRow, 'content_id' | 'client_id' | 'status'>;

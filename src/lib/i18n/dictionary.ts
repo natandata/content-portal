@@ -371,6 +371,12 @@ export interface Dictionary {
     statusApproved: string;
     statusDeclined: string;
     statusCancelled: string;
+    statusScheduled: string;
+    calendlyAwaitingLabel: string;
+    calendlyOpenButton: string;
+    calendlyRequestButton: string;
+    calendlyEventSummary: string;
+    calendlyNotConnectedWarning: string;
   };
 }
 
@@ -745,6 +751,13 @@ const ptBR: Dictionary = {
     statusApproved: "Confirmada",
     statusDeclined: "Recusada",
     statusCancelled: "Cancelada",
+    statusScheduled: "Agendada",
+    calendlyAwaitingLabel: "Aguardando agendamento",
+    calendlyOpenButton: "Abrir Calendly",
+    calendlyRequestButton: "Marcar reuniao",
+    calendlyEventSummary: "reuniao de",
+    calendlyNotConnectedWarning:
+      "Seu profissional ainda nao conectou o Calendly. Voce ainda pode pedir uma reuniao pelo metodo atual.",
   },
 };
 
@@ -1124,6 +1137,13 @@ const en: Dictionary = {
     statusApproved: "Confirmed",
     statusDeclined: "Declined",
     statusCancelled: "Cancelled",
+    statusScheduled: "Scheduled",
+    calendlyAwaitingLabel: "Awaiting scheduling",
+    calendlyOpenButton: "Open Calendly",
+    calendlyRequestButton: "Schedule meeting",
+    calendlyEventSummary: "meeting for",
+    calendlyNotConnectedWarning:
+      "Your professional hasn't connected Calendly yet. You can still request a meeting the current way.",
   },
 };
 

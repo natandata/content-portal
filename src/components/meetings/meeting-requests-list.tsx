@@ -21,9 +21,11 @@ function statusMeta(dict: MeetingsDict) {
     approved: { label: dict.statusApproved, tone: "success" as const },
     declined: { label: dict.statusDeclined, tone: "danger" as const },
     cancelled: { label: dict.statusCancelled, tone: "neutral" as const },
+    scheduled: { label: dict.statusScheduled, tone: "success" as const },
   };
 }
 
+/** Usado so pelo metodo google_meet, onde data e horario sao sempre preenchidos. */
 function dateLabel(date: string, time: string, locale: Locale): string {
   const parsed = new Date(`${date}T${time}`);
   const datePart = new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium" }).format(parsed);
@@ -78,7 +80,15 @@ function MeetingRow({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-sm font-medium text-ink-900">
           <Clock className="size-4 shrink-0 text-ink-400" aria-hidden />
-          {dateLabel(meeting.proposed_date, meeting.proposed_time, locale)}
+          {meeting.method === "calendly"
+            ? meeting.scheduled_start
+              ? new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium", timeStyle: "short" }).format(
+                  new Date(meeting.scheduled_start),
+                )
+              : dict.calendlyAwaitingLabel
+            : meeting.proposed_date && meeting.proposed_time
+              ? dateLabel(meeting.proposed_date, meeting.proposed_time, locale)
+              : "—"}
         </p>
         <Badge tone={meta.tone}>{meta.label}</Badge>
       </div>

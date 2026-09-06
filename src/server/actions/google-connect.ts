@@ -6,7 +6,8 @@ import { revalidatePath } from "next/cache";
 
 import { requireStaff } from "@/lib/auth";
 import { googleAuthUrl } from "@/lib/google/client";
-import { GOOGLE_MEETINGS_PATH, GOOGLE_OAUTH_STATE_COOKIE } from "@/lib/google/meetings-constants";
+import { GOOGLE_OAUTH_STATE_COOKIE } from "@/lib/google/meetings-constants";
+import { MEETINGS_SETTINGS_PATH } from "@/lib/meetings-constants";
 import { createAdminClient } from "@/lib/supabase/server";
 import { describeError, done, fail, ok, type ActionResult } from "@/server/result";
 
@@ -54,7 +55,7 @@ export async function disconnectGoogleAction(): Promise<ActionResult<null>> {
     return fail(describeError(error, "Nao foi possivel desconectar a conta Google."));
   }
 
-  revalidatePath(GOOGLE_MEETINGS_PATH);
+  revalidatePath(MEETINGS_SETTINGS_PATH);
   return done();
 }
 
