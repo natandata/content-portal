@@ -4,7 +4,7 @@ import { requireStaff } from "@/lib/auth";
 import { CONTENT_STATUS_LABEL, CONTENT_STATUS_TONE, type BadgeTone } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import { loadClientNames, loadProfessionalClientIds } from "@/server/queries";
-import type { TaskStatus } from "@/types/database";
+import type { TaskRow, TaskStatus } from "@/types/database";
 
 /** Post agendado ou tarefa com prazo — o calendario trata os dois igual. */
 export interface CalendarEntry {
@@ -51,13 +51,24 @@ export async function CalendarBoard() {
       : Promise.resolve({ data: [] }),
     supabase
       .from("tasks")
-      .select("id, title, client_id, status, due_date")
+      .select("*")
       .eq("professional_id", actor.authUser.id)
       .not("due_date", "is", null),
   ]);
 
   const contentRows = contents ?? [];
-  const taskRows = tasks ?? [];
+  const taskRows: TaskRow[] = tasks ?? [];
+
+  const clientOptions = clientIds.length > 0
+    ? await (async () => {
+        const { data } = await supabase
+          .from("clients")
+          .select("id, company_name")
+          .in("id", clientIds)
+          .order("company_name");
+        return (data ?? []).map((client) => ({ id: client.id, companyName: client.company_name }));
+      })()
+    : [];
 
   const names = await loadClientNames(supabase, [
     ...contentRows.map((row) => row.client_id),
@@ -96,7 +107,7 @@ export async function CalendarBoard() {
         title="Calendario"
         description="Posts agendados e prazos de tarefas, em visao de Mes, Semana ou Dia."
       />
-      <CalendarView posts={posts} tasks={taskEntries} />
+      <CalendarView posts={posts} tasks={taskEntries} taskRows={taskRows} clientOptions={clientOptions} />
     </>
   );
 }

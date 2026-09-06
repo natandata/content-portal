@@ -1,14 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarClock, CheckSquare, ChevronLeft, ChevronRight, Images } from "lucide-react";
+import { CalendarClock, CheckSquare, ChevronLeft, ChevronRight, Images, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { RescheduleModal } from "@/components/calendar/reschedule-modal";
+import { TaskFormModal, type ClientOption } from "@/components/tasks/task-form-modal";
 import { cn } from "@/lib/utils";
 import type { BadgeTone } from "@/lib/domain";
 import type { CalendarEntry } from "@/features/workspace/calendar-board";
+import type { TaskRow } from "@/types/database";
 
 type ViewMode = "month" | "week" | "day";
 type Source = "posts" | "tasks";
@@ -71,7 +73,18 @@ function EntryPill({
   );
 }
 
-export function CalendarView({ posts, tasks }: { posts: CalendarEntry[]; tasks: CalendarEntry[] }) {
+export function CalendarView({
+  posts,
+  tasks,
+  taskRows = [],
+  clientOptions = [],
+}: {
+  posts: CalendarEntry[];
+  tasks: CalendarEntry[];
+  /** Tarefa completa por tras de cada `CalendarEntry` de tarefa — so assim da para editar tudo, nao so o prazo. */
+  taskRows?: TaskRow[];
+  clientOptions?: ClientOption[];
+}) {
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [source, setSource] = useState<Source>("posts");
   const [referenceDate, setReferenceDate] = useState(() => {
@@ -81,8 +94,12 @@ export function CalendarView({ posts, tasks }: { posts: CalendarEntry[]; tasks: 
   });
   const [selected, setSelected] = useState<CalendarEntry | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [taskModal, setTaskModal] = useState<{ open: boolean; task?: TaskRow; defaultDueDate?: string }>({
+    open: false,
+  });
 
   const entries = source === "posts" ? posts : tasks;
+  const taskById = useMemo(() => new Map(taskRows.map((row) => [row.id, row])), [taskRows]);
 
   const entriesByDay = useMemo(() => {
     const map = new Map<string, CalendarEntry[]>();
@@ -98,8 +115,16 @@ export function CalendarView({ posts, tasks }: { posts: CalendarEntry[]; tasks: 
   }, [entries]);
 
   function openEntry(entry: CalendarEntry) {
+    if (entry.kind === "task") {
+      setTaskModal({ open: true, task: taskById.get(entry.id) });
+      return;
+    }
     setSelected(entry);
     setModalOpen(true);
+  }
+
+  function addTaskOn(dateKey: string) {
+    setTaskModal({ open: true, task: undefined, defaultDueDate: dateKey });
   }
 
   function navigate(direction: 1 | -1) {
@@ -216,10 +241,22 @@ export function CalendarView({ posts, tasks }: { posts: CalendarEntry[]; tasks: 
             </button>
           ))}
         </div>
+
+        {source === "tasks" ? (
+          <Button size="sm" onClick={() => addTaskOn(toDateKey(referenceDate))}>
+            <Plus className="size-4" aria-hidden />
+            Nova tarefa
+          </Button>
+        ) : null}
       </div>
 
       {viewMode === "month" ? (
-        <MonthGrid referenceDate={referenceDate} entriesByDay={entriesByDay} onSelect={openEntry} />
+        <MonthGrid
+          referenceDate={referenceDate}
+          entriesByDay={entriesByDay}
+          onSelect={openEntry}
+          onAddTask={source === "tasks" ? addTaskOn : undefined}
+        />
       ) : viewMode === "week" ? (
         <WeekGrid referenceDate={referenceDate} entriesByDay={entriesByDay} onSelect={openEntry} />
       ) : (
@@ -232,6 +269,15 @@ export function CalendarView({ posts, tasks }: { posts: CalendarEntry[]; tasks: 
       )}
 
       <RescheduleModal entry={selected} open={modalOpen} onClose={() => setModalOpen(false)} />
+
+      <TaskFormModal
+        clients={clientOptions}
+        task={taskModal.task}
+        defaultDueDate={taskModal.defaultDueDate}
+        forceOpen={taskModal.open}
+        onOpenChange={(open) => setTaskModal((prev) => ({ ...prev, open }))}
+        trigger={() => null}
+      />
     </div>
   );
 }
@@ -240,10 +286,12 @@ function MonthGrid({
   referenceDate,
   entriesByDay,
   onSelect,
+  onAddTask,
 }: {
   referenceDate: Date;
   entriesByDay: Map<string, CalendarEntry[]>;
   onSelect: (entry: CalendarEntry) => void;
+  onAddTask?: (dateKey: string) => void;
 }) {
   const firstOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
   const gridStart = startOfWeek(firstOfMonth);
@@ -274,18 +322,30 @@ function MonthGrid({
             <div
               key={key}
               className={cn(
-                "min-h-[96px] border-r border-b border-line p-1.5 last:border-r-0",
+                "group/cell relative min-h-[96px] border-r border-b border-line p-1.5 last:border-r-0",
                 !inMonth && "bg-ink-50/40",
               )}
             >
-              <span
-                className={cn(
-                  "mb-1 inline-flex size-6 items-center justify-center rounded-full text-xs font-medium",
-                  isToday ? "bg-ink-900 text-on-ink" : inMonth ? "text-ink-700" : "text-ink-300",
-                )}
-              >
-                {day.getDate()}
-              </span>
+              <div className="mb-1 flex items-center justify-between">
+                <span
+                  className={cn(
+                    "inline-flex size-6 items-center justify-center rounded-full text-xs font-medium",
+                    isToday ? "bg-ink-900 text-on-ink" : inMonth ? "text-ink-700" : "text-ink-300",
+                  )}
+                >
+                  {day.getDate()}
+                </span>
+                {onAddTask ? (
+                  <button
+                    type="button"
+                    onClick={() => onAddTask(key)}
+                    aria-label="Nova tarefa neste dia"
+                    className="focus-ring flex size-5 items-center justify-center rounded text-ink-400 opacity-0 transition group-hover/cell:opacity-100 hover:bg-ink-100 hover:text-ink-700"
+                  >
+                    <Plus className="size-3.5" aria-hidden />
+                  </button>
+                ) : null}
+              </div>
               <div className="space-y-0.5">
                 {dayEntries.slice(0, 3).map((entry) => (
                   <EntryPill key={entry.id} entry={entry} onClick={() => onSelect(entry)} compact />

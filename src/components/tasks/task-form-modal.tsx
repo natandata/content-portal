@@ -40,12 +40,15 @@ export function TaskFormModal({
   trigger,
   forceOpen,
   onOpenChange,
+  defaultDueDate,
 }: {
   clients: ClientOption[];
   task?: TaskRow;
   trigger?: (open: () => void) => React.ReactNode;
   forceOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** So vale para criacao (task ausente) — ex.: clicou em "+" num dia do calendario. */
+  defaultDueDate?: string;
 }) {
   const router = useRouter();
   const isEditing = Boolean(task);
@@ -57,7 +60,7 @@ export function TaskFormModal({
   const [title, setTitle] = useState(task?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
   const [clientId, setClientId] = useState(task?.client_id ?? "");
-  const [dueDate, setDueDate] = useState(task?.due_date ?? "");
+  const [dueDate, setDueDate] = useState(task?.due_date ?? defaultDueDate ?? "");
   const [tag, setTag] = useState(task?.tag ?? "");
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? "pending");
   const [error, setError] = useState<string | null>(null);
@@ -69,11 +72,11 @@ export function TaskFormModal({
     setTitle(task?.title ?? "");
     setDescription(task?.description ?? "");
     setClientId(task?.client_id ?? "");
-    setDueDate(task?.due_date ?? "");
+    setDueDate(task?.due_date ?? defaultDueDate ?? "");
     setTag(task?.tag ?? "");
     setStatus(task?.status ?? "pending");
     setError(null);
-  }, [open, task]);
+  }, [open, task, defaultDueDate]);
 
   function setOpen(next: boolean) {
     if (controlled) onOpenChange?.(next);
