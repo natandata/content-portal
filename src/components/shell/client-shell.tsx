@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { LogOut, Settings } from "lucide-react";
 
 import { NavBadge } from "@/components/shell/nav-badge";
-import { clientNavItems } from "@/components/shell/nav-items";
+import { clientNavItems, navBadgeCount } from "@/components/shell/nav-items";
 import { ReloadAppButton } from "@/components/shell/reload-app-button";
 import { IconButton } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -38,12 +38,9 @@ export function ClientShell({
   const navLabel: Record<string, string> = {
     "/client/dashboard": dict.nav.home,
     "/client/content": dict.nav.content,
-    "/client/feed": dict.nav.feed,
-    "/client/calendar": dict.nav.calendar,
     "/client/meetings": dict.nav.meetings,
     "/client/documents": dict.nav.documents,
     "/client/chat": dict.nav.chat,
-    "/client/payments": dict.nav.payments,
   };
   const items = clientNavItems.map((item) => ({
     ...item,
@@ -76,7 +73,7 @@ export function ClientShell({
                   {item.label}
                   {item.badge ? (
                     <NavBadge
-                      count={badges[item.badge]}
+                      count={navBadgeCount(badges, item.badge)}
                       variant={item.badge === "meetings" ? "dot" : "count"}
                       className="ml-0"
                     />
@@ -118,11 +115,11 @@ export function ClientShell({
       </main>
 
       {/*
-       * Navegacao inferior — prioridade mobile. grid-cols-5 porque so 5 dos
-       * itens aparecem aqui (Inicio, Conteudos, Feed, Documentos, Chat) —
-       * Cobrancas fica de fora (hideOnMobileNav), so no menu de topo, para
-       * nao espremer uma sexta coluna em telas de 360-375px. O texto encolhe
-       * um pouco em relacao ao topo para caber cinco colunas sem cortar.
+       * Navegacao inferior — prioridade mobile. grid-cols-5 para os 5 itens
+       * de `clientNavItems` (Feed, Calendario e Cobrancas agora vivem como
+       * abas dentro de Conteudos/Documentos, entao nao competem mais por
+       * espaco aqui). O texto encolhe um pouco em relacao ao topo para caber
+       * cinco colunas sem cortar em telas de 360-375px.
        */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/97 backdrop-blur sm:hidden">
         <div className="mx-auto grid max-w-md grid-cols-5 px-1 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
@@ -142,7 +139,8 @@ export function ClientShell({
                   <Icon className={cn("size-5", active && "stroke-[2.3]")} aria-hidden />
                   {item.badge ? (
                     <NavBadge
-                      count={badges[item.badge]}
+                      count={navBadgeCount(badges, item.badge)}
+                      variant={item.badge === "meetings" ? "dot" : "count"}
                       className="absolute -top-1.5 -right-2 ml-0 min-w-4 px-1 text-[9px]"
                     />
                   ) : null}

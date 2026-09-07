@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
-import { RevalidateInvoicesBadge } from "@/components/payments/revalidate-invoices-badge";
-import { ClientInvoices } from "@/features/client/invoices";
+import { ClientDocumentsHub } from "@/features/client/documents-hub";
 import { getServerDictionary } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -9,11 +8,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: dict.nav.payments };
 }
 
+/** Cobrancas agora mora dentro de Documentos, como aba — esta rota fica so
+ * para notificacoes push de pagamento continuarem apontando pro lugar certo. */
 export default function Page() {
-  return (
-    <>
-      <RevalidateInvoicesBadge />
-      <ClientInvoices />
-    </>
-  );
+  return <ClientDocumentsHub defaultTab="payments" />;
 }

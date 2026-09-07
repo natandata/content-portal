@@ -10,10 +10,14 @@ import { cn } from "@/lib/utils";
  */
 export function ClientDetailTabs({
   tabs,
+  defaultTab,
 }: {
   tabs: { id: string; label: string; content: ReactNode }[];
+  /** Qual aba comeca ativa — usado quando a pagina e um destino direto para
+   * uma aba especifica (link salvo, notificacao push) em vez da primeira. */
+  defaultTab?: string;
 }) {
-  const [active, setActive] = useState(tabs[0]?.id);
+  const [active, setActive] = useState(defaultTab ?? tabs[0]?.id);
 
   return (
     <div>

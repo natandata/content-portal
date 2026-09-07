@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { LogOut, Menu, X } from "lucide-react";
 
 import { NavBadge } from "@/components/shell/nav-badge";
-import { staffNavItems } from "@/components/shell/nav-items";
+import { navBadgeCount, staffNavItems } from "@/components/shell/nav-items";
 import type { NavGroup, NavItem } from "@/components/shell/nav-items";
 import { ReloadAppButton } from "@/components/shell/reload-app-button";
 import { IconButton } from "@/components/ui/button";
@@ -85,7 +85,7 @@ export function WorkspaceShell({
         <Icon className="size-[18px] shrink-0" aria-hidden />
         <span className="truncate">{item.label}</span>
         {item.badge ? (
-          <NavBadge count={badges[item.badge]} tone={active ? "onDark" : "default"} />
+          <NavBadge count={navBadgeCount(badges, item.badge)} tone={active ? "onDark" : "default"} />
         ) : null}
       </Link>
     );

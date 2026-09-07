@@ -4,7 +4,6 @@ import {
   Calendar,
   FileText,
   Lightbulb,
-  Grid3x3,
   Images,
   LayoutDashboard,
   Megaphone,
@@ -20,12 +19,16 @@ import {
 
 import type { UserRole } from "@/types/database";
 
+export type NavBadgeKey = "approvals" | "contracts" | "chat" | "invoices" | "meetings";
+
 export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
-  /** Qual contador do menu aparece neste item, quando houver pendencia. */
-  badge?: "approvals" | "contracts" | "chat" | "invoices" | "meetings";
+  /** Qual contador do menu aparece neste item, quando houver pendencia. Mais
+   * de uma chave soma os contadores — usado quando um item de menu agrupa
+   * varias abas que antes eram itens separados, cada uma com seu contador. */
+  badge?: NavBadgeKey | NavBadgeKey[];
   /**
    * So usado na area do cliente: item existe no menu de topo (desktop), mas
    * fica de fora da barra inferior do celular — ela ja esta no limite de
@@ -98,30 +101,27 @@ export function staffNavItems(role: UserRole): NavItem[] | NavGroup[] {
   return role === "admin" ? adminNavItems() : professionalNavItems();
 }
 
+/** Um item de menu pode somar mais de um contador (ex.: Documentos do
+ * cliente agrupa contratos + cobrancas, que eram dois itens separados). */
+export function navBadgeCount(
+  badges: Record<NavBadgeKey, number>,
+  key: NavBadgeKey | NavBadgeKey[] | undefined,
+): number {
+  if (!key) return 0;
+  const keys = Array.isArray(key) ? key : [key];
+  return keys.reduce((sum, k) => sum + badges[k], 0);
+}
+
+/**
+ * Feed e Calendario moram dentro de Conteudos (abas); Cobrancas mora dentro
+ * de Documentos (aba) — eram 8 itens disputando espaco no menu, viraram 5
+ * destinos de verdade. As rotas antigas continuam existindo (ver
+ * `content-hub.tsx` e `documents-hub.tsx`), so nao aparecem mais aqui.
+ */
 export const clientNavItems: NavItem[] = [
   { href: "/client/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/client/content", label: "Conteudos", icon: Images, badge: "approvals" },
-  { href: "/client/feed", label: "Feed", icon: Grid3x3 },
-  {
-    href: "/client/calendar",
-    label: "Calendario",
-    icon: Calendar,
-    hideOnMobileNav: true,
-  },
-  {
-    href: "/client/meetings",
-    label: "Reunioes",
-    icon: Video,
-    badge: "meetings",
-    hideOnMobileNav: true,
-  },
-  { href: "/client/documents", label: "Documentos", icon: FileText, badge: "contracts" },
+  { href: "/client/meetings", label: "Reunioes", icon: Video, badge: "meetings" },
+  { href: "/client/documents", label: "Documentos", icon: FileText, badge: ["contracts", "invoices"] },
   { href: "/client/chat", label: "Chat", icon: MessageCircle, badge: "chat" },
-  {
-    href: "/client/payments",
-    label: "Cobrancas",
-    icon: Banknote,
-    badge: "invoices",
-    hideOnMobileNav: true,
-  },
 ];

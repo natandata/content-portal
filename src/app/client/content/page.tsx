@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { ClientContents } from "@/features/client/contents";
+import { ClientContentHub } from "@/features/client/content-hub";
 import { getServerDictionary } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -9,5 +9,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function Page() {
-  return <ClientContents />;
+  return <ClientContentHub defaultTab="content" />;
 }

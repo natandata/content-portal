@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { ClientCalendar } from "@/features/client/calendar";
+import { ClientContentHub } from "@/features/client/content-hub";
 import { getServerDictionary } from "@/lib/i18n/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -8,6 +8,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: dict.nav.calendar };
 }
 
+/** Calendario agora mora dentro de Conteudos, como aba — esta rota fica so
+ * para links salvos continuarem funcionando. */
 export default function Page() {
-  return <ClientCalendar />;
+  return <ClientContentHub defaultTab="calendar" />;
 }
