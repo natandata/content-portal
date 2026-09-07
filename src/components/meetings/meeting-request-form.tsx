@@ -1,16 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { CalendarPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Field, Input, Textarea } from "@/components/ui/form";
+import { Field, Input, Select, Textarea } from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import type { Locale } from "@/lib/i18n/locale";
 import { requestMeetingAction } from "@/server/actions/meetings";
+
+export interface MeetingClientOption {
+  id: string;
+  companyName: string;
+}
 
 /**
  * Um unico formulario serve os dois lados: quem abre e que vira
@@ -20,14 +25,20 @@ import { requestMeetingAction } from "@/server/actions/meetings";
  * conectado com um tipo de reuniao escolhido — os campos de data/hora somem
  * porque a pessoa vai escolher um horario livre direto na Calendly, so
  * precisa confirmar o e-mail de contato.
+ *
+ * `clientId` fixo (uso normal, dentro da pagina de um cliente) ou `clients`
+ * (uso na Visao Geral > Reunioes, onde o profissional escolhe o cliente no
+ * proprio formulario, sem precisar navegar ate a pagina dele antes).
  */
 export function MeetingRequestForm({
   clientId,
+  clients,
   defaultEmail,
   locale = "pt-BR",
   calendlyEventType = null,
 }: {
-  clientId: string;
+  clientId?: string;
+  clients?: MeetingClientOption[];
   defaultEmail?: string;
   locale?: Locale;
   calendlyEventType?: { name: string; durationMinutes: number } | null;
@@ -35,6 +46,7 @@ export function MeetingRequestForm({
   const dict = getDictionary(locale).meetings;
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(clientId ?? "");
   const [email, setEmail] = useState(defaultEmail ?? "");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -42,11 +54,21 @@ export function MeetingRequestForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
+  const needsClientPicker = !clientId;
+  const sortedClients = useMemo(
+    () => [...(clients ?? [])].sort((a, b) => a.companyName.localeCompare(b.companyName, "pt-BR")),
+    [clients],
+  );
+
   function submit() {
     setError(null);
+    if (!selectedClientId) {
+      setError(dict.fieldClientRequired);
+      return;
+    }
     start(async () => {
       const result = await requestMeetingAction({
-        clientId,
+        clientId: selectedClientId,
         contactEmail: email,
         proposedDate: calendlyEventType ? undefined : date,
         proposedTime: calendlyEventType ? undefined : time,
@@ -61,6 +83,7 @@ export function MeetingRequestForm({
       toast.success(dict.sentToast);
       setOpen(false);
       setMessage("");
+      if (needsClientPicker) setSelectedClientId("");
       router.refresh();
     });
   }
@@ -89,6 +112,25 @@ export function MeetingRequestForm({
         }
       >
         <div className="grid gap-4 sm:grid-cols-2">
+          {needsClientPicker ? (
+            <Field label={dict.fieldClient} htmlFor="meeting-client" required className="sm:col-span-2">
+              <Select
+                id="meeting-client"
+                value={selectedClientId}
+                onChange={(event) => setSelectedClientId(event.target.value)}
+                disabled={pending}
+              >
+                <option value="" disabled>
+                  {dict.fieldClientPlaceholder}
+                </option>
+                {sortedClients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.companyName}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
           {calendlyEventType ? (
             <div className="rounded-lg border border-line bg-canvas p-3 text-sm text-ink-600 sm:col-span-2">
               <p className="font-medium text-ink-900">{calendlyEventType.name}</p>

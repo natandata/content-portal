@@ -357,6 +357,9 @@ export interface Dictionary {
     modalDescription: string;
     fieldDate: string;
     fieldTime: string;
+    fieldClient: string;
+    fieldClientPlaceholder: string;
+    fieldClientRequired: string;
     fieldEmail: string;
     fieldMessage: string;
     submit: string;
@@ -753,6 +756,9 @@ const ptBR: Dictionary = {
       "A outra parte recebe o pedido e aprova ou recusa. Aprovando, o Google Meet e criado sozinho.",
     fieldDate: "Data",
     fieldTime: "Horario",
+    fieldClient: "Cliente",
+    fieldClientPlaceholder: "Selecione...",
+    fieldClientRequired: "Escolha o cliente.",
     fieldEmail: "Seu e-mail",
     fieldMessage: "Assunto (opcional)",
     submit: "Enviar pedido",
@@ -1156,6 +1162,9 @@ const en: Dictionary = {
     modalDescription: "The other side gets the request and approves or declines it. Approving creates the Google Meet automatically.",
     fieldDate: "Date",
     fieldTime: "Time",
+    fieldClient: "Client",
+    fieldClientPlaceholder: "Select...",
+    fieldClientRequired: "Choose the client.",
     fieldEmail: "Your email",
     fieldMessage: "Subject (optional)",
     submit: "Send request",
