@@ -107,6 +107,35 @@ export function calendlyOAuthConfig(): { clientId: string; clientSecret: string;
   return { clientId, clientSecret, redirectUri };
 }
 
+/**
+ * Credenciais da Apify (relatorio de perfil publico do Instagram, sem
+ * login). `null` = relatorio desligado, mesmo contrato das outras
+ * integracoes. O `webhookSecret` e gerado por nos (nao a Apify manda) —
+ * colado na URL do webhook na hora de disparar cada run, para o endpoint
+ * saber que quem chamou de volta foi mesmo a Apify.
+ */
+export function apifyConfig(): { apiToken: string; webhookSecret: string } | null {
+  const apiToken = process.env.APIFY_API_TOKEN;
+  const webhookSecret = process.env.APIFY_WEBHOOK_SECRET;
+  if (!apiToken?.trim() || !webhookSecret?.trim()) return null;
+  return { apiToken, webhookSecret };
+}
+
+/**
+ * Chave de API da Composio (insights do Instagram via OAuth do cliente —
+ * nunca senha). `null` = relatorio de insights desligado, mesmo contrato
+ * das outras integracoes. `instagramAuthConfigId` e o "Auth Config" criado
+ * uma vez no painel da Composio (representa o app Meta for Developers
+ * cadastrado la) — a Composio exige esse id toda vez que inicia uma conexao
+ * nova, nao tem como inferir na hora.
+ */
+export function composioConfig(): { apiKey: string; instagramAuthConfigId: string } | null {
+  const apiKey = process.env.COMPOSIO_API_KEY;
+  const instagramAuthConfigId = process.env.COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID;
+  if (!apiKey?.trim() || !instagramAuthConfigId?.trim()) return null;
+  return { apiKey, instagramAuthConfigId };
+}
+
 export const isSupabaseConfigured =
   publicEnv.supabaseUrl.length > 0 && publicEnv.supabaseAnonKey.length > 0;
 
