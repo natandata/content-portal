@@ -6,7 +6,7 @@ import type { FeedEntry } from "@/components/feed/feed-grid";
 import type { ProfileView } from "@/components/feed/instagram-profile";
 import { BUCKETS } from "@/lib/paths";
 import { signedUrl, signedUrlMap } from "@/lib/storage";
-import { AWAITING_CLIENT_STATUSES, NEEDS_TEAM_ACTION_STATUSES } from "@/lib/domain";
+import { AWAITING_CLIENT_STATUSES, NEEDS_TEAM_ACTION_STATUSES, type BadgeTone } from "@/lib/domain";
 import type {
   BulletinAdminReportRow,
   BulletinFeedRow,
@@ -171,6 +171,68 @@ export async function loadMonthlyRevenueForecast(supabase: Client): Promise<Reve
   }
 
   return Array.from(byCurrency.entries()).map(([currency, amount]) => ({ currency, amount }));
+}
+
+export interface RevenueTrendPoint {
+  monthLabel: string;
+  amount: number;
+}
+
+export interface RevenueTrend {
+  currency: CurrencyCode;
+  points: RevenueTrendPoint[];
+}
+
+/**
+ * Receita paga por mes, nos ultimos `months` meses — usado pelo sparkline
+ * da Visao Geral. Ao contrario de `loadMonthlyRevenueForecast` (que separa
+ * por moeda de proposito, porque podem coexistir varias no mesmo mes),
+ * aqui a serie precisa ser um numero so por mes: pega a moeda com mais
+ * cobrancas pagas no periodo e soma so essa, em vez de misturar moedas
+ * diferentes numa soma sem sentido. `null` quando nao ha nenhuma cobranca
+ * paga no periodo — a tela decide o que mostrar nesse caso.
+ */
+export async function loadRevenueTrend(supabase: Client, months = 6): Promise<RevenueTrend | null> {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+
+  const { data } = await supabase
+    .from("invoices")
+    .select("amount, currency, paid_at")
+    .eq("status", "paid")
+    .gte("paid_at", start.toISOString());
+
+  const rows = (data ?? []).filter(
+    (row): row is typeof row & { paid_at: string } => typeof row.paid_at === "string",
+  );
+  if (rows.length === 0) return null;
+
+  const countByCurrency = new Map<CurrencyCode, number>();
+  for (const row of rows) countByCurrency.set(row.currency, (countByCurrency.get(row.currency) ?? 0) + 1);
+  const sortedCurrencies = Array.from(countByCurrency.entries()).sort((a, b) => b[1] - a[1]);
+  const dominantEntry = sortedCurrencies[0];
+  if (!dominantEntry) return null;
+  const [dominantCurrency] = dominantEntry;
+
+  const monthBuckets = Array.from({ length: months }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (months - 1 - index), 1);
+    return {
+      key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
+      label: new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(date).replace(".", ""),
+    };
+  });
+
+  const sumByMonth = new Map<string, number>();
+  for (const row of rows) {
+    if (row.currency !== dominantCurrency) continue;
+    const key = row.paid_at.slice(0, 7);
+    sumByMonth.set(key, (sumByMonth.get(key) ?? 0) + Number(row.amount));
+  }
+
+  return {
+    currency: dominantCurrency,
+    points: monthBuckets.map((bucket) => ({ monthLabel: bucket.label, amount: sumByMonth.get(bucket.key) ?? 0 })),
+  };
 }
 
 export async function loadDashboardStats(supabase: Client): Promise<DashboardStats> {
@@ -763,6 +825,105 @@ export async function loadProfessionalMeetings(
   );
 
   return rows.map((row) => ({ ...row, clientName: names.get(row.client_id) ?? "Cliente" }));
+}
+
+export interface AttentionItem {
+  kind: "content_pending" | "content_adjustment" | "overdue_invoice" | "stale_client" | "meeting_pending";
+  clientId: string;
+  clientName: string;
+  label: string;
+  href: string;
+  /** Usado so pra ordenar por urgencia (menor = mais urgente) -- nao exibido diretamente. */
+  priority: number;
+  tone: BadgeTone;
+}
+
+/**
+ * Feed unico de "precisa de atencao" pra Visao Geral, juntando pendencias de
+ * dominios diferentes (conteudo, cobranca, cliente parado, reuniao) numa
+ * lista so. Nao faz SQL novo -- so combina `loadClientsGallery` (que ja
+ * calcula os sinais por cliente) com `loadProfessionalMeetings`, cada um
+ * ja restrito ao profissional/RLS de quem chamou.
+ */
+export async function loadAttentionFeed(
+  supabase: Client,
+  professionalId: string,
+  base: string,
+  limit = 8,
+): Promise<AttentionItem[]> {
+  const [clients, meetings] = await Promise.all([
+    loadClientsGallery(supabase, { professionalId }),
+    loadProfessionalMeetings(supabase, professionalId),
+  ]);
+
+  const items: AttentionItem[] = [];
+
+  for (const client of clients) {
+    if (client.overdueInvoice) {
+      items.push({
+        kind: "overdue_invoice",
+        clientId: client.id,
+        clientName: client.companyName,
+        label: "Cobranca vencida",
+        href: `${base}/clients/${client.id}`,
+        priority: 1,
+        tone: "danger",
+      });
+    }
+    if (client.staleActivity) {
+      items.push({
+        kind: "stale_client",
+        clientId: client.id,
+        clientName: client.companyName,
+        label: "Sem atividade ha mais de 30 dias",
+        href: `${base}/clients/${client.id}`,
+        priority: 2,
+        tone: "warning",
+      });
+    }
+    if (client.needsAdjustment) {
+      items.push({
+        kind: "content_adjustment",
+        clientId: client.id,
+        clientName: client.companyName,
+        label: "Conteudo com ajuste pedido",
+        href: `${base}/clients/${client.id}`,
+        priority: 3,
+        tone: "warning",
+      });
+    }
+    if (client.pendingApprovalCount > 0) {
+      items.push({
+        kind: "content_pending",
+        clientId: client.id,
+        clientName: client.companyName,
+        label:
+          client.pendingApprovalCount === 1
+            ? "1 conteudo aguardando aprovacao"
+            : `${client.pendingApprovalCount} conteudos aguardando aprovacao`,
+        href: `${base}/clients/${client.id}`,
+        priority: 4,
+        tone: "info",
+      });
+    }
+  }
+
+  for (const meeting of meetings) {
+    if (meeting.status !== "pending") continue;
+    items.push({
+      kind: "meeting_pending",
+      clientId: meeting.client_id,
+      clientName: meeting.clientName,
+      label: "Reuniao aguardando confirmacao",
+      href: `${base}/meetings`,
+      priority: 5,
+      tone: "info",
+    });
+  }
+
+  // Mais urgente primeiro (vencido/parado), depois por ordem de insercao.
+  items.sort((a, b) => a.priority - b.priority);
+  return items.slice(0, limit);
 }
 
 export interface ClientCalendarPost {

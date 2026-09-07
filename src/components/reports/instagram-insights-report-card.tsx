@@ -1,5 +1,6 @@
 import { AlertTriangle, Loader2 } from "lucide-react";
 
+import { Sparkline } from "@/components/ui/sparkline";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import type { InstagramInsightsReportRow } from "@/types/database";
 
@@ -38,22 +39,8 @@ function postMetricValue(insights: unknown, name: string): number | null {
   return num(entry?.values?.[0]?.value);
 }
 
-function Sparkline({ points }: { points: { value: number; endTime: string | null }[] }) {
-  if (points.length === 0) return <p className="text-xs text-ink-400">Sem dados no periodo.</p>;
-  const max = Math.max(...points.map((p) => p.value), 1);
-
-  return (
-    <div className="flex h-16 items-end gap-0.5">
-      {points.map((point, index) => (
-        <div
-          key={index}
-          className="min-w-[3px] flex-1 rounded-t bg-accent/70"
-          style={{ height: `${Math.max((point.value / max) * 100, 2)}%` }}
-          title={`${point.endTime ? formatDate(point.endTime.slice(0, 10)) : ""}: ${point.value.toLocaleString("pt-BR")}`}
-        />
-      ))}
-    </div>
-  );
+function instagramSparklineLabel(point: { value: number; endTime: string | null }): string {
+  return `${point.endTime ? formatDate(point.endTime.slice(0, 10)) : ""}: ${point.value.toLocaleString("pt-BR")}`;
 }
 
 /**
@@ -94,13 +81,13 @@ export function InstagramInsightsReportCard({ report }: { report: InstagramInsig
           <p className="text-xs font-semibold tracking-wide text-ink-500 uppercase">
             Alcance no periodo ({metricTotal(report.account_metrics, "reach").toLocaleString("pt-BR")})
           </p>
-          <Sparkline points={reachSeries} />
+          <Sparkline points={reachSeries} formatLabel={instagramSparklineLabel} />
         </div>
         <div>
           <p className="text-xs font-semibold tracking-wide text-ink-500 uppercase">
             Interacoes no periodo ({metricTotal(report.account_metrics, "total_interactions").toLocaleString("pt-BR")})
           </p>
-          <Sparkline points={interactionsSeries} />
+          <Sparkline points={interactionsSeries} formatLabel={instagramSparklineLabel} />
         </div>
       </div>
 
