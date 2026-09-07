@@ -524,7 +524,13 @@ export async function confirmCalendlyMeetingAction(
   // exigir um segundo clique depois. So nao bloqueia: se a Calendly ainda
   // nao tiver sincronizado, segue so com o que a pessoa digitou.
   const found = account?.calendly_uri
-    ? await findScheduledEventForInvitee(meeting.professional_id, account.calendly_uri, meeting.contact_email, meeting.created_at)
+    ? await findScheduledEventForInvitee(
+        meeting.professional_id,
+        account.calendly_uri,
+        meeting.contact_email,
+        meeting.created_at,
+        start.toISOString(),
+      )
     : null;
 
   if (found?.ok && found.data) {
@@ -591,6 +597,7 @@ export async function retryCalendlyLinkAction(requestId: string): Promise<Action
     account.calendly_uri,
     meeting.contact_email,
     meeting.created_at,
+    meeting.scheduled_start ?? undefined,
   );
   if (!found.ok) return fail(found.error);
   if (!found.data) return ok({ found: false });

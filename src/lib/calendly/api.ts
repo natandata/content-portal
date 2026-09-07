@@ -199,13 +199,20 @@ export interface CalendlyScheduledEvent {
  *
  * Sem um id de reserva para casar 1:1 (o link de uso unico nao devolve isso
  * de volta), a correlacao e por e-mail do convidado dentro da janela de
- * eventos criados desde o pedido — o mesmo criterio que o webhook usa.
+ * eventos criados desde o pedido. Mas o campo de e-mail do formulario da
+ * Calendly vem so pre-preenchido a partir do link — a pessoa pode editar
+ * antes de confirmar, e confirmado na pratica que isso acontece. Por isso,
+ * quando `nearStartTime` e informado (a confirmacao manual ja fica com um
+ * horario, mesmo que so o digitado) e o e-mail nao bate em nenhum convidado,
+ * cai para o evento cujo horario de inicio mais se aproxima — sinal mais
+ * confiavel que um e-mail que a pessoa pode ter trocado.
  */
 export async function findScheduledEventForInvitee(
   userId: string,
   userUri: string,
   contactEmail: string,
   sinceISO: string,
+  nearStartTime?: string,
 ): Promise<Result<CalendlyScheduledEvent | null>> {
   const listResult = await calendlyFetch(
     userId,
@@ -219,6 +226,13 @@ export async function findScheduledEventForInvitee(
     }
   ).collection;
 
+  const toEntry = (event: (typeof events)[number]): CalendlyScheduledEvent => ({
+    uri: event.uri,
+    startTime: event.start_time,
+    endTime: event.end_time,
+    joinUrl: event.location?.join_url ?? null,
+  });
+
   for (const event of events) {
     const inviteesResult = await calendlyFetch(userId, `${event.uri}/invitees`);
     if (!inviteesResult.ok) continue;
@@ -227,17 +241,20 @@ export async function findScheduledEventForInvitee(
     const matched = invitees.some(
       (invitee) => invitee.status === "active" && invitee.email.toLowerCase() === contactEmail.toLowerCase(),
     );
-    if (matched) {
-      return {
-        ok: true,
-        data: {
-          uri: event.uri,
-          startTime: event.start_time,
-          endTime: event.end_time,
-          joinUrl: event.location?.join_url ?? null,
-        },
-      };
+    if (matched) return { ok: true, data: toEntry(event) };
+  }
+
+  if (nearStartTime) {
+    const target = new Date(nearStartTime).getTime();
+    const TOLERANCE_MS = 10 * 60_000;
+    let closest: { event: (typeof events)[number]; diff: number } | null = null;
+
+    for (const event of events) {
+      const diff = Math.abs(new Date(event.start_time).getTime() - target);
+      if (diff <= TOLERANCE_MS && (!closest || diff < closest.diff)) closest = { event, diff };
     }
+
+    if (closest) return { ok: true, data: toEntry(closest.event) };
   }
 
   return { ok: true, data: null };
