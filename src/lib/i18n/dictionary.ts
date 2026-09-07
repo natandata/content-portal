@@ -384,6 +384,12 @@ export interface Dictionary {
     calendlyRequestButton: string;
     calendlyEventSummary: string;
     calendlyNotConnectedWarning: string;
+    calendlyConfirmButton: string;
+    calendlyConfirmModalTitle: string;
+    calendlyConfirmModalDescription: string;
+    calendlyConfirmSubmit: string;
+    fieldScheduledAt: string;
+    calendlyConfirmedToast: string;
   };
 }
 
@@ -772,6 +778,13 @@ const ptBR: Dictionary = {
     calendlyEventSummary: "reuniao de",
     calendlyNotConnectedWarning:
       "Seu profissional ainda nao conectou o Calendly. Voce ainda pode pedir uma reuniao pelo metodo atual.",
+    calendlyConfirmButton: "Ja marquei",
+    calendlyConfirmModalTitle: "Confirmar horario marcado",
+    calendlyConfirmModalDescription:
+      "Informe a data e o horario que voce marcou na Calendly (veja no convite que ela mandou por e-mail).",
+    calendlyConfirmSubmit: "Confirmar",
+    fieldScheduledAt: "Data e horario",
+    calendlyConfirmedToast: "Reuniao confirmada.",
   },
 };
 
@@ -1165,6 +1178,13 @@ const en: Dictionary = {
     calendlyEventSummary: "meeting for",
     calendlyNotConnectedWarning:
       "Your professional hasn't connected Calendly yet. You can still request a meeting the current way.",
+    calendlyConfirmButton: "I booked it",
+    calendlyConfirmModalTitle: "Confirm the scheduled time",
+    calendlyConfirmModalDescription:
+      "Enter the date and time you booked on Calendly (check the invite it emailed you).",
+    calendlyConfirmSubmit: "Confirm",
+    fieldScheduledAt: "Date and time",
+    calendlyConfirmedToast: "Meeting confirmed.",
   },
 };
 

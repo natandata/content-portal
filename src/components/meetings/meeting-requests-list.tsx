@@ -1,17 +1,20 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
-import { CalendarClock, Check, Clock, ExternalLink, Trash2, Video, X } from "lucide-react";
+import { useState, useTransition } from "react";
+import { CalendarCheck, CalendarClock, Check, Clock, ExternalLink, Trash2, Video, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
+import { Field, Input } from "@/components/ui/form";
+import { Modal } from "@/components/ui/modal";
 import { getDictionary, type Dictionary } from "@/lib/i18n/dictionary";
 import { intlLocale, type Locale } from "@/lib/i18n/locale";
 import {
   cancelMeetingRequestAction,
+  confirmCalendlyMeetingAction,
   deleteMeetingRequestAction,
   respondMeetingRequestAction,
 } from "@/server/actions/meetings";
@@ -49,6 +52,8 @@ function MeetingRow({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
   const meta = statusMeta(dict)[meeting.status];
 
   // "isMine" = fui eu que pedi. So quem NAO pediu ve aprovar/recusar — e so
@@ -60,6 +65,10 @@ function MeetingRow({
       ? meeting.status === "pending" || meeting.status === "scheduled"
       : meeting.status === "pending" || meeting.status === "approved";
   const canDelete = meeting.status === "cancelled";
+  // So existe porque a assinatura de webhook exige plano pago da Calendly —
+  // sem ela, a Calendly nunca avisa o app sozinha. Enquanto isso, quem
+  // marcou confirma manualmente com a data/hora reais.
+  const canConfirmCalendly = meeting.method === "calendly" && meeting.status === "pending";
 
   function respond(decision: "approved" | "declined") {
     start(async () => {
@@ -93,6 +102,24 @@ function MeetingRow({
         return;
       }
       toast.success(dict.deletedToast);
+      router.refresh();
+    });
+  }
+
+  function confirmCalendly() {
+    // O input datetime-local nao carrega fuso — convertido aqui, no
+    // navegador de quem preencheu, "sabe" o fuso local certo. Mandar a
+    // string crua para o servidor deixaria a interpretacao a merce do
+    // fuso de onde a funcao roda (nao o de quem marcou a reuniao).
+    const iso = new Date(scheduledAt).toISOString();
+    start(async () => {
+      const result = await confirmCalendlyMeetingAction(meeting.id, { scheduledStart: iso });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(dict.calendlyConfirmedToast);
+      setConfirmOpen(false);
       router.refresh();
     });
   }
@@ -146,8 +173,14 @@ function MeetingRow({
         </a>
       ) : null}
 
-      {canRespond || canCancel || canDelete ? (
+      {canRespond || canCancel || canDelete || canConfirmCalendly ? (
         <div className="flex flex-wrap gap-2 pt-1">
+          {canConfirmCalendly ? (
+            <Button size="sm" variant="secondary" loading={pending} onClick={() => setConfirmOpen(true)}>
+              <CalendarCheck className="size-3.5" aria-hidden />
+              {dict.calendlyConfirmButton}
+            </Button>
+          ) : null}
           {canRespond ? (
             <>
               <Button size="sm" variant="success" loading={pending} onClick={() => respond("approved")}>
@@ -184,6 +217,35 @@ function MeetingRow({
             </Button>
           ) : null}
         </div>
+      ) : null}
+
+      {canConfirmCalendly ? (
+        <Modal
+          open={confirmOpen}
+          onClose={() => !pending && setConfirmOpen(false)}
+          title={dict.calendlyConfirmModalTitle}
+          description={dict.calendlyConfirmModalDescription}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setConfirmOpen(false)} disabled={pending}>
+                {dict.cancel}
+              </Button>
+              <Button loading={pending} disabled={!scheduledAt} onClick={confirmCalendly}>
+                {dict.calendlyConfirmSubmit}
+              </Button>
+            </>
+          }
+        >
+          <Field label={dict.fieldScheduledAt} htmlFor={`scheduled-at-${meeting.id}`} required>
+            <Input
+              id={`scheduled-at-${meeting.id}`}
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(event) => setScheduledAt(event.target.value)}
+              disabled={pending}
+            />
+          </Field>
+        </Modal>
       ) : null}
     </div>
   );

@@ -355,3 +355,97 @@ export async function deleteMeetingRequestAction(requestId: string): Promise<Act
   revalidateMeetings(meeting.client_id);
   return done();
 }
+
+const confirmCalendlySchema = z.object({
+  scheduledStart: z.string().min(1, "Informe a data e o horario marcados."),
+});
+
+/**
+ * Confirmacao manual do lado Calendly — existe porque webhook de webhook
+ * subscription exige plano pago da Calendly (Standard ou superior); sem
+ * isso, a Calendly nunca avisa o app sozinha que a pessoa marcou. Quem
+ * marcou entra aqui com a data/hora reais (visiveis na propria Calendly ou
+ * no convite que ela manda por e-mail) para o pedido sair de "pendente".
+ * Qualquer um dos dois lados pode confirmar — o link de agendamento nao
+ * amarra a quem coube marcar.
+ */
+export async function confirmCalendlyMeetingAction(
+  requestId: string,
+  input: z.input<typeof confirmCalendlySchema>,
+): Promise<ActionResult<null>> {
+  const actor = await getActor();
+  if (!actor) return fail("Sessao expirada.");
+
+  const parsed = confirmCalendlySchema.safeParse(input);
+  if (!parsed.success) return fail(firstIssue(parsed.error.issues, "Dados invalidos."));
+
+  const admin = createAdminClient();
+  const { data: meeting } = await admin
+    .from("meeting_requests")
+    .select("*")
+    .eq("id", requestId)
+    .maybeSingle();
+
+  if (!meeting) return fail("Pedido de reuniao nao encontrado.");
+  if (meeting.method !== "calendly") return fail("Essa confirmacao e so para reunioes pelo Calendly.");
+  if (meeting.status !== "pending") return fail("Este pedido ja foi atualizado.");
+
+  const isClientSide = actor.role === "client" && actor.client?.id === meeting.client_id;
+  if (!isClientSide) {
+    const supabase = await createClient();
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("id", meeting.client_id)
+      .maybeSingle();
+    if (!client) return fail("Sem permissao para este cliente.");
+  }
+
+  const start = new Date(parsed.data.scheduledStart);
+  if (Number.isNaN(start.getTime())) return fail("Data invalida.");
+
+  const { data: account } = await admin
+    .from("professional_calendly_accounts")
+    .select("event_type_duration")
+    .eq("user_id", meeting.professional_id)
+    .maybeSingle();
+
+  const end = account?.event_type_duration
+    ? new Date(start.getTime() + account.event_type_duration * 60_000)
+    : null;
+
+  const { error } = await admin
+    .from("meeting_requests")
+    .update({
+      status: "scheduled",
+      scheduled_start: start.toISOString(),
+      scheduled_end: end ? end.toISOString() : null,
+    })
+    .eq("id", meeting.id);
+
+  if (error) return fail(describeError(error, "Nao foi possivel confirmar."));
+
+  const dateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(start);
+
+  if (isClientSide) {
+    await sendPushToClientStaff(meeting.client_id, {
+      title: "Reuniao confirmada",
+      body: `Marcada para ${dateLabel} pela Calendly.`,
+      url: `/professional/clients/${meeting.client_id}`,
+      tag: `meeting-${meeting.id}`,
+    }).catch(() => {});
+  } else {
+    await sendPushToClient(meeting.client_id, (locale) => ({
+      title: locale === "en" ? "Meeting confirmed" : "Reuniao confirmada",
+      body:
+        locale === "en"
+          ? `Scheduled for ${dateLabel} via Calendly.`
+          : `Marcada para ${dateLabel} pela Calendly.`,
+      url: "/client/meetings",
+      tag: `meeting-${meeting.id}`,
+    })).catch(() => {});
+  }
+
+  revalidateMeetings(meeting.client_id);
+  return done();
+}

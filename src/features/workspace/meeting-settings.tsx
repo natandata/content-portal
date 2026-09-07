@@ -133,6 +133,11 @@ export async function MeetingSettings({ error }: { error?: string }) {
                     Escolha um tipo de reuniao acima para o Calendly comecar a funcionar no portal.
                   </p>
                 )}
+                <p className="text-xs text-ink-500">
+                  Planos gratuitos da Calendly nao liberam a confirmacao automatica: quem marcar clica em
+                  &quot;Ja marquei&quot; na tela de Reunioes e informa o horario. Com plano Standard ou superior,
+                  isso passa a acontecer sozinho.
+                </p>
                 <CalendlyDisconnectButton />
               </div>
             ) : (
