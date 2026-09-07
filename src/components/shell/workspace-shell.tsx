@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { LogOut, Menu, X } from "lucide-react";
 
 import { NavBadge } from "@/components/shell/nav-badge";
-import { navBadgeCount, staffNavItems } from "@/components/shell/nav-items";
+import { navBadgeCount, staffNavItems, type NavBadgeKey } from "@/components/shell/nav-items";
 import type { NavGroup, NavItem } from "@/components/shell/nav-items";
 import { ReloadAppButton } from "@/components/shell/reload-app-button";
 import { IconButton } from "@/components/ui/button";
@@ -46,6 +46,19 @@ export function WorkspaceShell({
   const navGroups: NavGroup[] =
     navData.length > 0 && isNavGroup(navData[0]) ? (navData as NavGroup[]) : [{ items: navData as NavItem[] }];
   const homeHref = navGroups[0]?.items[0]?.href ?? "/";
+
+  // Barra inferior mobile, mesmo lugar/desenho do `ClientShell` -- so cabem
+  // 4 destinos de verdade (a 5a posicao e sempre "Mais"), entao pega os
+  // primeiros 4 itens na ordem em que ja aparecem no menu (pro profissional,
+  // isso e o grupo "Visao Geral" inteiro; pro admin, os 4 primeiros da lista
+  // plana). O resto continua acessivel pela gaveta, que "Mais" abre.
+  const flatItems = navGroups.flatMap((group) => group.items);
+  const primaryMobileItems = flatItems.slice(0, 4);
+  const overflowItems = flatItems.slice(4);
+  const overflowBadgeKeys = overflowItems.flatMap((item) =>
+    item.badge ? (Array.isArray(item.badge) ? item.badge : [item.badge]) : [],
+  );
+  const overflowBadgeCount = navBadgeCount(badges, overflowBadgeKeys as NavBadgeKey[]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -208,17 +221,24 @@ export function WorkspaceShell({
         </div>
       </header>
 
-      {/* Topbar — mobile (com gaveta lateral, ja no topo desde sempre) */}
+      {/*
+       * Topbar — mobile. Mesmo padrao do `ClientShell`: so identidade/marca
+       * a esquerda e controles utilitarios a direita -- a navegacao mesmo
+       * mora na barra inferior, nao aqui (sem hamburguer).
+       */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-surface/95 py-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] backdrop-blur lg:hidden">
         <Link href={homeHref} className="flex min-w-0 items-center gap-2">
           {logo}
           <span className="truncate text-sm font-semibold text-ink-900">Content</span>
         </Link>
         <div className="flex shrink-0 items-center gap-1">
+          <ThemeToggle compact />
           <ReloadAppButton label="Recarregar o app" />
-          <IconButton label="Abrir menu" onClick={() => setMenuOpen(true)}>
-            <Menu className="size-5" />
-          </IconButton>
+          <form action="/api/auth/logout" method="post">
+            <IconButton label="Sair" type="submit">
+              <LogOut className="size-4" />
+            </IconButton>
+          </form>
         </div>
       </header>
 
@@ -229,7 +249,7 @@ export function WorkspaceShell({
             onClick={() => setMenuOpen(false)}
             aria-hidden
           />
-          {/* Abre pela direita: e o lado do botao que a abriu. */}
+          {/* Abre pela direita: e o lado de onde "Mais" fica na barra inferior. */}
           <div className="absolute inset-y-0 right-0 flex w-[280px] max-w-[85vw] flex-col bg-surface p-4 pr-[max(1rem,env(safe-area-inset-right))] shadow-xl">
             <div className="mb-5 flex items-center justify-between">
               <span className="text-sm font-semibold text-ink-900">Menu</span>
@@ -238,21 +258,69 @@ export function WorkspaceShell({
               </IconButton>
             </div>
             <div className="scroll-slim flex-1 overflow-y-auto">{drawerNav}</div>
-            <div className="pt-4">
-              <div className="mb-2">
-                <ThemeToggle compact />
-              </div>
-              {identity}
-            </div>
+            <div className="pt-4">{identity}</div>
           </div>
         </div>
       ) : null}
 
       <main className="min-w-0 flex-1 overflow-x-hidden">
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+        <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 sm:px-6 lg:px-8 lg:pt-10 lg:pb-10">
           {children}
         </div>
       </main>
+
+      {/*
+       * Navegacao inferior — mobile, mesma posicao/desenho do `ClientShell`.
+       * Só 4 destinos de verdade cabem (grid-cols-5); "Mais" abre a gaveta
+       * com o resto do menu -- o profissional tem 11 itens, no cliente cabem
+       * os 5 de verdade sem overflow nenhum.
+       */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/97 backdrop-blur lg:hidden">
+        <div className="mx-auto grid max-w-md grid-cols-5 px-1 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))]">
+          {primaryMobileItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "focus-ring flex flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] font-medium transition",
+                  active ? "text-ink-900" : "text-ink-400",
+                )}
+              >
+                <span className="relative">
+                  <Icon className={cn("size-5", active && "stroke-[2.3]")} aria-hidden />
+                  {item.badge ? (
+                    <NavBadge
+                      count={navBadgeCount(badges, item.badge)}
+                      className="absolute -top-1.5 -right-2 ml-0 min-w-4 px-1 text-[9px]"
+                    />
+                  ) : null}
+                </span>
+                <span className="truncate px-0.5">{item.label}</span>
+              </Link>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            className={cn(
+              "focus-ring flex flex-col items-center gap-1 rounded-lg py-1.5 text-[10px] font-medium transition",
+              menuOpen ? "text-ink-900" : "text-ink-400",
+            )}
+          >
+            <span className="relative">
+              <Menu className={cn("size-5", menuOpen && "stroke-[2.3]")} aria-hidden />
+              {overflowBadgeCount > 0 ? (
+                <NavBadge count={overflowBadgeCount} className="absolute -top-1.5 -right-2 ml-0 min-w-4 px-1 text-[9px]" />
+              ) : null}
+            </span>
+            <span className="truncate px-0.5">Mais</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }
