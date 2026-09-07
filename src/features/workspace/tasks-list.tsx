@@ -1,5 +1,5 @@
-import { TaskBoard } from "@/components/tasks/task-board";
 import { TaskFormModal } from "@/components/tasks/task-form-modal";
+import { TasksWorkspace } from "@/components/tasks/tasks-workspace";
 import { PageHeader } from "@/components/ui/layout";
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -38,11 +38,11 @@ export async function TasksList() {
     <>
       <PageHeader
         title="Tarefas"
-        description="Arraste os cards entre as colunas para atualizar o andamento."
+        description="Painel, Lista, Timeline, Gantt, Mapa Mental ou Workload — escolha a visualizacao."
         actions={<TaskFormModal clients={clientOptions} />}
       />
 
-      <TaskBoard tasks={rows} clients={clientOptions} clientNames={names} />
+      <TasksWorkspace tasks={rows} clients={clientOptions} clientNames={names} />
     </>
   );
 }
