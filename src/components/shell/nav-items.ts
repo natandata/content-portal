@@ -70,6 +70,7 @@ function professionalNavItems(): NavGroup[] {
         { href: `${base}/dashboard`, label: "Visão Geral", icon: LayoutDashboard },
         { href: `${base}/tasks`, label: "Tarefas", icon: CheckSquare },
         { href: `${base}/meetings`, label: "Reuniões", icon: Video },
+        { href: `${base}/chat`, label: "Chat", icon: MessageCircle, badge: "chat" },
       ],
     },
     {

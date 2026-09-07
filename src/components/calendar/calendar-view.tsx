@@ -1,7 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { CalendarClock, CheckSquare, ChevronLeft, ChevronRight, Images, Plus } from "lucide-react";
+import { CalendarClock, CheckSquare, ChevronLeft, ChevronRight, Images, Plus, Video } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
@@ -13,7 +14,7 @@ import type { CalendarEntry } from "@/features/workspace/calendar-board";
 import type { TaskRow } from "@/types/database";
 
 type ViewMode = "month" | "week" | "day";
-type Source = "posts" | "tasks";
+type Source = "posts" | "tasks" | "meetings";
 
 const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 
@@ -76,15 +77,18 @@ function EntryPill({
 export function CalendarView({
   posts,
   tasks,
+  meetings = [],
   taskRows = [],
   clientOptions = [],
 }: {
   posts: CalendarEntry[];
   tasks: CalendarEntry[];
+  meetings?: CalendarEntry[];
   /** Tarefa completa por tras de cada `CalendarEntry` de tarefa — so assim da para editar tudo, nao so o prazo. */
   taskRows?: TaskRow[];
   clientOptions?: ClientOption[];
 }) {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [source, setSource] = useState<Source>("posts");
   const [referenceDate, setReferenceDate] = useState(() => {
@@ -98,7 +102,7 @@ export function CalendarView({
     open: false,
   });
 
-  const entries = source === "posts" ? posts : tasks;
+  const entries = source === "posts" ? posts : source === "tasks" ? tasks : meetings;
   const taskById = useMemo(() => new Map(taskRows.map((row) => [row.id, row])), [taskRows]);
 
   const entriesByDay = useMemo(() => {
@@ -117,6 +121,12 @@ export function CalendarView({
   function openEntry(entry: CalendarEntry) {
     if (entry.kind === "task") {
       setTaskModal({ open: true, task: taskById.get(entry.id) });
+      return;
+    }
+    if (entry.kind === "meeting") {
+      // Reuniao nao tem modal proprio aqui — leva para a pagina do cliente,
+      // onde a lista de Reunioes ja tem as acoes (cancelar, confirmar, etc.).
+      if (entry.clientId) router.push(`/professional/clients/${entry.clientId}`);
       return;
     }
     setSelected(entry);
@@ -166,11 +176,12 @@ export function CalendarView({
 
   return (
     <div>
-      {/* Posts x Tarefas: troca o que o calendario inteiro esta mostrando. */}
+      {/* Posts x Tarefas x Reunioes: troca o que o calendario inteiro esta mostrando. */}
       <div className="mb-4 flex w-fit rounded-lg border border-line bg-ink-50 p-0.5">
         {([
           { value: "posts", label: "Posts", icon: Images, count: posts.length },
           { value: "tasks", label: "Tarefas", icon: CheckSquare, count: tasks.length },
+          { value: "meetings", label: "Reunioes", icon: Video, count: meetings.length },
         ] as const).map((option) => {
           const Icon = option.icon;
           return (
@@ -431,11 +442,19 @@ function DayList({
     return (
       <EmptyState
         icon={<CalendarClock className="size-5" />}
-        title={source === "posts" ? "Nenhum post agendado" : "Nenhuma tarefa com prazo"}
+        title={
+          source === "posts"
+            ? "Nenhum post agendado"
+            : source === "tasks"
+              ? "Nenhuma tarefa com prazo"
+              : "Nenhuma reuniao"
+        }
         description={
           source === "posts"
             ? "Nao ha conteudos agendados para este dia."
-            : "Nenhuma tarefa vence neste dia."
+            : source === "tasks"
+              ? "Nenhuma tarefa vence neste dia."
+              : "Nenhuma reuniao marcada para este dia."
         }
       />
     );
