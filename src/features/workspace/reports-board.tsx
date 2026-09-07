@@ -4,7 +4,9 @@ import { InstagramAutoReportToggle } from "@/components/instagram/instagram-auto
 import { InstagramConnectCard } from "@/components/instagram/instagram-connect-card";
 import { ClientPicker } from "@/components/reports/client-picker";
 import { InstagramInsightsReportCard } from "@/components/reports/instagram-insights-report-card";
+import { InstagramInsightsReportDeleteButton } from "@/components/reports/instagram-insights-report-delete-button";
 import { InstagramInsightsReportForm } from "@/components/reports/instagram-insights-report-form";
+import { InstagramInsightsReportsClearButton } from "@/components/reports/instagram-insights-reports-clear-button";
 import { InstagramPublicReportCard } from "@/components/reports/instagram-public-report-card";
 import { InstagramPublicReportForm } from "@/components/reports/instagram-public-report-form";
 import { InstagramScheduledReportsList } from "@/components/reports/instagram-scheduled-reports-list";
@@ -176,6 +178,11 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
               <CardHeader
                 title="Insights (Instagram)"
                 description="Alcance, engajamento e metricas por post da conta autenticada, nos ultimos 3, 6 ou 9 meses."
+                actions={
+                  insightsReports.length > 0 ? (
+                    <InstagramInsightsReportsClearButton clientId={clientId} count={insightsReports.length} />
+                  ) : undefined
+                }
               />
 
               {instagramConnections.length === 0 ? (
@@ -194,6 +201,12 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
                     <div className="divide-y divide-line">
                       {insightsReports.map((report) => (
                         <div key={report.id} className="py-4 first:pt-0">
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <span className="text-xs font-semibold tracking-wide text-ink-400 uppercase">
+                              Relatorio de {report.period_months} meses
+                            </span>
+                            <InstagramInsightsReportDeleteButton reportId={report.id} clientId={clientId} />
+                          </div>
                           <InstagramInsightsReportCard report={report} />
                         </div>
                       ))}
