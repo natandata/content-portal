@@ -45,6 +45,7 @@ export function WorkspaceShell({
   // por item (bug corrigido aqui).
   const navGroups: NavGroup[] =
     navData.length > 0 && isNavGroup(navData[0]) ? (navData as NavGroup[]) : [{ items: navData as NavItem[] }];
+  const homeHref = navGroups[0]?.items[0]?.href ?? "/";
 
   useEffect(() => {
     setMenuOpen(false);
@@ -68,8 +69,31 @@ export function WorkspaceShell({
     };
   }, [menuOpen]);
 
-  const renderNavItem = (item: NavItem) => {
-    const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  // Item da barra HORIZONTAL de topo (desktop) — mais compacto que o da gaveta.
+  const renderTopNavItem = (item: NavItem) => {
+    const active = isActive(item.href);
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={cn(
+          "focus-ring flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium transition",
+          active ? "bg-ink-100 text-ink-900" : "text-ink-500 hover:bg-ink-50 hover:text-ink-800",
+        )}
+      >
+        <Icon className="size-[17px] shrink-0" aria-hidden />
+        <span className="whitespace-nowrap">{item.label}</span>
+        {item.badge ? <NavBadge count={navBadgeCount(badges, item.badge)} className="ml-0" /> : null}
+      </Link>
+    );
+  };
+
+  // Item da gaveta (mobile) — mesmo desenho de sempre, com grupos rotulados.
+  const renderDrawerNavItem = (item: NavItem) => {
+    const active = isActive(item.href);
     const Icon = item.icon;
     return (
       <Link
@@ -91,7 +115,16 @@ export function WorkspaceShell({
     );
   };
 
-  const nav = (
+  const logo = (
+    <span className="grid size-7 shrink-0 grid-cols-2 gap-[2px] rounded-md bg-ink-900 p-1">
+      <span className="rounded-[2px] bg-on-ink" />
+      <span className="rounded-[2px] bg-on-ink/55" />
+      <span className="rounded-[2px] bg-on-ink/55" />
+      <span className="rounded-[2px] bg-on-ink" />
+    </span>
+  );
+
+  const drawerNav = (
     <nav className="flex flex-col gap-6">
       {navGroups.map((group, groupIndex) => (
         <div key={groupIndex} className="flex flex-col gap-0.5">
@@ -100,7 +133,7 @@ export function WorkspaceShell({
               {group.label}
             </p>
           )}
-          {group.items.map((item) => renderNavItem(item))}
+          {group.items.map((item) => renderDrawerNavItem(item))}
         </div>
       ))}
     </nav>
@@ -126,42 +159,53 @@ export function WorkspaceShell({
     </div>
   );
 
-  const themePicker = (
-    <div className="mb-2">
-      <ThemeToggle compact />
-    </div>
-  );
-
   return (
-    <div className="min-h-dvh lg:flex">
-      {/* Sidebar — desktop */}
-      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-line bg-surface p-4 lg:flex">
-        <Link href={navGroups[0]?.items[0]?.href ?? "/"} className="mb-6 flex items-center gap-2.5 px-1">
-          <span className="grid size-8 grid-cols-2 gap-[2px] rounded-lg bg-ink-900 p-[5px]">
-            <span className="rounded-[2px] bg-on-ink" />
-            <span className="rounded-[2px] bg-on-ink/55" />
-            <span className="rounded-[2px] bg-on-ink/55" />
-            <span className="rounded-[2px] bg-on-ink" />
-          </span>
-          <span className="text-sm font-semibold tracking-tight text-ink-900">Content</span>
-        </Link>
+    <div className="flex min-h-dvh flex-col">
+      {/*
+       * Barra superior — desktop. Mesma posicao (topo, nao lateral) do shell
+       * do cliente (`ClientShell`). Os grupos do menu do profissional viram
+       * um separador vertical fino entre blocos de itens, ja que rotulo de
+       * grupo nao cabe numa barra horizontal; `overflow-x-auto` cobre telas
+       * mais estreitas sem cortar item nenhum.
+       */}
+      <header className="sticky top-0 z-30 hidden border-b border-line bg-surface/95 backdrop-blur lg:block">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-6 py-2.5">
+          <Link href={homeHref} className="flex shrink-0 items-center gap-2 pr-1">
+            {logo}
+            <span className="text-sm font-semibold tracking-tight text-ink-900">Content</span>
+          </Link>
 
-        <div className="scroll-slim flex-1 overflow-y-auto">{nav}</div>
-        <div className="pt-4">
-          {themePicker}
-          {identity}
+          <nav className="scroll-slim flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+            {navGroups.map((group, groupIndex) => (
+              <div key={groupIndex} className="flex shrink-0 items-center gap-0.5">
+                {groupIndex > 0 ? <span className="mx-1.5 h-5 w-px shrink-0 bg-line" aria-hidden /> : null}
+                {group.items.map((item) => renderTopNavItem(item))}
+              </div>
+            ))}
+          </nav>
+
+          <div className="flex shrink-0 items-center gap-1 pl-1">
+            <ThemeToggle compact />
+            <ReloadAppButton label="Recarregar o app" />
+            <span
+              className="flex size-9 items-center justify-center rounded-full bg-ink-900 text-xs font-semibold text-on-ink"
+              title={`${name} — ${ROLE_LABEL[role]} · ${email}`}
+            >
+              {initials(name)}
+            </span>
+            <form action="/api/auth/logout" method="post">
+              <IconButton label="Sair" type="submit">
+                <LogOut className="size-4" />
+              </IconButton>
+            </form>
+          </div>
         </div>
-      </aside>
+      </header>
 
-      {/* Topbar — mobile */}
+      {/* Topbar — mobile (com gaveta lateral, ja no topo desde sempre) */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-surface/95 py-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] backdrop-blur lg:hidden">
-        <Link href={navGroups[0]?.items[0]?.href ?? "/"} className="flex min-w-0 items-center gap-2">
-          <span className="grid size-7 grid-cols-2 gap-[2px] rounded-md bg-ink-900 p-1">
-            <span className="rounded-[2px] bg-on-ink" />
-            <span className="rounded-[2px] bg-on-ink/55" />
-            <span className="rounded-[2px] bg-on-ink/55" />
-            <span className="rounded-[2px] bg-on-ink" />
-          </span>
+        <Link href={homeHref} className="flex min-w-0 items-center gap-2">
+          {logo}
           <span className="truncate text-sm font-semibold text-ink-900">Content</span>
         </Link>
         <div className="flex shrink-0 items-center gap-1">
@@ -187,9 +231,11 @@ export function WorkspaceShell({
                 <X className="size-5" />
               </IconButton>
             </div>
-            <div className="scroll-slim flex-1 overflow-y-auto">{nav}</div>
+            <div className="scroll-slim flex-1 overflow-y-auto">{drawerNav}</div>
             <div className="pt-4">
-              {themePicker}
+              <div className="mb-2">
+                <ThemeToggle compact />
+              </div>
               {identity}
             </div>
           </div>
