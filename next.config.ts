@@ -14,6 +14,14 @@ const nextConfig: NextConfig = {
   // real). Isso e o motivo por tras do relatorio de Instagram nunca chegar
   // em Documentos.
   serverExternalPackages: ["@react-pdf/renderer", "@react-pdf/pdfkit", "pdfkit"],
+  // serverExternalPackages so evita o webpack bundlear o pacote -- quem
+  // decide quais ARQUIVOS entram no pacote da function e' o Node File Trace
+  // da Vercel, que analisa requires estaticamente e nunca pega um require()
+  // dinamico (exatamente o caso do pdfkit). Sem isso, o erro acima persiste
+  // mesmo com o pacote marcado como externo.
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./node_modules/pdfkit/js/data/**/*", "./node_modules/pdfkit/js/standard-fonts/**/*"],
+  },
 
   // "Contratos" virou "Documentos": link salvo ou atalho do PWA continua valendo.
   async redirects() {
