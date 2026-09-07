@@ -74,7 +74,13 @@ export function ClientShell({
                   )}
                 >
                   {item.label}
-                  {item.badge ? <NavBadge count={badges[item.badge]} className="ml-0" /> : null}
+                  {item.badge ? (
+                    <NavBadge
+                      count={badges[item.badge]}
+                      variant={item.badge === "meetings" ? "dot" : "count"}
+                      className="ml-0"
+                    />
+                  ) : null}
                 </Link>
               ))}
             </nav>

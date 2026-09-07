@@ -25,7 +25,7 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   /** Qual contador do menu aparece neste item, quando houver pendencia. */
-  badge?: "approvals" | "contracts" | "chat" | "invoices";
+  badge?: "approvals" | "contracts" | "chat" | "invoices" | "meetings";
   /**
    * So usado na area do cliente: item existe no menu de topo (desktop), mas
    * fica de fora da barra inferior do celular — ela ja esta no limite de
@@ -111,6 +111,7 @@ export const clientNavItems: NavItem[] = [
     href: "/client/meetings",
     label: "Reunioes",
     icon: Video,
+    badge: "meetings",
     hideOnMobileNav: true,
   },
   { href: "/client/documents", label: "Documentos", icon: FileText, badge: "contracts" },

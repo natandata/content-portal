@@ -2,18 +2,31 @@ import { cn } from "@/lib/utils";
 
 /**
  * Contador ao lado do nome do item de menu. Acima de 99 vira "99+" para nao
- * esticar a linha.
+ * esticar a linha. `variant="dot"` troca o numero por uma bolinha simples —
+ * usado quando o que importa e so sinalizar "tem novidade", sem quantidade
+ * (ex.: Reunioes, onde 1 pedido pendente ja muda tudo).
  */
 export function NavBadge({
   count,
   tone = "default",
+  variant = "count",
   className,
 }: {
   count: number;
   tone?: "default" | "onDark";
+  variant?: "count" | "dot";
   className?: string;
 }) {
   if (count <= 0) return null;
+
+  if (variant === "dot") {
+    return (
+      <span
+        className={cn("ml-auto size-2 shrink-0 rounded-full bg-red-500", className)}
+        aria-label="Atualizacao recente"
+      />
+    );
+  }
 
   return (
     <span

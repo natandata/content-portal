@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { CalendarClock, Check, Clock, ExternalLink, Video, X } from "lucide-react";
+import { CalendarClock, Check, Clock, ExternalLink, Trash2, Video, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,11 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
 import { getDictionary, type Dictionary } from "@/lib/i18n/dictionary";
 import { intlLocale, type Locale } from "@/lib/i18n/locale";
-import { cancelMeetingRequestAction, respondMeetingRequestAction } from "@/server/actions/meetings";
+import {
+  cancelMeetingRequestAction,
+  deleteMeetingRequestAction,
+  respondMeetingRequestAction,
+} from "@/server/actions/meetings";
 import type { MeetingRequestRow } from "@/types/database";
 
 type MeetingsDict = Dictionary["meetings"];
@@ -55,6 +59,7 @@ function MeetingRow({
     meeting.method === "calendly"
       ? meeting.status === "pending" || meeting.status === "scheduled"
       : meeting.status === "pending" || meeting.status === "approved";
+  const canDelete = meeting.status === "cancelled";
 
   function respond(decision: "approved" | "declined") {
     start(async () => {
@@ -76,6 +81,18 @@ function MeetingRow({
         return;
       }
       toast.success(dict.cancelledToast);
+      router.refresh();
+    });
+  }
+
+  function remove() {
+    start(async () => {
+      const result = await deleteMeetingRequestAction(meeting.id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(dict.deletedToast);
       router.refresh();
     });
   }
@@ -129,7 +146,7 @@ function MeetingRow({
         </a>
       ) : null}
 
-      {canRespond || canCancel ? (
+      {canRespond || canCancel || canDelete ? (
         <div className="flex flex-wrap gap-2 pt-1">
           {canRespond ? (
             <>
@@ -152,6 +169,18 @@ function MeetingRow({
               onClick={cancel}
             >
               {dict.cancelMeeting}
+            </Button>
+          ) : null}
+          {canDelete ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-red-600 hover:bg-red-50"
+              loading={pending}
+              onClick={remove}
+            >
+              <Trash2 className="size-3.5" aria-hidden />
+              {dict.deleteMeeting}
             </Button>
           ) : null}
         </div>

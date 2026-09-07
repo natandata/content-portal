@@ -368,10 +368,12 @@ export interface Dictionary {
     approve: string;
     decline: string;
     cancelMeeting: string;
+    deleteMeeting: string;
     joinMeet: string;
     approvedToast: string;
     declinedToast: string;
     cancelledToast: string;
+    deletedToast: string;
     statusPending: string;
     statusApproved: string;
     statusDeclined: string;
@@ -753,10 +755,12 @@ const ptBR: Dictionary = {
     approve: "Aprovar",
     decline: "Recusar",
     cancelMeeting: "Cancelar",
+    deleteMeeting: "Apagar",
     joinMeet: "Entrar no Google Meet",
     approvedToast: "Reuniao confirmada.",
     declinedToast: "Pedido recusado.",
     cancelledToast: "Reuniao cancelada.",
+    deletedToast: "Reuniao apagada.",
     statusPending: "Aguardando resposta",
     statusApproved: "Confirmada",
     statusDeclined: "Recusada",
@@ -1144,10 +1148,12 @@ const en: Dictionary = {
     approve: "Approve",
     decline: "Decline",
     cancelMeeting: "Cancel",
+    deleteMeeting: "Delete",
     joinMeet: "Join Google Meet",
     approvedToast: "Meeting confirmed.",
     declinedToast: "Request declined.",
     cancelledToast: "Meeting cancelled.",
+    deletedToast: "Meeting deleted.",
     statusPending: "Awaiting response",
     statusApproved: "Confirmed",
     statusDeclined: "Declined",

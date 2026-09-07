@@ -321,3 +321,37 @@ export async function cancelMeetingRequestAction(requestId: string): Promise<Act
   revalidateMeetings(meeting.client_id);
   return done();
 }
+
+/** So reunioes ja canceladas podem ser apagadas — e so limpeza de historico,
+ * nao desfaz nada que ainda esteja em andamento. */
+export async function deleteMeetingRequestAction(requestId: string): Promise<ActionResult<null>> {
+  const actor = await getActor();
+  if (!actor) return fail("Sessao expirada.");
+
+  const admin = createAdminClient();
+  const { data: meeting } = await admin
+    .from("meeting_requests")
+    .select("id, client_id, status")
+    .eq("id", requestId)
+    .maybeSingle();
+
+  if (!meeting) return fail("Pedido de reuniao nao encontrado.");
+  if (meeting.status !== "cancelled") return fail("So e possivel apagar reunioes canceladas.");
+
+  const isClientSide = actor.role === "client" && actor.client?.id === meeting.client_id;
+  if (!isClientSide) {
+    const supabase = await createClient();
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("id", meeting.client_id)
+      .maybeSingle();
+    if (!client) return fail("Sem permissao para este cliente.");
+  }
+
+  const { error } = await admin.from("meeting_requests").delete().eq("id", meeting.id);
+  if (error) return fail(describeError(error, "Nao foi possivel apagar."));
+
+  revalidateMeetings(meeting.client_id);
+  return done();
+}

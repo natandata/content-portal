@@ -549,6 +549,7 @@ export interface NavBadges {
   contracts: number;
   chat: number;
   invoices: number;
+  meetings: number;
 }
 
 /**
@@ -584,6 +585,9 @@ export async function loadStaffBadges(supabase: Client, role: UserRole): Promise
     contracts: contracts.count ?? 0,
     chat: chatCount,
     invoices: invoices.count ?? 0,
+    // Sem item de menu global de Reunioes do lado do profissional ainda
+    // (fica dentro da aba de cada cliente) — nada para contar aqui por ora.
+    meetings: 0,
   };
 }
 
@@ -591,7 +595,7 @@ export async function loadStaffBadges(supabase: Client, role: UserRole): Promise
 export async function loadClientBadges(supabase: Client): Promise<NavBadges> {
   const waiting: ContentStatus[] = ["submitted", "awaiting_approval"];
 
-  const [contents, contracts, chat, invoices] = await Promise.all([
+  const [contents, contracts, chat, invoices, meetings] = await Promise.all([
     supabase
       .from("contents")
       .select("id", { count: "exact", head: true })
@@ -602,6 +606,15 @@ export async function loadClientBadges(supabase: Client): Promise<NavBadges> {
       .eq("status", "awaiting_signature" satisfies ContractStatus),
     supabase.rpc("unread_chat_count"),
     supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
+    // Pendencia real de reuniao: pedido do metodo google_meet que o
+    // profissional propos (o cliente e quem aprova/recusa) ou qualquer
+    // link de agendamento do Calendly ainda nao usado (qualquer lado pode
+    // ser quem falta marcar).
+    supabase
+      .from("meeting_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .or("method.eq.calendly,requested_by.eq.professional"),
   ]);
 
   return {
@@ -609,6 +622,7 @@ export async function loadClientBadges(supabase: Client): Promise<NavBadges> {
     contracts: contracts.count ?? 0,
     chat: chat.data ?? 0,
     invoices: invoices.count ?? 0,
+    meetings: meetings.count ?? 0,
   };
 }
 
