@@ -176,47 +176,42 @@ export function WorkspaceShell({
     <div className="flex min-h-dvh flex-col">
       {/*
        * Barra superior — desktop. Mesma posicao (topo, nao lateral) do shell
-       * do cliente (`ClientShell`). Duas linhas, nao uma so: linha de cima
-       * (logo + controles) nunca precisa quebrar (poucos itens); a linha do
-       * menu usa `flex-wrap` (nunca `overflow-x-auto`) -- com 11 itens no
-       * profissional, um scroll horizontal escondido deixava Documentos/
-       * Relatorios/Configuracoes cortados fora da vista sem nenhum indicio
-       * de que dava pra rolar. Quebrar linha custa altura, nunca corta item.
+       * do cliente (`ClientShell`). `overflow-x-auto` na linha do menu: com
+       * 11 itens no profissional, quebrar em duas linhas (tentativa
+       * anterior) ficava pior do que rolar -- volta pro scroll horizontal.
        * Os grupos do menu viram um separador vertical fino entre blocos, ja
        * que rotulo de grupo nao cabe numa barra horizontal.
        */}
       <header className="sticky top-0 z-30 hidden border-b border-line bg-surface/95 backdrop-blur lg:block">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-1.5 px-6 py-2.5">
-          <div className="flex items-center gap-3">
-            <Link href={homeHref} className="flex shrink-0 items-center gap-2 pr-1">
-              {logo}
-              <span className="text-sm font-semibold tracking-tight text-ink-900">Content</span>
-            </Link>
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-6 py-2.5">
+          <Link href={homeHref} className="flex shrink-0 items-center gap-2 pr-1">
+            {logo}
+            <span className="text-sm font-semibold tracking-tight text-ink-900">Content</span>
+          </Link>
 
-            <nav className="flex min-w-0 flex-1 flex-wrap items-center gap-0.5">
-              {navGroups.map((group, groupIndex) => (
-                <div key={groupIndex} className="flex flex-wrap items-center gap-0.5">
-                  {groupIndex > 0 ? <span className="mx-1.5 h-5 w-px shrink-0 bg-line" aria-hidden /> : null}
-                  {group.items.map((item) => renderTopNavItem(item))}
-                </div>
-              ))}
-            </nav>
+          <nav className="scroll-slim flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto">
+            {navGroups.map((group, groupIndex) => (
+              <div key={groupIndex} className="flex shrink-0 items-center gap-0.5">
+                {groupIndex > 0 ? <span className="mx-1.5 h-5 w-px shrink-0 bg-line" aria-hidden /> : null}
+                {group.items.map((item) => renderTopNavItem(item))}
+              </div>
+            ))}
+          </nav>
 
-            <div className="flex shrink-0 items-center gap-1 pl-1">
-              <ThemeToggle compact />
-              <ReloadAppButton label="Recarregar o app" />
-              <span
-                className="flex size-9 items-center justify-center rounded-full bg-ink-900 text-xs font-semibold text-on-ink"
-                title={`${name} — ${ROLE_LABEL[role]} · ${email}`}
-              >
-                {initials(name)}
-              </span>
-              <form action="/api/auth/logout" method="post">
-                <IconButton label="Sair" type="submit">
-                  <LogOut className="size-4" />
-                </IconButton>
-              </form>
-            </div>
+          <div className="flex shrink-0 items-center gap-1 pl-1">
+            <ThemeToggle compact />
+            <ReloadAppButton label="Recarregar o app" />
+            <span
+              className="flex size-9 items-center justify-center rounded-full bg-ink-900 text-xs font-semibold text-on-ink"
+              title={`${name} — ${ROLE_LABEL[role]} · ${email}`}
+            >
+              {initials(name)}
+            </span>
+            <form action="/api/auth/logout" method="post">
+              <IconButton label="Sair" type="submit">
+                <LogOut className="size-4" />
+              </IconButton>
+            </form>
           </div>
         </div>
       </header>
