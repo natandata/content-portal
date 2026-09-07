@@ -26,16 +26,25 @@ export async function deliverInstagramInsightsReportPdf(params: {
   report: InstagramInsightsReportRow;
   requestedBy: string | null;
 }): Promise<void> {
-  try {
-    const admin = createAdminClient();
+  const admin = createAdminClient();
 
+  // Grava o motivo real da falha na propria linha do relatorio -- alem do
+  // console.error, pra ser diagnosticavel mesmo sem acesso aos logs da
+  // Vercel (temporario, ver plano; nunca mostrado ao usuario).
+  async function recordDeliveryError(message: string) {
+    await admin.from("instagram_insights_reports").update({ delivery_error: message.slice(0, 2000) }).eq("id", params.report.id);
+  }
+
+  try {
     const { data: client, error: clientError } = await admin
       .from("clients")
       .select("company_name")
       .eq("id", params.clientId)
       .maybeSingle();
     if (!client) {
-      console.error("[instagram-report-delivery] cliente nao encontrado", clientError, params.clientId);
+      const message = `cliente nao encontrado: ${clientError?.message ?? "sem erro"}`;
+      console.error("[instagram-report-delivery]", message, params.clientId);
+      await recordDeliveryError(message);
       return;
     }
 
@@ -62,7 +71,9 @@ export async function deliverInstagramInsightsReportPdf(params: {
       .select("id")
       .single();
     if (insertError || !document) {
-      console.error("[instagram-report-delivery] falha ao criar o documento", insertError);
+      const message = `falha ao criar o documento: ${insertError?.message ?? "sem erro"} ${insertError?.details ?? ""} ${insertError?.hint ?? ""}`;
+      console.error("[instagram-report-delivery]", message);
+      await recordDeliveryError(message);
       return;
     }
 
@@ -72,7 +83,9 @@ export async function deliverInstagramInsightsReportPdf(params: {
       upsert: false,
     });
     if (uploadError) {
-      console.error("[instagram-report-delivery] falha ao enviar o PDF pro storage", uploadError);
+      const message = `falha ao enviar o PDF pro storage: ${uploadError.message}`;
+      console.error("[instagram-report-delivery]", message);
+      await recordDeliveryError(message);
       return;
     }
 
@@ -89,6 +102,8 @@ export async function deliverInstagramInsightsReportPdf(params: {
     }).catch(() => {});
   } catch (error) {
     // Melhor esforco -- ver comentario da funcao -- mas nunca mais silencioso.
-    console.error("[instagram-report-delivery] falha inesperada", error);
+    const message = `falha inesperada: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`;
+    console.error("[instagram-report-delivery]", message);
+    await recordDeliveryError(message).catch(() => {});
   }
 }

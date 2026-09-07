@@ -639,6 +639,8 @@ export type InstagramInsightsReportRow = {
   audience: Record<string, unknown> | null;
   requested_by: string | null;
   error: string | null;
+  /** Erro da entrega do PDF em Documentos (etapa separada, best-effort) -- diagnostico, nunca mostrado ao usuario. */
+  delivery_error: string | null;
   created_at: string;
   completed_at: string | null;
 }
