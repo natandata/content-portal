@@ -580,6 +580,54 @@ export type ClientMetricRow = {
   updated_at: string;
 }
 
+export type InstagramReportStatus = "pending" | "running" | "done" | "failed";
+
+/** Relatorio 1: scrape de um @ qualquer, sem login. So a serviceRole escreve. */
+export type InstagramPublicReportRow = {
+  id: string;
+  client_id: string;
+  username: string;
+  status: InstagramReportStatus;
+  apify_run_id: string | null;
+  apify_dataset_id: string | null;
+  /** Dados de perfil (seguidores, bio, etc.), brutos como a Apify devolve. */
+  summary: Record<string, unknown> | null;
+  /** `latestPosts[]` da Apify, brutos. */
+  posts: unknown[] | null;
+  requested_by: string | null;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+/**
+ * Sem policy de RLS de proposito -- guarda so a referencia da conexao na
+ * Composio, nunca um token de acesso. Dona e a conta Instagram do CLIENTE
+ * (nao do profissional), conectada via OAuth.
+ */
+export type ClientInstagramConnectionRow = {
+  client_id: string;
+  composio_connection_id: string;
+  instagram_username: string | null;
+  connected_at: string;
+}
+
+/** Relatorio 2: insights autenticados (3/6/9 meses) via Composio. So a serviceRole escreve. */
+export type InstagramInsightsReportRow = {
+  id: string;
+  client_id: string;
+  period_months: 3 | 6 | 9;
+  status: InstagramReportStatus;
+  /** reach, accounts_engaged, total_interactions, etc. — janela do periodo inteiro. */
+  account_metrics: Record<string, unknown> | null;
+  /** Metricas por post dentro do periodo. */
+  posts: unknown[] | null;
+  requested_by: string | null;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -633,6 +681,15 @@ export type Database = {
       client_metrics: Table<
         ClientMetricRow,
         'client_id' | 'metric_name' | 'metric_value' | 'period_date'
+      >;
+      instagram_public_reports: Table<InstagramPublicReportRow, 'client_id' | 'username'>;
+      client_instagram_connections: Table<
+        ClientInstagramConnectionRow,
+        'client_id' | 'composio_connection_id'
+      >;
+      instagram_insights_reports: Table<
+        InstagramInsightsReportRow,
+        'client_id' | 'period_months'
       >;
       professional_payment_accounts: Table<ProfessionalPaymentAccountRow, 'user_id'>;
       stripe_events: Table<StripeEventRow, 'id' | 'type'>;
