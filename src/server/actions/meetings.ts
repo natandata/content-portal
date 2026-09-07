@@ -3,13 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { getActor } from "@/lib/auth";
-import { cancelCalendlyEvent, createSingleUseSchedulingLink } from "@/lib/calendly/api";
+import { getActor, type Actor } from "@/lib/auth";
+import { cancelCalendlyEvent, createSingleUseSchedulingLink, findScheduledEventForInvitee } from "@/lib/calendly/api";
 import { cancelMeetEvent, createMeetEvent } from "@/lib/google/calendar";
 import { sendPushToClient, sendPushToClientStaff } from "@/lib/push";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { loadCalendlyConnectionStatus } from "@/server/actions/calendly-connect";
-import { describeError, done, fail, firstIssue, type ActionResult } from "@/server/result";
+import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
+import type { MeetingRequestRow } from "@/types/database";
+
+type AdminClient = ReturnType<typeof createAdminClient>;
 
 const MEETING_DURATION_MINUTES = 30;
 
@@ -356,39 +359,26 @@ export async function deleteMeetingRequestAction(requestId: string): Promise<Act
   return done();
 }
 
-const confirmCalendlySchema = z.object({
-  scheduledStart: z.string().min(1, "Informe a data e o horario marcados."),
-});
-
 /**
- * Confirmacao manual do lado Calendly — existe porque webhook de webhook
- * subscription exige plano pago da Calendly (Standard ou superior); sem
- * isso, a Calendly nunca avisa o app sozinha que a pessoa marcou. Quem
- * marcou entra aqui com a data/hora reais (visiveis na propria Calendly ou
- * no convite que ela manda por e-mail) para o pedido sair de "pendente".
- * Qualquer um dos dois lados pode confirmar — o link de agendamento nao
- * amarra a quem coube marcar.
+ * Confirmacao do lado Calendly — existe porque a assinatura de webhook exige
+ * plano pago da Calendly (Standard ou superior); sem isso, a Calendly nunca
+ * avisa o app sozinha que a pessoa marcou. Qualquer um dos dois lados pode
+ * confirmar — o link de agendamento nao amarra a quem coube marcar.
  */
-export async function confirmCalendlyMeetingAction(
+async function loadMeetingForConfirmation(
+  admin: AdminClient,
   requestId: string,
-  input: z.input<typeof confirmCalendlySchema>,
-): Promise<ActionResult<null>> {
-  const actor = await getActor();
-  if (!actor) return fail("Sessao expirada.");
-
-  const parsed = confirmCalendlySchema.safeParse(input);
-  if (!parsed.success) return fail(firstIssue(parsed.error.issues, "Dados invalidos."));
-
-  const admin = createAdminClient();
+  actor: Actor,
+): Promise<{ error: string } | { meeting: MeetingRequestRow; isClientSide: boolean }> {
   const { data: meeting } = await admin
     .from("meeting_requests")
     .select("*")
     .eq("id", requestId)
     .maybeSingle();
 
-  if (!meeting) return fail("Pedido de reuniao nao encontrado.");
-  if (meeting.method !== "calendly") return fail("Essa confirmacao e so para reunioes pelo Calendly.");
-  if (meeting.status !== "pending") return fail("Este pedido ja foi atualizado.");
+  if (!meeting) return { error: "Pedido de reuniao nao encontrado." };
+  if (meeting.method !== "calendly") return { error: "Essa confirmacao e so para reunioes pelo Calendly." };
+  if (meeting.status !== "pending") return { error: "Este pedido ja foi atualizado." };
 
   const isClientSide = actor.role === "client" && actor.client?.id === meeting.client_id;
   if (!isClientSide) {
@@ -398,34 +388,34 @@ export async function confirmCalendlyMeetingAction(
       .select("id")
       .eq("id", meeting.client_id)
       .maybeSingle();
-    if (!client) return fail("Sem permissao para este cliente.");
+    if (!client) return { error: "Sem permissao para este cliente." };
   }
 
-  const start = new Date(parsed.data.scheduledStart);
-  if (Number.isNaN(start.getTime())) return fail("Data invalida.");
+  return { meeting, isClientSide };
+}
 
-  const { data: account } = await admin
-    .from("professional_calendly_accounts")
-    .select("event_type_duration")
-    .eq("user_id", meeting.professional_id)
-    .maybeSingle();
-
-  const end = account?.event_type_duration
-    ? new Date(start.getTime() + account.event_type_duration * 60_000)
-    : null;
-
+async function applyCalendlyConfirmation(
+  admin: AdminClient,
+  meeting: MeetingRequestRow,
+  isClientSide: boolean,
+  fields: { start: Date; end: Date | null; eventUri: string | null; joinUrl: string | null },
+): Promise<ActionResult<null>> {
   const { error } = await admin
     .from("meeting_requests")
     .update({
       status: "scheduled",
-      scheduled_start: start.toISOString(),
-      scheduled_end: end ? end.toISOString() : null,
+      scheduled_start: fields.start.toISOString(),
+      scheduled_end: fields.end ? fields.end.toISOString() : null,
+      calendly_event_uri: fields.eventUri,
+      meet_link: fields.joinUrl,
     })
     .eq("id", meeting.id);
 
   if (error) return fail(describeError(error, "Nao foi possivel confirmar."));
 
-  const dateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(start);
+  const dateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "short" }).format(
+    fields.start,
+  );
 
   if (isClientSide) {
     await sendPushToClientStaff(meeting.client_id, {
@@ -448,4 +438,91 @@ export async function confirmCalendlyMeetingAction(
 
   revalidateMeetings(meeting.client_id);
   return done();
+}
+
+/**
+ * Tentativa automatica, disparada pelo proprio clique em "Ja marquei": busca
+ * o evento de verdade na Calendly (por e-mail do convidado, dentro da janela
+ * desde que o pedido foi criado) em vez de pedir para alguem digitar a
+ * data/hora. `found: false` (ainda `ok: true` — nao e erro, so nao achou
+ * ainda) e o sinal para a UI cair no formulario manual como reserva.
+ */
+export async function autoConfirmCalendlyMeetingAction(
+  requestId: string,
+): Promise<ActionResult<{ found: boolean }>> {
+  const actor = await getActor();
+  if (!actor) return fail("Sessao expirada.");
+
+  const admin = createAdminClient();
+  const context = await loadMeetingForConfirmation(admin, requestId, actor);
+  if ("error" in context) return fail(context.error);
+  const { meeting, isClientSide } = context;
+
+  const { data: account } = await admin
+    .from("professional_calendly_accounts")
+    .select("calendly_uri")
+    .eq("user_id", meeting.professional_id)
+    .maybeSingle();
+
+  if (!account) return fail("Profissional sem Calendly conectado.");
+
+  const found = await findScheduledEventForInvitee(
+    meeting.professional_id,
+    account.calendly_uri,
+    meeting.contact_email,
+    meeting.created_at,
+  );
+  if (!found.ok) return fail(found.error);
+  if (!found.data) return ok({ found: false });
+
+  const result = await applyCalendlyConfirmation(admin, meeting, isClientSide, {
+    start: new Date(found.data.startTime),
+    end: new Date(found.data.endTime),
+    eventUri: found.data.uri,
+    joinUrl: found.data.joinUrl,
+  });
+  if (!result.ok) return result;
+  return ok({ found: true });
+}
+
+const confirmCalendlySchema = z.object({
+  scheduledStart: z.string().min(1, "Informe a data e o horario marcados."),
+});
+
+/** Reserva manual — so aberta quando a busca automatica nao encontrou nada
+ * (Calendly ainda nao sincronizou, API fora do ar, etc.). */
+export async function confirmCalendlyMeetingAction(
+  requestId: string,
+  input: z.input<typeof confirmCalendlySchema>,
+): Promise<ActionResult<null>> {
+  const actor = await getActor();
+  if (!actor) return fail("Sessao expirada.");
+
+  const parsed = confirmCalendlySchema.safeParse(input);
+  if (!parsed.success) return fail(firstIssue(parsed.error.issues, "Dados invalidos."));
+
+  const admin = createAdminClient();
+  const context = await loadMeetingForConfirmation(admin, requestId, actor);
+  if ("error" in context) return fail(context.error);
+  const { meeting, isClientSide } = context;
+
+  const start = new Date(parsed.data.scheduledStart);
+  if (Number.isNaN(start.getTime())) return fail("Data invalida.");
+
+  const { data: account } = await admin
+    .from("professional_calendly_accounts")
+    .select("event_type_duration")
+    .eq("user_id", meeting.professional_id)
+    .maybeSingle();
+
+  const end = account?.event_type_duration
+    ? new Date(start.getTime() + account.event_type_duration * 60_000)
+    : null;
+
+  return applyCalendlyConfirmation(admin, meeting, isClientSide, {
+    start,
+    end,
+    eventUri: null,
+    joinUrl: null,
+  });
 }

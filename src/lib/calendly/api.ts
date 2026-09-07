@@ -184,3 +184,61 @@ export async function cancelCalendlyEvent(userId: string, eventUri: string, reas
     body: JSON.stringify({ reason }),
   }).catch(() => {});
 }
+
+export interface CalendlyScheduledEvent {
+  uri: string;
+  startTime: string;
+  endTime: string;
+  joinUrl: string | null;
+}
+
+/**
+ * Acha, na propria Calendly, o evento real que corresponde a um pedido
+ * pendente — usado pelo botao "Ja marquei" no plano Free (sem webhook): em
+ * vez de confiar em alguem digitar a data/hora, busca de verdade.
+ *
+ * Sem um id de reserva para casar 1:1 (o link de uso unico nao devolve isso
+ * de volta), a correlacao e por e-mail do convidado dentro da janela de
+ * eventos criados desde o pedido — o mesmo criterio que o webhook usa.
+ */
+export async function findScheduledEventForInvitee(
+  userId: string,
+  userUri: string,
+  contactEmail: string,
+  sinceISO: string,
+): Promise<Result<CalendlyScheduledEvent | null>> {
+  const listResult = await calendlyFetch(
+    userId,
+    `/scheduled_events?user=${encodeURIComponent(userUri)}&status=active&min_start_time=${encodeURIComponent(sinceISO)}&count=20`,
+  );
+  if (!listResult.ok) return listResult;
+
+  const events = (
+    listResult.data as {
+      collection: { uri: string; start_time: string; end_time: string; location?: { join_url?: string } }[];
+    }
+  ).collection;
+
+  for (const event of events) {
+    const inviteesResult = await calendlyFetch(userId, `${event.uri}/invitees`);
+    if (!inviteesResult.ok) continue;
+
+    const invitees = (inviteesResult.data as { collection: { email: string; status: string }[] }).collection;
+    const matched = invitees.some(
+      (invitee) => invitee.status === "active" && invitee.email.toLowerCase() === contactEmail.toLowerCase(),
+    );
+    if (matched) {
+      return {
+        ok: true,
+        data: {
+          uri: event.uri,
+          startTime: event.start_time,
+          endTime: event.end_time,
+          joinUrl: event.location?.join_url ?? null,
+        },
+      };
+    }
+  }
+
+  return { ok: true, data: null };
+}

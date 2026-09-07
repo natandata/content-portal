@@ -14,6 +14,7 @@ import { Modal } from "@/components/ui/modal";
 import { getDictionary, type Dictionary } from "@/lib/i18n/dictionary";
 import { intlLocale, type Locale } from "@/lib/i18n/locale";
 import {
+  autoConfirmCalendlyMeetingAction,
   cancelMeetingRequestAction,
   confirmCalendlyMeetingAction,
   deleteMeetingRequestAction,
@@ -113,7 +114,25 @@ function MeetingRow({
     });
   }
 
-  function confirmCalendly() {
+  function tryAutoConfirm() {
+    start(async () => {
+      const result = await autoConfirmCalendlyMeetingAction(meeting.id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      if (!result.data.found) {
+        // Calendly ainda nao mostra o evento (pode nao ter sincronizado, ou
+        // a API pode estar fora do ar) — cai no formulario manual.
+        setConfirmOpen(true);
+        return;
+      }
+      toast.success(dict.calendlyConfirmedToast);
+      router.refresh();
+    });
+  }
+
+  function submitManualConfirm() {
     // O input datetime-local nao carrega fuso — convertido aqui, no
     // navegador de quem preencheu, "sabe" o fuso local certo. Mandar a
     // string crua para o servidor deixaria a interpretacao a merce do
@@ -195,7 +214,7 @@ function MeetingRow({
       {canRespond || canCancel || canDelete || canConfirmCalendly ? (
         <div className="flex flex-wrap gap-2 pt-1">
           {canConfirmCalendly ? (
-            <Button size="sm" variant="secondary" loading={pending} onClick={() => setConfirmOpen(true)}>
+            <Button size="sm" variant="secondary" loading={pending} onClick={tryAutoConfirm}>
               <CalendarCheck className="size-3.5" aria-hidden />
               {dict.calendlyConfirmButton}
             </Button>
@@ -249,7 +268,7 @@ function MeetingRow({
               <Button variant="secondary" onClick={() => setConfirmOpen(false)} disabled={pending}>
                 {dict.cancel}
               </Button>
-              <Button loading={pending} disabled={!scheduledAt} onClick={confirmCalendly}>
+              <Button loading={pending} disabled={!scheduledAt} onClick={submitManualConfirm}>
                 {dict.calendlyConfirmSubmit}
               </Button>
             </>

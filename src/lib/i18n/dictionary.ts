@@ -781,7 +781,7 @@ const ptBR: Dictionary = {
     calendlyConfirmButton: "Ja marquei",
     calendlyConfirmModalTitle: "Confirmar horario marcado",
     calendlyConfirmModalDescription:
-      "Informe a data e o horario que voce marcou na Calendly (veja no convite que ela mandou por e-mail).",
+      "Ainda nao achamos esse agendamento automaticamente na Calendly. Informe a data e o horario que voce marcou (veja no convite que ela mandou por e-mail).",
     calendlyConfirmSubmit: "Confirmar",
     fieldScheduledAt: "Data e horario",
     calendlyConfirmedToast: "Reuniao confirmada.",
@@ -1181,7 +1181,7 @@ const en: Dictionary = {
     calendlyConfirmButton: "I booked it",
     calendlyConfirmModalTitle: "Confirm the scheduled time",
     calendlyConfirmModalDescription:
-      "Enter the date and time you booked on Calendly (check the invite it emailed you).",
+      "We couldn't find this booking on Calendly automatically yet. Enter the date and time you booked (check the invite it emailed you).",
     calendlyConfirmSubmit: "Confirm",
     fieldScheduledAt: "Date and time",
     calendlyConfirmedToast: "Meeting confirmed.",
