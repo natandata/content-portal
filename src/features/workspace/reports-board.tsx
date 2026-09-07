@@ -2,6 +2,8 @@ import { AlertTriangle, BarChart3, Users } from "lucide-react";
 
 import { InstagramConnectCard } from "@/components/instagram/instagram-connect-card";
 import { ClientPicker } from "@/components/reports/client-picker";
+import { InstagramInsightsReportCard } from "@/components/reports/instagram-insights-report-card";
+import { InstagramInsightsReportForm } from "@/components/reports/instagram-insights-report-form";
 import { InstagramPublicReportCard } from "@/components/reports/instagram-public-report-card";
 import { InstagramPublicReportForm } from "@/components/reports/instagram-public-report-form";
 import { MetricFormModal } from "@/components/reports/metric-form-modal";
@@ -10,8 +12,9 @@ import { RealtimeRefresh } from "@/components/realtime/realtime-refresh";
 import { EmptyState } from "@/components/ui/feedback";
 import { Card, CardHeader, PageHeader } from "@/components/ui/layout";
 import { requireStaff } from "@/lib/auth";
-import { apifyConfig } from "@/lib/env";
+import { apifyConfig, composioConfig } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { loadInstagramConnectionStatus } from "@/server/actions/instagram-connect";
 
 const ERROR_MESSAGE: Record<string, string> = {
   instagram_denied: "Voce cancelou a conexao no Instagram.",
@@ -25,6 +28,7 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
   const actor = await requireStaff();
   const supabase = await createClient();
   const apifyConfigured = Boolean(apifyConfig());
+  const composioConfigured = Boolean(composioConfig());
 
   const { data: clients } = await supabase
     .from("clients")
@@ -57,6 +61,19 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
           .eq("client_id", clientId)
           .order("created_at", { ascending: false })
       : { data: [] };
+
+  const [instagramConnection, insightsReports] =
+    clientId && composioConfigured
+      ? await Promise.all([
+          loadInstagramConnectionStatus(clientId),
+          supabase
+            .from("instagram_insights_reports")
+            .select("*")
+            .eq("client_id", clientId)
+            .order("created_at", { ascending: false })
+            .then(({ data }) => data ?? []),
+        ])
+      : [{ connected: false, instagramUsername: null }, []];
 
   return (
     <>
@@ -142,9 +159,37 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
             )}
           </Card>
 
-          <Card className="mt-4">
-            <InstagramConnectCard clientId={clientId} />
-          </Card>
+          {composioConfigured ? (
+            <Card className="mt-4">
+              <InstagramConnectCard clientId={clientId} />
+            </Card>
+          ) : null}
+
+          {composioConfigured ? (
+            <Card className="mt-4">
+              <CardHeader
+                title="Insights (Instagram)"
+                description="Alcance, engajamento e metricas por post da conta autenticada, nos ultimos 3, 6 ou 9 meses."
+              />
+
+              {!instagramConnection.connected ? (
+                <p className="text-sm text-ink-500">Conecte o Instagram do cliente acima para gerar este relatorio.</p>
+              ) : (
+                <div className="space-y-4">
+                  <InstagramInsightsReportForm clientId={clientId} />
+                  {insightsReports.length > 0 ? (
+                    <div className="divide-y divide-line">
+                      {insightsReports.map((report) => (
+                        <div key={report.id} className="py-4 first:pt-0">
+                          <InstagramInsightsReportCard report={report} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </Card>
+          ) : null}
         </div>
       ) : null}
     </>
