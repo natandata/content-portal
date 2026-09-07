@@ -777,7 +777,7 @@ const ptBR: Dictionary = {
     statusScheduled: "Agendada",
     calendlyAwaitingLabel: "Aguardando agendamento",
     calendlyOpenButton: "Abrir Calendly",
-    calendlyRequestButton: "Marcar reuniao",
+    calendlyRequestButton: "Solicitar reuniao",
     calendlyEventSummary: "reuniao de",
     calendlyNotConnectedWarning:
       "Seu profissional ainda nao conectou o Calendly. Voce ainda pode pedir uma reuniao pelo metodo atual.",
@@ -1180,7 +1180,7 @@ const en: Dictionary = {
     statusScheduled: "Scheduled",
     calendlyAwaitingLabel: "Awaiting scheduling",
     calendlyOpenButton: "Open Calendly",
-    calendlyRequestButton: "Schedule meeting",
+    calendlyRequestButton: "Request meeting",
     calendlyEventSummary: "meeting for",
     calendlyNotConnectedWarning:
       "Your professional hasn't connected Calendly yet. You can still request a meeting the current way.",
