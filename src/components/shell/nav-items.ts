@@ -22,7 +22,8 @@ import type { UserRole } from "@/types/database";
 export type NavBadgeKey = "approvals" | "contracts" | "chat" | "invoices" | "meetings";
 
 export interface NavItem {
-  href: string;
+  /** Opcional -- um item com `children` nunca navega sozinho, so abre o dropdown. */
+  href?: string;
   label: string;
   icon: LucideIcon;
   /** Qual contador do menu aparece neste item, quando houver pendencia. Mais
@@ -35,7 +36,16 @@ export interface NavItem {
    * itens que cabem sem cortar em 360-375px.
    */
   hideOnMobileNav?: boolean;
+  /**
+   * Presenca marca este item como um dropdown (so no menu de topo do
+   * desktop, ver `NavDropdown`) -- mobile continua achatando isso pra uma
+   * lista comum, sem dropdown nenhum (ver `workspace-shell.tsx`).
+   */
+  children?: NavItem[];
 }
+
+/** Item "folha" de verdade -- tem `href`, nunca e um gatilho de dropdown (nunca acontece do lado do cliente). */
+export type NavLeafItem = NavItem & { href: string };
 
 export interface NavGroup {
   label?: string;
@@ -76,17 +86,29 @@ function professionalNavItems(): NavGroup[] {
     {
       label: "PLANEJAMENTO",
       items: [
-        { href: `${base}/calendar`, label: "Calendário", icon: Calendar },
-        { href: `${base}/ideas`, label: "Banco de Ideias", icon: Lightbulb },
+        {
+          label: "Planejamento",
+          icon: Calendar,
+          children: [
+            { href: `${base}/calendar`, label: "Calendário", icon: Calendar },
+            { href: `${base}/ideas`, label: "Banco de Ideias", icon: Lightbulb },
+          ],
+        },
       ],
     },
     {
       label: "GESTÃO",
       items: [
-        { href: `${base}/clients`, label: "Clientes", icon: Users },
-        { href: `${base}/payments`, label: "Cobranças", icon: Banknote, badge: "invoices" },
-        { href: `${base}/documents`, label: "Documentos", icon: FileText, badge: "contracts" },
-        { href: `${base}/reports`, label: "Relatórios", icon: BarChart3 },
+        {
+          label: "Gestão",
+          icon: Users,
+          children: [
+            { href: `${base}/clients`, label: "Clientes", icon: Users },
+            { href: `${base}/payments`, label: "Cobranças", icon: Banknote, badge: "invoices" },
+            { href: `${base}/documents`, label: "Documentos", icon: FileText, badge: "contracts" },
+            { href: `${base}/reports`, label: "Relatórios", icon: BarChart3 },
+          ],
+        },
       ],
     },
     {
@@ -119,7 +141,7 @@ export function navBadgeCount(
  * destinos de verdade. As rotas antigas continuam existindo (ver
  * `content-hub.tsx` e `documents-hub.tsx`), so nao aparecem mais aqui.
  */
-export const clientNavItems: NavItem[] = [
+export const clientNavItems: NavLeafItem[] = [
   { href: "/client/dashboard", label: "Inicio", icon: LayoutDashboard },
   { href: "/client/content", label: "Conteudos", icon: Images, badge: "approvals" },
   { href: "/client/meetings", label: "Reunioes", icon: Video, badge: "meetings" },

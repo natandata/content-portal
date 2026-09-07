@@ -6,8 +6,9 @@ import { useEffect, useState, type ReactNode } from "react";
 import { LogOut, Menu, X } from "lucide-react";
 
 import { NavBadge } from "@/components/shell/nav-badge";
+import { NavDropdown } from "@/components/shell/nav-dropdown";
 import { navBadgeCount, staffNavItems, type NavBadgeKey } from "@/components/shell/nav-items";
-import type { NavGroup, NavItem } from "@/components/shell/nav-items";
+import type { NavGroup, NavItem, NavLeafItem } from "@/components/shell/nav-items";
 import { ReloadAppButton } from "@/components/shell/reload-app-button";
 import { IconButton } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -15,6 +16,11 @@ import { ROLE_LABEL } from "@/lib/domain";
 import { cn, initials } from "@/lib/utils";
 import type { NavBadges } from "@/server/queries";
 import type { UserRole } from "@/types/database";
+
+/** Item "folha" de verdade -- tem `href`, nunca e um gatilho de dropdown. */
+function isLeafItem(item: NavItem): item is NavLeafItem {
+  return Boolean(item.href);
+}
 
 export function WorkspaceShell({
   role,
@@ -52,7 +58,13 @@ export function WorkspaceShell({
   // primeiros 4 itens na ordem em que ja aparecem no menu (pro profissional,
   // isso e o grupo "Visao Geral" inteiro; pro admin, os 4 primeiros da lista
   // plana). O resto continua acessivel pela gaveta, que "Mais" abre.
-  const flatItems = navGroups.flatMap((group) => group.items);
+  //
+  // Mobile nunca mostra dropdown -- achata um nivel (`item.children ?? [item]`)
+  // antes de tudo, entao os itens que viraram dropdown no desktop (ver
+  // NavDropdown) continuam aparecendo soltos aqui, igual a antes.
+  const flatItems = navGroups
+    .flatMap((group) => group.items.flatMap((item) => item.children ?? [item]))
+    .filter(isLeafItem);
   const primaryMobileItems = flatItems.slice(0, 4);
   const overflowItems = flatItems.slice(4);
   const overflowBadgeKeys = overflowItems.flatMap((item) =>
@@ -85,7 +97,9 @@ export function WorkspaceShell({
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   // Item da barra HORIZONTAL de topo (desktop) — mais compacto que o da gaveta.
+  // So chamado com item folha (com children, quem renderiza e NavDropdown).
   const renderTopNavItem = (item: NavItem) => {
+    if (!isLeafItem(item)) return null;
     const active = isActive(item.href);
     const Icon = item.icon;
     return (
@@ -105,7 +119,9 @@ export function WorkspaceShell({
   };
 
   // Item da gaveta (mobile) — mesmo desenho de sempre, com grupos rotulados.
+  // So chamado com item folha -- ver achatamento em `drawerNav` abaixo.
   const renderDrawerNavItem = (item: NavItem) => {
+    if (!isLeafItem(item)) return null;
     const active = isActive(item.href);
     const Icon = item.icon;
     return (
@@ -146,7 +162,7 @@ export function WorkspaceShell({
               {group.label}
             </p>
           )}
-          {group.items.map((item) => renderDrawerNavItem(item))}
+          {group.items.flatMap((item) => item.children ?? [item]).map((item) => renderDrawerNavItem(item))}
         </div>
       ))}
     </nav>
@@ -193,7 +209,13 @@ export function WorkspaceShell({
             {navGroups.map((group, groupIndex) => (
               <div key={groupIndex} className="flex shrink-0 items-center gap-0.5">
                 {groupIndex > 0 ? <span className="mx-1.5 h-5 w-px shrink-0 bg-line" aria-hidden /> : null}
-                {group.items.map((item) => renderTopNavItem(item))}
+                {group.items.map((item) =>
+                  item.children ? (
+                    <NavDropdown key={item.label} item={item} badges={badges} isActive={isActive} />
+                  ) : (
+                    renderTopNavItem(item)
+                  ),
+                )}
               </div>
             ))}
           </nav>
