@@ -35,7 +35,15 @@ import {
 } from "@/server/queries";
 import type { ContentStatus } from "@/types/database";
 
-export async function ClientDetail({ clientId }: { clientId: string }) {
+export async function ClientDetail({
+  clientId,
+  defaultTab,
+}: {
+  clientId: string;
+  /** Aba que comeca ativa — link direto (ex.: clique numa reuniao no
+   * Calendario) usa `?tab=reunioes` em vez de cair sempre em Visao Geral. */
+  defaultTab?: string;
+}) {
   const actor = await requireStaff();
   const base = basePath(actor.role);
   const supabase = await createClient();
@@ -183,6 +191,7 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
       </div>
 
       <ClientDetailTabs
+        defaultTab={defaultTab}
         tabs={[
           {
             id: "visao-geral",

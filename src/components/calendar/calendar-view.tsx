@@ -124,9 +124,10 @@ export function CalendarView({
       return;
     }
     if (entry.kind === "meeting") {
-      // Reuniao nao tem modal proprio aqui — leva para a pagina do cliente,
-      // onde a lista de Reunioes ja tem as acoes (cancelar, confirmar, etc.).
-      if (entry.clientId) router.push(`/professional/clients/${entry.clientId}`);
+      // Reuniao nao tem modal proprio aqui — leva direto para a aba
+      // Reunioes do cliente (nao Visao Geral), onde a lista ja tem as
+      // acoes de verdade (cancelar, confirmar, etc.).
+      if (entry.clientId) router.push(`/professional/clients/${entry.clientId}?tab=reunioes`);
       return;
     }
     setSelected(entry);

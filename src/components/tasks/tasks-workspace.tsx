@@ -553,19 +553,24 @@ function GanttView({
   const dated = useMemo(() => tasks.filter((task) => task.due_date), [tasks]);
   const undated = useMemo(() => tasks.filter((task) => !task.due_date), [tasks]);
 
+  // O eixo e governado pelos PRAZOS, nao por quando a tarefa nasceu: uma
+  // tarefa criada meses atras (mas com prazo proximo) nao pode esticar o
+  // grafico inteiro e espremer todas as outras barras numa fatia minuscula.
+  // O inicio de cada barra ainda usa `created_at`, so que "cortado" na borda
+  // esquerda do eixo quando for mais antigo que ela.
   const range = useMemo(() => {
     if (dated.length === 0) return null;
-    let min = Infinity;
-    let max = -Infinity;
+    const now = Date.now();
+    let minDue = Infinity;
+    let maxDue = -Infinity;
     for (const task of dated) {
-      const start = new Date(task.created_at.slice(0, 10)).getTime();
-      const end = new Date(task.due_date!).getTime();
-      if (start < min) min = start;
-      if (end > max) max = end;
-      if (end < min) min = end;
+      const due = new Date(task.due_date!).getTime();
+      if (due < minDue) minDue = due;
+      if (due > maxDue) maxDue = due;
     }
-    min -= 24 * 60 * 60 * 1000;
-    max += 24 * 60 * 60 * 1000;
+    const DAY = 24 * 60 * 60 * 1000;
+    const min = Math.min(minDue, now) - 3 * DAY;
+    const max = maxDue + 3 * DAY;
     return { min, max };
   }, [dated]);
 
@@ -607,12 +612,12 @@ function GanttView({
         <p className="mb-3 text-xs text-ink-500">{undated.length} sem prazo — nao aparecem no Gantt.</p>
       ) : null}
       <div className="card overflow-x-auto p-0">
-        <div style={{ minWidth: Math.max(600, days * 24) }}>
-          <div className="relative h-8 border-b border-line bg-ink-50">
+        <div style={{ minWidth: Math.max(700, days * 40) }}>
+          <div className="relative h-9 border-b border-line bg-ink-50">
             {weekMarks.map((mark, index) => (
               <div
                 key={index}
-                className="absolute top-0 h-full border-l border-line px-1.5 text-[10px] leading-8 text-ink-400"
+                className="absolute top-0 h-full border-l border-line px-2 text-[11px] leading-9 text-ink-500"
                 style={{ left: `${mark.leftPct}%` }}
               >
                 {mark.label}
@@ -623,20 +628,21 @@ function GanttView({
 
           <div className="divide-y divide-line">
             {sorted.map((task) => {
-              const start = new Date(task.created_at.slice(0, 10)).getTime();
+              const rawStart = new Date(task.created_at.slice(0, 10)).getTime();
               const end = new Date(task.due_date!).getTime();
-              const left = pct(Math.min(start, end));
-              const width = Math.max(1.5, pct(Math.max(start, end)) - left);
+              const start = Math.max(Math.min(rawStart, end), range.min);
+              const left = pct(start);
+              const width = Math.max(3, pct(Math.max(end, start)) - left);
               const clientName = task.client_id ? clientNames.get(task.client_id) : undefined;
 
               return (
-                <div key={task.id} className="relative flex h-11 items-center">
+                <div key={task.id} className="relative flex h-12 items-center">
                   <button
                     type="button"
                     onClick={() => onOpen(task)}
                     title={task.title}
                     className={cn(
-                      "focus-ring absolute flex h-6 items-center truncate rounded-md px-2 text-[11px] font-medium text-white transition hover:brightness-110",
+                      "focus-ring absolute flex h-7 items-center truncate rounded-md px-2.5 text-xs font-medium text-white transition hover:brightness-110",
                       STATUS_DOT[task.status],
                     )}
                     style={{ left: `${left}%`, width: `${width}%` }}
@@ -794,7 +800,7 @@ function WorkloadView({ tasks }: { tasks: TaskRow[] }) {
   }
 
   return (
-    <div className="card space-y-3">
+    <div className="card space-y-4">
       {rows.map((row) => {
         const counts = STATUS_ORDER.map((status) => ({
           status,
@@ -802,16 +808,16 @@ function WorkloadView({ tasks }: { tasks: TaskRow[] }) {
         }));
 
         return (
-          <div key={row.label} className="flex items-center gap-3">
+          <div key={row.label} className="flex items-center gap-4">
             <span
               className={cn(
-                "w-32 shrink-0 text-xs font-medium",
+                "w-36 shrink-0 text-sm font-medium",
                 row.tone === "danger" ? "text-red-600" : row.tone === "muted" ? "text-ink-400" : "text-ink-600",
               )}
             >
               {row.label}
             </span>
-            <div className="flex h-6 flex-1 overflow-hidden rounded-md bg-ink-50">
+            <div className="flex h-7 flex-1 overflow-hidden rounded-md bg-ink-50">
               {counts.map(({ status, count }) =>
                 count === 0 ? null : (
                   <div
@@ -823,7 +829,7 @@ function WorkloadView({ tasks }: { tasks: TaskRow[] }) {
                 ),
               )}
             </div>
-            <span className="w-6 shrink-0 text-right text-xs text-ink-500 tabular-nums">{row.tasks.length}</span>
+            <span className="w-8 shrink-0 text-right text-sm text-ink-500 tabular-nums">{row.tasks.length}</span>
           </div>
         );
       })}

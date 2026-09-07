@@ -1,6 +1,13 @@
 import { ClientDetail } from "@/features/workspace/client-detail";
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const { id } = await params;
-  return <ClientDetail clientId={id} />;
+  const { tab } = await searchParams;
+  return <ClientDetail clientId={id} defaultTab={tab} />;
 }
