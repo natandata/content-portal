@@ -56,6 +56,7 @@ export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
   approved: "Aprovado",
   replaced: "Substituido",
   delivered: "Entregue",
+  pending_delivery: "Aguardando envio",
 };
 
 export const CONTRACT_STATUS_TONE: Record<ContractStatus, BadgeTone> = {
@@ -65,6 +66,7 @@ export const CONTRACT_STATUS_TONE: Record<ContractStatus, BadgeTone> = {
   approved: "success",
   replaced: "neutral",
   delivered: "success",
+  pending_delivery: "warning",
 };
 
 export const DOCUMENT_KIND_LABEL: Record<DocumentKind, string> = {

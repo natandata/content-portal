@@ -2,15 +2,20 @@ import "server-only";
 
 import { renderInstagramInsightsPdf } from "@/server/reports/instagram-insights-pdf";
 import { contractPath, BUCKETS } from "@/lib/paths";
-import { sendPushToClient } from "@/lib/push";
+import { sendPushToClientStaff } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/server";
 import type { InstagramInsightsReportRow } from "@/types/database";
 
 /**
  * Gera o PDF do relatorio de insights e entrega em Documentos (tabela
  * `contracts`, mesmo bucket/fluxo dos documentos que a equipe ja envia --
- * ganha preview, download assinado e a tela de Documentos do cliente de
- * graca). Chamado tanto pelo disparo manual quanto pelo cron automatico.
+ * ganha preview, download assinado e a tela de Documentos de graca). Chamado
+ * tanto pelo disparo manual quanto pelo cron automatico.
+ *
+ * Nasce `client_visible: false` / `status: 'pending_delivery'` -- o envio ao
+ * cliente nunca e automatico, so quando o profissional clicar em "Enviar ao
+ * cliente" (`sendDocumentToClientAction`). Aqui so avisa a EQUIPE que ha um
+ * relatorio novo esperando revisao.
  *
  * Melhor esforco de proposito: o relatorio em si (`instagram_insights_reports`)
  * ja foi salvo com sucesso antes desta funcao rodar -- uma falha aqui (PDF ou
@@ -47,6 +52,8 @@ export async function deliverInstagramInsightsReportPdf(params: {
         kind: "report",
         requires_signature: false,
         allow_gov_br_signature: false,
+        client_visible: false,
+        status: "pending_delivery",
         created_by: params.requestedBy,
       })
       .select("id")
@@ -62,13 +69,13 @@ export async function deliverInstagramInsightsReportPdf(params: {
 
     await admin
       .from("contracts")
-      .update({ original_file_path: filePath, uploaded_at: new Date().toISOString(), status: "delivered" })
+      .update({ original_file_path: filePath, uploaded_at: new Date().toISOString() })
       .eq("id", document.id);
 
-    await sendPushToClient(params.clientId, {
-      title: "Novo relatorio de Instagram",
-      body: `"${title}" ja esta disponivel em Documentos.`,
-      url: "/client/documents",
+    await sendPushToClientStaff(params.clientId, {
+      title: "Relatorio pronto para envio",
+      body: `"${title}" foi gerado e esta aguardando voce enviar ao cliente.`,
+      url: "/professional/documents",
       tag: `document-${document.id}`,
     }).catch(() => {});
   } catch {

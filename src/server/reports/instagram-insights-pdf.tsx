@@ -2,38 +2,25 @@ import "server-only";
 
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 
+import {
+  extractDemographicsEntries,
+  metricTotal,
+  num,
+  postMetricValue,
+  str,
+} from "@/lib/instagram-insights";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import type { InstagramInsightsReportRow } from "@/types/database";
 
-function str(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value : null;
-}
-function num(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-/** Mesma leitura defensiva de `InstagramInsightsReportCard` -- a Graph API embrulha series em `{data:[{name,values:[...]}]}`. */
-function metricTotal(raw: unknown, name: string): number {
-  const data =
-    raw && typeof raw === "object" && Array.isArray((raw as { data?: unknown }).data)
-      ? (raw as { data: unknown[] }).data
-      : [];
-  const entry = data.find(
-    (item) => item && typeof item === "object" && (item as { name?: unknown }).name === name,
-  ) as { values?: { value?: unknown }[] } | undefined;
-
-  return (entry?.values ?? []).reduce((sum, point) => sum + (num(point?.value) ?? 0), 0);
-}
-
-function postMetricValue(insights: unknown, name: string): number | null {
-  if (!Array.isArray(insights)) return null;
-  const entry = insights.find(
-    (item) => item && typeof item === "object" && (item as { name?: unknown }).name === name,
-  ) as { values?: { value?: unknown }[] } | undefined;
-  return num(entry?.values?.[0]?.value);
-}
-
 const MAX_POSTS_IN_PDF = 20;
+const MAX_STORIES_IN_PDF = 12;
+
+const AUDIENCE_DIMENSION_LABEL: Record<string, string> = {
+  age: "Idade",
+  gender: "Genero",
+  city: "Cidade",
+  country: "Pais",
+};
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontSize: 10, fontFamily: "Helvetica", color: "#1a1a1a" },
@@ -51,7 +38,8 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 15, fontWeight: 700 },
   statLabel: { fontSize: 8, color: "#666", marginTop: 2 },
-  sectionTitle: { fontSize: 12, fontWeight: 700, marginBottom: 8, marginTop: 4 },
+  sectionTitle: { fontSize: 12, fontWeight: 700, marginBottom: 8, marginTop: 14 },
+  sectionNote: { fontSize: 8, color: "#888", marginTop: -6, marginBottom: 8 },
   table: { borderWidth: 1, borderColor: "#e2e2e2", borderRadius: 4 },
   tableHeaderRow: { flexDirection: "row", backgroundColor: "#f5f5f5", borderBottomWidth: 1, borderBottomColor: "#e2e2e2" },
   tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
@@ -59,6 +47,20 @@ const styles = StyleSheet.create({
   cellDate: { width: "16%", padding: 6, fontSize: 8 },
   cellNum: { width: "11%", padding: 6, fontSize: 8, textAlign: "right" },
   headerCell: { fontSize: 8, fontWeight: 700, color: "#555" },
+  storyCard: {
+    width: "31%",
+    borderWidth: 1,
+    borderColor: "#e2e2e2",
+    borderRadius: 4,
+    padding: 6,
+    marginRight: "1.5%",
+    marginBottom: 8,
+  },
+  storyDate: { fontSize: 8, color: "#666" },
+  storyMetric: { fontSize: 8, marginTop: 2 },
+  audienceGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  audienceBox: { width: "47%" },
+  audienceRow: { flexDirection: "row", justifyContent: "space-between", fontSize: 8, paddingVertical: 2 },
   footer: { position: "absolute", bottom: 24, left: 32, right: 32, fontSize: 8, color: "#999", textAlign: "center" },
 });
 
@@ -70,15 +72,22 @@ function InstagramInsightsPdfDocument({
   report: InstagramInsightsReportRow;
 }) {
   const posts = (Array.isArray(report.posts) ? report.posts : []).slice(0, MAX_POSTS_IN_PDF);
+  const stories = (Array.isArray(report.stories) ? report.stories : []).slice(0, MAX_STORIES_IN_PDF);
+  const audience = (report.audience ?? {}) as Record<string, unknown>;
+  const audienceDimensions = Object.keys(audience);
 
   const stats: { label: string; value: number }[] = [
     { label: "Alcance", value: metricTotal(report.account_metrics, "reach") },
     { label: "Interacoes", value: metricTotal(report.account_metrics, "total_interactions") },
+    { label: "Contas engajadas", value: metricTotal(report.account_metrics, "accounts_engaged") },
     { label: "Curtidas", value: metricTotal(report.account_metrics, "likes") },
     { label: "Comentarios", value: metricTotal(report.account_metrics, "comments") },
     { label: "Compartilhamentos", value: metricTotal(report.account_metrics, "shares") },
     { label: "Salvamentos", value: metricTotal(report.account_metrics, "saves") },
+    { label: "Respostas", value: metricTotal(report.account_metrics, "replies") },
+    { label: "Visualizacoes", value: metricTotal(report.account_metrics, "views") },
     { label: "Visitas ao perfil", value: metricTotal(report.account_metrics, "profile_views") },
+    { label: "Cliques no site", value: metricTotal(report.account_metrics, "website_clicks") },
     { label: "Seguidores", value: metricTotal(report.account_metrics, "follower_count") },
   ];
 
@@ -135,6 +144,68 @@ function InstagramInsightsPdfDocument({
                   <Text style={styles.cellNum}>{likes != null ? likes.toLocaleString("pt-BR") : "-"}</Text>
                   <Text style={styles.cellNum}>{comments != null ? comments.toLocaleString("pt-BR") : "-"}</Text>
                   <Text style={styles.cellNum}>{saved != null ? saved.toLocaleString("pt-BR") : "-"}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        <Text style={styles.sectionTitle}>Stories ativos agora {stories.length > 0 ? `(${stories.length})` : ""}</Text>
+        <Text style={styles.sectionNote}>
+          A Meta so devolve stories dentro das 24h -- nunca historico do periodo do relatorio.
+        </Text>
+
+        {stories.length === 0 ? (
+          <Text>Nenhum story ativo no momento da geracao.</Text>
+        ) : (
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {stories.map((raw, index) => {
+              const story = raw as Record<string, unknown>;
+              const timestamp = str(story.timestamp);
+              const views = num(story.view_count) ?? postMetricValue(story.insights, "views");
+              const reach = postMetricValue(story.insights, "reach");
+              const replies = postMetricValue(story.insights, "replies");
+
+              return (
+                <View key={str(story.id) ?? index} style={styles.storyCard}>
+                  <Text style={styles.storyDate}>{timestamp ? formatDateTime(timestamp) : "-"}</Text>
+                  <Text style={styles.storyMetric}>Views: {views != null ? views.toLocaleString("pt-BR") : "-"}</Text>
+                  <Text style={styles.storyMetric}>Alcance: {reach != null ? reach.toLocaleString("pt-BR") : "-"}</Text>
+                  <Text style={styles.storyMetric}>
+                    Respostas: {replies != null ? replies.toLocaleString("pt-BR") : "-"}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        <Text style={styles.sectionTitle}>Publico (perfil atual)</Text>
+        <Text style={styles.sectionNote}>
+          Retrato de agora (semana/mes atual) -- a Meta nao libera demografia historica do periodo do relatorio.
+        </Text>
+
+        {audienceDimensions.length === 0 ? (
+          <Text>Demografia indisponivel para esta conta no momento.</Text>
+        ) : (
+          <View style={styles.audienceGrid}>
+            {audienceDimensions.map((dimension) => {
+              const entries = extractDemographicsEntries(audience[dimension]).slice(0, 6);
+              return (
+                <View key={dimension} style={styles.audienceBox}>
+                  <Text style={[styles.headerCell, { marginBottom: 4 }]}>
+                    {AUDIENCE_DIMENSION_LABEL[dimension] ?? dimension}
+                  </Text>
+                  {entries.length === 0 ? (
+                    <Text style={{ fontSize: 8, color: "#888" }}>Sem dados suficientes.</Text>
+                  ) : (
+                    entries.map((entry) => (
+                      <View key={entry.label} style={styles.audienceRow}>
+                        <Text>{entry.label}</Text>
+                        <Text>{entry.value.toLocaleString("pt-BR")}</Text>
+                      </View>
+                    ))
+                  )}
                 </View>
               );
             })}

@@ -23,6 +23,10 @@ export async function ClientDocuments() {
   const { data: contracts } = await supabase
     .from("contracts")
     .select("*")
+    // Documento gerado (ex.: relatorio automatico) fica invisivel pro
+    // cliente ate o profissional liberar manualmente -- ver
+    // sendDocumentToClientAction em src/server/actions/documents.ts.
+    .eq("client_visible", true)
     .order("created_at", { ascending: false });
 
   const rows = contracts ?? [];

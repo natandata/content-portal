@@ -7,6 +7,7 @@ import { InstagramInsightsReportCard } from "@/components/reports/instagram-insi
 import { InstagramInsightsReportForm } from "@/components/reports/instagram-insights-report-form";
 import { InstagramPublicReportCard } from "@/components/reports/instagram-public-report-card";
 import { InstagramPublicReportForm } from "@/components/reports/instagram-public-report-form";
+import { InstagramScheduledReportsList } from "@/components/reports/instagram-scheduled-reports-list";
 import { MetricFormModal } from "@/components/reports/metric-form-modal";
 import { MetricRow } from "@/components/reports/metric-row";
 import { RealtimeRefresh } from "@/components/realtime/realtime-refresh";
@@ -17,6 +18,7 @@ import { apifyConfig, composioConfig } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { loadInstagramConnectionStatus } from "@/server/actions/instagram-connect";
 import { loadInstagramReportSettings } from "@/server/actions/instagram-report-settings";
+import { loadScheduledReports } from "@/server/actions/instagram-scheduled-reports";
 
 const ERROR_MESSAGE: Record<string, string> = {
   instagram_denied: "Voce cancelou a conexao no Instagram.",
@@ -64,7 +66,7 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
           .order("created_at", { ascending: false })
       : { data: [] };
 
-  const [instagramConnections, insightsReports, autoReportSettings] =
+  const [instagramConnections, insightsReports, autoReportSettings, scheduledReports] =
     clientId && composioConfigured
       ? await Promise.all([
           loadInstagramConnectionStatus(clientId),
@@ -75,8 +77,9 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
             .order("created_at", { ascending: false })
             .then(({ data }) => data ?? []),
           loadInstagramReportSettings(clientId),
+          loadScheduledReports(clientId),
         ])
-      : [[], [], { autoReportEnabled: false, autoReportPeriodMonths: 3 as const, autoReportDay: 1 }];
+      : [[], [], { autoReportEnabled: false, autoReportPeriodMonths: 3 as const, autoReportDay: 1 }, []];
 
   return (
     <>
@@ -186,6 +189,7 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
                     day={autoReportSettings.autoReportDay}
                   />
                   <InstagramInsightsReportForm clientId={clientId} connections={instagramConnections} />
+                  <InstagramScheduledReportsList schedules={scheduledReports} />
                   {insightsReports.length > 0 ? (
                     <div className="divide-y divide-line">
                       {insightsReports.map((report) => (

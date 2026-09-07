@@ -23,11 +23,17 @@ import { createAdminClient } from "@/lib/supabase/server";
  * arriscaria estourar o `maxDuration` da funcao. O que sobrar fica pro dia
  * seguinte (a marca de mes so e gravada em quem for processado agora, entao
  * nada se perde, so atrasa).
+ *
+ * Na mesma passada, tambem processa `instagram_scheduled_reports` --
+ * agendamentos avulsos por data (nao recorrentes, ver
+ * `instagram-scheduled-reports.ts`). Mesmo raciocinio de cap e de "so data,
+ * nao hora exata" se aplica.
  */
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_CLIENTS_PER_RUN = 5;
+const MAX_SCHEDULED_PER_RUN = 5;
 
 export async function GET(request: Request) {
   const secret = cronSecret();
@@ -93,5 +99,45 @@ export async function GET(request: Request) {
     processed += 1;
   }
 
-  return NextResponse.json({ ok: true, due: due.length, processed, skippedNoPrincipal });
+  // Agendamentos avulsos por data -- independentes do toggle mensal acima.
+  const { data: dueSchedules } = await admin
+    .from("instagram_scheduled_reports")
+    .select("id, client_id, connection_id, period_months")
+    .eq("status", "pending")
+    .lte("scheduled_date", todayIso)
+    .limit(MAX_SCHEDULED_PER_RUN);
+
+  let scheduledProcessed = 0;
+
+  for (const scheduled of dueSchedules ?? []) {
+    const result = await runInstagramInsightsReport({
+      clientId: scheduled.client_id,
+      connectionId: scheduled.connection_id,
+      periodMonths: scheduled.period_months as 3 | 6 | 9,
+      requestedBy: null,
+    });
+
+    // Marca processado (sucesso ou falha) mesmo assim -- um agendamento
+    // avulso nao deve ficar tentando pra sempre; erro fica registrado pra
+    // quem agendou conferir depois.
+    await admin
+      .from("instagram_scheduled_reports")
+      .update({
+        status: result.ok ? "done" : "failed",
+        error: result.ok ? null : result.error,
+        processed_at: new Date().toISOString(),
+      })
+      .eq("id", scheduled.id);
+
+    scheduledProcessed += 1;
+  }
+
+  return NextResponse.json({
+    ok: true,
+    due: due.length,
+    processed,
+    skippedNoPrincipal,
+    scheduledDue: dueSchedules?.length ?? 0,
+    scheduledProcessed,
+  });
 }

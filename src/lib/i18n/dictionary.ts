@@ -210,6 +210,7 @@ export interface Dictionary {
       approved: string;
       replaced: string;
       delivered: string;
+      pending_delivery: string;
     };
     documentKind: {
       contract: string;
@@ -623,6 +624,7 @@ const ptBR: Dictionary = {
       approved: "Aprovado",
       replaced: "Substituido",
       delivered: "Entregue",
+      pending_delivery: "Aguardando envio",
     },
     documentKind: {
       contract: "Contrato",
@@ -1024,6 +1026,7 @@ const en: Dictionary = {
       approved: "Approved",
       replaced: "Replaced",
       delivered: "Delivered",
+      pending_delivery: "Awaiting delivery",
     },
     documentKind: {
       contract: "Contract",

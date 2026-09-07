@@ -23,7 +23,9 @@ export type ContractStatus =
   | "approved"
   | "replaced"
   /** Documento que nao pede assinatura: foi entregue e pronto. */
-  | "delivered";
+  | "delivered"
+  /** Gerado (ex.: relatorio automatico), mas ainda nao liberado pro cliente ver. */
+  | "pending_delivery";
 
 export type DocumentKind = "contract" | "strategy" | "brandbook" | "mockup" | "report" | "other";
 
@@ -165,6 +167,8 @@ export type ContractRow = {
   requires_signature: boolean;
   /** Mostra ao cliente o botao "Assinar com Gov.br" — redireciona, nao integra. */
   allow_gov_br_signature: boolean;
+  /** Falso enquanto aguarda liberacao manual (ex.: relatorio recem-gerado) -- cliente so ve quando vira true. */
+  client_visible: boolean;
   created_by: string | null;
   uploaded_at: string | null;
   signed_at: string | null;
@@ -629,6 +633,10 @@ export type InstagramInsightsReportRow = {
   account_metrics: Record<string, unknown> | null;
   /** Metricas por post dentro do periodo. */
   posts: unknown[] | null;
+  /** Stories ATIVOS no momento da geracao -- a Meta nunca devolve historico de stories. */
+  stories: unknown[] | null;
+  /** Retrato atual do publico (idade/genero/cidade/pais) -- "agora", nao do periodo do relatorio. */
+  audience: Record<string, unknown> | null;
   requested_by: string | null;
   error: string | null;
   created_at: string;
@@ -645,6 +653,23 @@ export type ClientInstagramReportSettingsRow = {
   /** 'YYYY-MM' -- trava de idempotencia do cron. */
   last_auto_report_month: string | null;
   updated_at: string;
+}
+
+export type InstagramScheduledReportStatus = "pending" | "done" | "failed";
+
+/** Agendamento avulso "gerar este relatorio nesta data", separado do automatico mensal recorrente. */
+export type InstagramScheduledReportRow = {
+  id: string;
+  client_id: string;
+  connection_id: string;
+  period_months: 3 | 6 | 9;
+  /** So data -- sem hora, o cron roda 1x/dia num horario que a Vercel escolhe. */
+  scheduled_date: string;
+  status: InstagramScheduledReportStatus;
+  requested_by: string | null;
+  error: string | null;
+  created_at: string;
+  processed_at: string | null;
 }
 
 export type Database = {
@@ -711,6 +736,10 @@ export type Database = {
         'client_id' | 'period_months'
       >;
       client_instagram_report_settings: Table<ClientInstagramReportSettingsRow, 'client_id'>;
+      instagram_scheduled_reports: Table<
+        InstagramScheduledReportRow,
+        'client_id' | 'connection_id' | 'period_months' | 'scheduled_date'
+      >;
       professional_payment_accounts: Table<ProfessionalPaymentAccountRow, 'user_id'>;
       stripe_events: Table<StripeEventRow, 'id' | 'type'>;
     };

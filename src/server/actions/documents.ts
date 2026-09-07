@@ -152,6 +152,41 @@ export async function setDocumentStatusAction(
   return done();
 }
 
+/**
+ * Libera um documento "aguardando envio" (ex.: relatorio gerado
+ * automaticamente) pro cliente ver -- ate aqui, so a equipe enxergava.
+ * Envio nunca e automatico de proposito: quem decide o momento e a pessoa.
+ */
+export async function sendDocumentToClientAction(contractId: string): Promise<ActionResult<null>> {
+  await requireStaff();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("contracts")
+    .update({ client_visible: true, status: "delivered" })
+    .eq("id", contractId)
+    .select("client_id, title")
+    .single();
+
+  if (error || !data) {
+    return fail(describeError(error, "Nao foi possivel enviar o documento."));
+  }
+
+  revalidateDocuments(data.client_id);
+
+  await sendPushToClient(data.client_id, (locale) => {
+    const en = locale === "en";
+    return {
+      title: en ? "New document to view" : "Novo documento para visualizar",
+      body: en ? `"${data.title}" is now available for you to view.` : `"${data.title}" ja esta disponivel para voce ver.`,
+      url: "/client/documents",
+      tag: `document-${contractId}`,
+    };
+  }).catch(() => {});
+
+  return done();
+}
+
 export async function deleteDocumentAction(contractId: string): Promise<ActionResult<null>> {
   await requireStaff();
   const supabase = await createClient();

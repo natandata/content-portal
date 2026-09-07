@@ -2,12 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { CheckCircle2, RotateCcw, Trash2 } from "lucide-react";
+import { CheckCircle2, RotateCcw, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { deleteDocumentAction, setDocumentStatusAction } from "@/server/actions/documents";
+import { deleteDocumentAction, sendDocumentToClientAction, setDocumentStatusAction } from "@/server/actions/documents";
 import type { ContractStatus } from "@/types/database";
 
 export function DocumentStaffActions({
@@ -36,6 +36,28 @@ export function DocumentStaffActions({
   return (
     <>
       <div className="flex flex-wrap gap-2">
+        {status === "pending_delivery" ? (
+          <Button
+            size="sm"
+            variant="success"
+            loading={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await sendDocumentToClientAction(contractId);
+                if (!result.ok) {
+                  toast.error(result.error);
+                  return;
+                }
+                toast.success("Documento enviado ao cliente.");
+                router.refresh();
+              })
+            }
+          >
+            <Send className="size-4" aria-hidden />
+            Enviar ao cliente
+          </Button>
+        ) : null}
+
         {status === "under_review" || status === "signed" ? (
           <Button
             size="sm"
