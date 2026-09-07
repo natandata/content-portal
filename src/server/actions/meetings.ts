@@ -511,7 +511,7 @@ export async function confirmCalendlyMeetingAction(
 
   const { data: account } = await admin
     .from("professional_calendly_accounts")
-    .select("event_type_duration")
+    .select("calendly_uri, event_type_duration")
     .eq("user_id", meeting.professional_id)
     .maybeSingle();
 
@@ -519,10 +519,93 @@ export async function confirmCalendlyMeetingAction(
     ? new Date(start.getTime() + account.event_type_duration * 60_000)
     : null;
 
+  // Mesmo confirmando na mao, tenta achar o evento de verdade na Calendly —
+  // se conseguir, o link de video (e o horario exato) vem de graca, sem
+  // exigir um segundo clique depois. So nao bloqueia: se a Calendly ainda
+  // nao tiver sincronizado, segue so com o que a pessoa digitou.
+  const found = account?.calendly_uri
+    ? await findScheduledEventForInvitee(meeting.professional_id, account.calendly_uri, meeting.contact_email, meeting.created_at)
+    : null;
+
+  if (found?.ok && found.data) {
+    return applyCalendlyConfirmation(admin, meeting, isClientSide, {
+      start: new Date(found.data.startTime),
+      end: new Date(found.data.endTime),
+      eventUri: found.data.uri,
+      joinUrl: found.data.joinUrl,
+    });
+  }
+
   return applyCalendlyConfirmation(admin, meeting, isClientSide, {
     start,
     end,
     eventUri: null,
     joinUrl: null,
   });
+}
+
+/**
+ * Reunioes confirmadas na mao (formulario manual, sem achar o evento na
+ * hora) ficam sem link de video ate alguem tentar de novo — esta acao existe
+ * para isso: reunioes que ja foram confirmadas por outro meio antes desta
+ * tentativa automatica existir, ou onde a Calendly nao tinha sincronizado
+ * ainda no momento da confirmacao.
+ */
+export async function retryCalendlyLinkAction(requestId: string): Promise<ActionResult<{ found: boolean }>> {
+  const actor = await getActor();
+  if (!actor) return fail("Sessao expirada.");
+
+  const admin = createAdminClient();
+  const { data: meeting } = await admin
+    .from("meeting_requests")
+    .select("*")
+    .eq("id", requestId)
+    .maybeSingle();
+
+  if (!meeting) return fail("Pedido de reuniao nao encontrado.");
+  if (meeting.method !== "calendly" || meeting.status !== "scheduled") {
+    return fail("So da para buscar o link de reunioes ja agendadas pelo Calendly.");
+  }
+  if (meeting.meet_link) return ok({ found: true });
+
+  const isClientSide = actor.role === "client" && actor.client?.id === meeting.client_id;
+  if (!isClientSide) {
+    const supabase = await createClient();
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("id", meeting.client_id)
+      .maybeSingle();
+    if (!client) return fail("Sem permissao para este cliente.");
+  }
+
+  const { data: account } = await admin
+    .from("professional_calendly_accounts")
+    .select("calendly_uri")
+    .eq("user_id", meeting.professional_id)
+    .maybeSingle();
+  if (!account) return fail("Profissional sem Calendly conectado.");
+
+  const found = await findScheduledEventForInvitee(
+    meeting.professional_id,
+    account.calendly_uri,
+    meeting.contact_email,
+    meeting.created_at,
+  );
+  if (!found.ok) return fail(found.error);
+  if (!found.data) return ok({ found: false });
+
+  const { error } = await admin
+    .from("meeting_requests")
+    .update({
+      calendly_event_uri: found.data.uri,
+      meet_link: found.data.joinUrl,
+      scheduled_start: found.data.startTime,
+      scheduled_end: found.data.endTime,
+    })
+    .eq("id", meeting.id);
+  if (error) return fail(describeError(error, "Nao foi possivel atualizar."));
+
+  revalidateMeetings(meeting.client_id);
+  return ok({ found: true });
 }

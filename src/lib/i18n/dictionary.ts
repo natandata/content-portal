@@ -390,6 +390,9 @@ export interface Dictionary {
     calendlyConfirmSubmit: string;
     fieldScheduledAt: string;
     calendlyConfirmedToast: string;
+    calendlyLinkPendingNotice: string;
+    calendlyRetryLinkButton: string;
+    calendlyLinkNotFoundToast: string;
   };
 }
 
@@ -785,6 +788,9 @@ const ptBR: Dictionary = {
     calendlyConfirmSubmit: "Confirmar",
     fieldScheduledAt: "Data e horario",
     calendlyConfirmedToast: "Reuniao confirmada.",
+    calendlyLinkPendingNotice: "Confirmada sem achar o link de video ainda — tente buscar de novo.",
+    calendlyRetryLinkButton: "Buscar link",
+    calendlyLinkNotFoundToast: "Ainda nao achamos o link. Tente de novo em alguns minutos.",
   },
 };
 
@@ -1185,6 +1191,9 @@ const en: Dictionary = {
     calendlyConfirmSubmit: "Confirm",
     fieldScheduledAt: "Date and time",
     calendlyConfirmedToast: "Meeting confirmed.",
+    calendlyLinkPendingNotice: "Confirmed, but no video link found yet — try searching again.",
+    calendlyRetryLinkButton: "Find link",
+    calendlyLinkNotFoundToast: "Still couldn't find it. Try again in a few minutes.",
   },
 };
 

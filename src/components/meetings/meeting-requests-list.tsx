@@ -19,6 +19,7 @@ import {
   confirmCalendlyMeetingAction,
   deleteMeetingRequestAction,
   respondMeetingRequestAction,
+  retryCalendlyLinkAction,
 } from "@/server/actions/meetings";
 import type { MeetingRequestRow } from "@/types/database";
 
@@ -77,6 +78,9 @@ function MeetingRow({
   // sem ela, a Calendly nunca avisa o app sozinha. Enquanto isso, quem
   // marcou confirma manualmente com a data/hora reais.
   const canConfirmCalendly = meeting.method === "calendly" && meeting.status === "pending";
+  // Confirmada na mao (o formulario acima) sem achar o link na hora — deixa
+  // tentar de novo, para quando a Calendly so sincronizou depois.
+  const canRetryLink = meeting.method === "calendly" && meeting.status === "scheduled" && !meeting.meet_link;
 
   function respond(decision: "approved" | "declined") {
     start(async () => {
@@ -125,6 +129,22 @@ function MeetingRow({
         // Calendly ainda nao mostra o evento (pode nao ter sincronizado, ou
         // a API pode estar fora do ar) — cai no formulario manual.
         setConfirmOpen(true);
+        return;
+      }
+      toast.success(dict.calendlyConfirmedToast);
+      router.refresh();
+    });
+  }
+
+  function retryLink() {
+    start(async () => {
+      const result = await retryCalendlyLinkAction(meeting.id);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      if (!result.data.found) {
+        toast.error(dict.calendlyLinkNotFoundToast);
         return;
       }
       toast.success(dict.calendlyConfirmedToast);
@@ -211,8 +231,16 @@ function MeetingRow({
         </a>
       ) : null}
 
-      {canRespond || canCancel || canDelete || canConfirmCalendly ? (
+      {canRetryLink ? <p className="text-xs text-amber-700">{dict.calendlyLinkPendingNotice}</p> : null}
+
+      {canRespond || canCancel || canDelete || canConfirmCalendly || canRetryLink ? (
         <div className="flex flex-wrap gap-2 pt-1">
+          {canRetryLink ? (
+            <Button size="sm" variant="secondary" loading={pending} onClick={retryLink}>
+              <Video className="size-3.5" aria-hidden />
+              {dict.calendlyRetryLinkButton}
+            </Button>
+          ) : null}
           {canConfirmCalendly ? (
             <Button size="sm" variant="secondary" loading={pending} onClick={tryAutoConfirm}>
               <CalendarCheck className="size-3.5" aria-hidden />
