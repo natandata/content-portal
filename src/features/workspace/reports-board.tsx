@@ -1,5 +1,6 @@
 import { AlertTriangle, BarChart3, Users } from "lucide-react";
 
+import { InstagramAutoReportToggle } from "@/components/instagram/instagram-auto-report-toggle";
 import { InstagramConnectCard } from "@/components/instagram/instagram-connect-card";
 import { ClientPicker } from "@/components/reports/client-picker";
 import { InstagramInsightsReportCard } from "@/components/reports/instagram-insights-report-card";
@@ -15,6 +16,7 @@ import { requireStaff } from "@/lib/auth";
 import { apifyConfig, composioConfig } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { loadInstagramConnectionStatus } from "@/server/actions/instagram-connect";
+import { loadInstagramReportSettings } from "@/server/actions/instagram-report-settings";
 
 const ERROR_MESSAGE: Record<string, string> = {
   instagram_denied: "Voce cancelou a conexao no Instagram.",
@@ -62,7 +64,7 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
           .order("created_at", { ascending: false })
       : { data: [] };
 
-  const [instagramConnection, insightsReports] =
+  const [instagramConnections, insightsReports, autoReportSettings] =
     clientId && composioConfigured
       ? await Promise.all([
           loadInstagramConnectionStatus(clientId),
@@ -72,8 +74,9 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
             .eq("client_id", clientId)
             .order("created_at", { ascending: false })
             .then(({ data }) => data ?? []),
+          loadInstagramReportSettings(clientId),
         ])
-      : [{ connected: false, instagramUsername: null }, []];
+      : [[], [], { autoReportEnabled: false, autoReportPeriodMonths: 3 as const }];
 
   return (
     <>
@@ -172,11 +175,16 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
                 description="Alcance, engajamento e metricas por post da conta autenticada, nos ultimos 3, 6 ou 9 meses."
               />
 
-              {!instagramConnection.connected ? (
+              {instagramConnections.length === 0 ? (
                 <p className="text-sm text-ink-500">Conecte o Instagram do cliente acima para gerar este relatorio.</p>
               ) : (
                 <div className="space-y-4">
-                  <InstagramInsightsReportForm clientId={clientId} />
+                  <InstagramAutoReportToggle
+                    clientId={clientId}
+                    enabled={autoReportSettings.autoReportEnabled}
+                    periodMonths={autoReportSettings.autoReportPeriodMonths}
+                  />
+                  <InstagramInsightsReportForm clientId={clientId} connections={instagramConnections} />
                   {insightsReports.length > 0 ? (
                     <div className="divide-y divide-line">
                       {insightsReports.map((report) => (

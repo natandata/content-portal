@@ -7,21 +7,35 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/form";
+import type { InstagramConnectionStatus } from "@/server/actions/instagram-connect";
 
 const PERIOD_OPTIONS = [3, 6, 9] as const;
 
-export function InstagramInsightsReportForm({ clientId }: { clientId: string }) {
+export function InstagramInsightsReportForm({
+  clientId,
+  connections,
+}: {
+  clientId: string;
+  connections: InstagramConnectionStatus[];
+}) {
   const router = useRouter();
+  const principal = connections.find((connection) => connection.isPrincipal) ?? connections[0];
+  const [connectionId, setConnectionId] = useState(principal?.id ?? "");
   const [periodMonths, setPeriodMonths] = useState<(typeof PERIOD_OPTIONS)[number]>(3);
   const [busy, setBusy] = useState(false);
 
   async function submit() {
+    if (!connectionId) {
+      toast.error("Conecte o Instagram do cliente primeiro.");
+      return;
+    }
+
     setBusy(true);
     try {
       const response = await fetch("/api/reports/instagram-insights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, periodMonths }),
+        body: JSON.stringify({ clientId, connectionId, periodMonths }),
       });
       const result = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
 
@@ -39,6 +53,28 @@ export function InstagramInsightsReportForm({ clientId }: { clientId: string }) 
 
   return (
     <div className="flex flex-wrap items-end gap-3">
+      {connections.length > 1 ? (
+        <div>
+          <label className="field-label" htmlFor="instagram-insights-connection">
+            Conta
+          </label>
+          <Select
+            id="instagram-insights-connection"
+            value={connectionId}
+            onChange={(event) => setConnectionId(event.target.value)}
+            disabled={busy}
+            className="max-w-[220px]"
+          >
+            {connections.map((connection) => (
+              <option key={connection.id} value={connection.id}>
+                {connection.label ?? connection.instagramUsername ?? "Conta conectada"}
+                {connection.isPrincipal ? " (principal)" : ""}
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
+
       <div>
         <label className="field-label" htmlFor="instagram-insights-period">
           Periodo

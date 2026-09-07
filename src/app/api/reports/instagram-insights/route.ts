@@ -16,6 +16,7 @@ export const maxDuration = 60;
 
 const bodySchema = z.object({
   clientId: z.uuid(),
+  connectionId: z.uuid(),
   periodMonths: z.union([z.literal(3), z.literal(6), z.literal(9)]),
 });
 
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
 
   const result = await runInstagramInsightsReport({
     clientId: parsed.data.clientId,
+    connectionId: parsed.data.connectionId,
     periodMonths: parsed.data.periodMonths,
     requestedBy: actor.authUser.id,
   });

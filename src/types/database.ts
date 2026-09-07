@@ -605,10 +605,15 @@ export type InstagramPublicReportRow = {
  * Composio, nunca um token de acesso. Dona e a conta Instagram do CLIENTE
  * (nao do profissional), conectada via OAuth.
  */
+/** Um cliente pode ter mais de uma conta -- `is_principal` marca a que entra no relatorio automatico mensal. */
 export type ClientInstagramConnectionRow = {
+  id: string;
   client_id: string;
   composio_connection_id: string;
+  /** Apelido digitado pelo usuario ao conectar (ex.: "Loja principal") -- a Composio nao garante devolver o username. */
+  label: string | null;
   instagram_username: string | null;
+  is_principal: boolean;
   connected_at: string;
 }
 
@@ -616,6 +621,8 @@ export type ClientInstagramConnectionRow = {
 export type InstagramInsightsReportRow = {
   id: string;
   client_id: string;
+  /** Qual conta gerou este relatorio -- nulo se a conexao foi removida depois. */
+  connection_id: string | null;
   period_months: 3 | 6 | 9;
   status: InstagramReportStatus;
   /** reach, accounts_engaged, total_interactions, etc. — janela do periodo inteiro. */
@@ -626,6 +633,16 @@ export type InstagramInsightsReportRow = {
   error: string | null;
   created_at: string;
   completed_at: string | null;
+}
+
+/** Preferencia de relatorio automatico mensal, uma linha por cliente. Mesmo padrao de ClientBrandingRow. */
+export type ClientInstagramReportSettingsRow = {
+  client_id: string;
+  auto_report_enabled: boolean;
+  auto_report_period_months: 3 | 6 | 9;
+  /** 'YYYY-MM' -- trava de idempotencia do cron. */
+  last_auto_report_month: string | null;
+  updated_at: string;
 }
 
 export type Database = {
@@ -691,6 +708,7 @@ export type Database = {
         InstagramInsightsReportRow,
         'client_id' | 'period_months'
       >;
+      client_instagram_report_settings: Table<ClientInstagramReportSettingsRow, 'client_id'>;
       professional_payment_accounts: Table<ProfessionalPaymentAccountRow, 'user_id'>;
       stripe_events: Table<StripeEventRow, 'id' | 'type'>;
     };

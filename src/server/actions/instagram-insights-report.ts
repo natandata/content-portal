@@ -63,8 +63,9 @@ function extractArray(raw: unknown): Record<string, unknown>[] {
 
 export async function runInstagramInsightsReport(params: {
   clientId: string;
+  connectionId: string;
   periodMonths: 3 | 6 | 9;
-  requestedBy: string;
+  requestedBy: string | null;
 }): Promise<ActionResult<InstagramInsightsReportRow>> {
   const config = composioConfig();
   if (!config) return fail("Insights do Instagram ainda nao foram configurados nesta instalacao.");
@@ -73,10 +74,12 @@ export async function runInstagramInsightsReport(params: {
 
   const { data: connection } = await admin
     .from("client_instagram_connections")
-    .select("client_id")
+    .select("composio_connection_id")
+    .eq("id", params.connectionId)
     .eq("client_id", params.clientId)
     .maybeSingle();
   if (!connection) return fail("Conecte o Instagram do cliente antes de gerar este relatorio.");
+  const connectedAccountId = connection.composio_connection_id;
 
   const until = new Date();
   const since = new Date(until);
@@ -88,6 +91,7 @@ export async function runInstagramInsightsReport(params: {
     .from("instagram_insights_reports")
     .insert({
       client_id: params.clientId,
+      connection_id: params.connectionId,
       period_months: params.periodMonths,
       status: "running",
       requested_by: params.requestedBy,
@@ -107,7 +111,7 @@ export async function runInstagramInsightsReport(params: {
       .eq("id", reportId);
   }
 
-  const accountResult = await callInstagramTool(params.clientId, "INSTAGRAM_GET_USER_INSIGHTS", {
+  const accountResult = await callInstagramTool(params.clientId, connectedAccountId, "INSTAGRAM_GET_USER_INSIGHTS", {
     since: sinceTs,
     until: untilTs,
     period: "day",
@@ -118,7 +122,7 @@ export async function runInstagramInsightsReport(params: {
     return fail(accountResult.error);
   }
 
-  const mediaResult = await callInstagramTool(params.clientId, "INSTAGRAM_GET_IG_USER_MEDIA", {
+  const mediaResult = await callInstagramTool(params.clientId, connectedAccountId, "INSTAGRAM_GET_IG_USER_MEDIA", {
     ig_user_id: "me",
     since: sinceTs,
     until: untilTs,
@@ -135,7 +139,7 @@ export async function runInstagramInsightsReport(params: {
     const mediaId = typeof post.id === "string" ? post.id : null;
     if (!mediaId) return post;
 
-    const insightsResult = await callInstagramTool(params.clientId, "INSTAGRAM_GET_IG_MEDIA_INSIGHTS", {
+    const insightsResult = await callInstagramTool(params.clientId, connectedAccountId, "INSTAGRAM_GET_IG_MEDIA_INSIGHTS", {
       ig_media_id: mediaId,
       metric: MEDIA_METRICS,
     });

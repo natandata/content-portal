@@ -26,10 +26,18 @@ function client(apiKey: string): Composio {
  * Usa `connectedAccounts.link()` (nao `initiate()`, que a propria Composio
  * marca como descontinuado para OAuth gerenciado por ela -- ver comentario
  * de deprecacao no client instalado em node_modules/@composio/core).
+ *
+ * `allowMultiple: true` -- um cliente pode ter mais de uma conta Instagram
+ * conectada (sem isso, a segunda tentativa para o mesmo `userId`+auth config
+ * lanca `ComposioMultipleConnectedAccountsError`). `alias` precisa ser unico
+ * por `userId`+toolkit no projeto -- o chamador gera um valor aleatorio a
+ * cada tentativa (nunca deriva do rotulo digitado, pra nao arriscar colisao
+ * com um alias de uma conexao antiga ja removida).
  */
 export async function initiateInstagramConnection(
   clientId: string,
   callbackUrl: string,
+  alias: string,
 ): Promise<Result<{ connectionId: string; redirectUrl: string }>> {
   const config = composioConfig();
   if (!config) return { ok: false, error: "Composio nao configurada nesta instalacao." };
@@ -38,7 +46,7 @@ export async function initiateInstagramConnection(
     const request = await client(config.apiKey).connectedAccounts.link(
       clientId,
       config.instagramAuthConfigId,
-      { callbackUrl },
+      { callbackUrl, alias, allowMultiple: true },
     );
     if (!request.redirectUrl) {
       return { ok: false, error: "Composio nao devolveu um link de autorizacao." };
@@ -83,9 +91,14 @@ export async function disconnectInstagramConnection(connectionId: string): Promi
  * `INSTAGRAM_GET_IG_MEDIA_INSIGHTS`). `dangerouslySkipVersionCheck: true`
  * porque a etapa 4 chama isso muitas vezes numa mesma rota (paginacao de
  * posts) -- pular a checagem de versao evita uma chamada extra por tool.
+ *
+ * `connectedAccountId` desambigua qual das contas do cliente usar -- desde
+ * que um cliente pode ter mais de uma conta conectada, `userId` sozinho nao
+ * basta mais.
  */
 export async function callInstagramTool(
   clientId: string,
+  connectedAccountId: string,
   toolSlug: string,
   args: Record<string, unknown>,
 ): Promise<Result<Record<string, unknown>>> {
@@ -95,6 +108,7 @@ export async function callInstagramTool(
   try {
     const result = await client(config.apiKey).tools.execute(toolSlug, {
       userId: clientId,
+      connectedAccountId,
       arguments: args,
       dangerouslySkipVersionCheck: true,
     });
