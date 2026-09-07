@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { CalendarCheck, CalendarClock, Check, Clock, ExternalLink, Trash2, Video, X } from "lucide-react";
@@ -21,6 +22,12 @@ import {
 import type { MeetingRequestRow } from "@/types/database";
 
 type MeetingsDict = Dictionary["meetings"];
+
+/** Extensao usada so na visao "todas as reunioes" do profissional (Visao
+ * Geral > Reunioes) — cada linha vem de um cliente diferente, entao precisa
+ * dizer de qual. No contexto de um unico cliente (aba Reunioes dele) esses
+ * campos ficam de fora e a linha nao muda em nada. */
+export type MeetingWithClient = MeetingRequestRow & { clientName?: string; clientHref?: string };
 
 function statusMeta(dict: MeetingsDict) {
   return {
@@ -45,7 +52,7 @@ function MeetingRow({
   dict,
   locale,
 }: {
-  meeting: MeetingRequestRow;
+  meeting: MeetingWithClient;
   isMine: boolean;
   dict: MeetingsDict;
   locale: Locale;
@@ -126,6 +133,18 @@ function MeetingRow({
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-line p-3">
+      {meeting.clientName ? (
+        meeting.clientHref ? (
+          <Link
+            href={meeting.clientHref}
+            className="focus-ring w-fit text-sm font-semibold text-ink-900 hover:text-accent"
+          >
+            {meeting.clientName}
+          </Link>
+        ) : (
+          <p className="text-sm font-semibold text-ink-900">{meeting.clientName}</p>
+        )
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-1.5 text-sm font-medium text-ink-900">
           <Clock className="size-4 shrink-0 text-ink-400" aria-hidden />
@@ -256,7 +275,7 @@ export function MeetingRequestsList({
   currentSide,
   locale = "pt-BR",
 }: {
-  meetings: MeetingRequestRow[];
+  meetings: MeetingWithClient[];
   currentSide: "client" | "professional";
   locale?: Locale;
 }) {

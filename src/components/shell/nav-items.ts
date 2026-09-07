@@ -66,6 +66,7 @@ function professionalNavItems(): NavGroup[] {
       items: [
         { href: `${base}/dashboard`, label: "Visão Geral", icon: LayoutDashboard },
         { href: `${base}/tasks`, label: "Tarefas", icon: CheckSquare },
+        { href: `${base}/meetings`, label: "Reuniões", icon: Video },
       ],
     },
     {

@@ -20,6 +20,7 @@ import type {
   ContractStatus,
   CurrencyCode,
   Database,
+  MeetingRequestRow,
   PlatformStats,
   UserRole,
 } from "@/types/database";
@@ -739,6 +740,29 @@ export async function loadClientMeetings(supabase: Client, clientId: string) {
     .eq("client_id", clientId)
     .order("created_at", { ascending: false });
   return data ?? [];
+}
+
+export type ProfessionalMeetingRow = MeetingRequestRow & { clientName: string };
+
+/** Todas as reunioes do profissional, de todos os clientes — a tela de
+ * "Reunioes" em Visao Geral usa isso para as 3 visualizacoes. */
+export async function loadProfessionalMeetings(
+  supabase: Client,
+  professionalId: string,
+): Promise<ProfessionalMeetingRow[]> {
+  const { data } = await supabase
+    .from("meeting_requests")
+    .select("*")
+    .eq("professional_id", professionalId)
+    .order("created_at", { ascending: false });
+
+  const rows = data ?? [];
+  const names = await loadClientNames(
+    supabase,
+    rows.map((row) => row.client_id),
+  );
+
+  return rows.map((row) => ({ ...row, clientName: names.get(row.client_id) ?? "Cliente" }));
 }
 
 export interface ClientCalendarPost {
