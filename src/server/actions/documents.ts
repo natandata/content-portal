@@ -18,7 +18,7 @@ const createSchema = z
     clientId: z.uuid("Selecione um cliente"),
     title: z.string().trim().min(2, "Informe o nome do documento"),
     notes: z.string().trim().max(1000).optional(),
-    kind: z.enum(["contract", "strategy", "brandbook", "mockup", "other"]),
+    kind: z.enum(["contract", "strategy", "brandbook", "mockup", "report", "other"]),
     requiresSignature: z.boolean(),
     // So faz sentido oferecer o atalho do Gov.br quando ha o que assinar.
     allowGovBrSignature: z.boolean().default(false),

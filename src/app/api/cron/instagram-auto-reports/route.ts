@@ -11,7 +11,11 @@ import { createAdminClient } from "@/lib/supabase/server";
  * nunca todas as contas dele.
  *
  * `last_auto_report_month` ('YYYY-MM') evita gerar duas vezes no mesmo mes
- * -- mesma ideia do `last_reminder_sent_on` do cron de cobranca.
+ * -- mesma ideia do `last_reminder_sent_on` do cron de cobranca. `auto_report_day`
+ * e tratado como um MINIMO (dia >= escolhido), nao um dia exato -- se o cron
+ * nao rodar exatamente nesse dia (deploy fora do ar, horario variavel do
+ * cron no plano Hobby), o cliente ainda recebe o relatorio assim que o cron
+ * voltar a rodar, em vez de esperar o mes inteiro.
  *
  * Cap deliberado por execucao: cada cliente devido custa uma chamada
  * completa de `runInstagramInsightsReport` (ate 25 posts, cada um com sua
@@ -33,22 +37,25 @@ export async function GET(request: Request) {
   }
 
   const admin = createAdminClient();
-  const currentMonth = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" })
-    .format(new Date())
-    .slice(0, 7); // 'YYYY-MM'
+  const todayIso = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date()); // 'YYYY-MM-DD'
+  const currentMonth = todayIso.slice(0, 7); // 'YYYY-MM'
+  const currentDay = Number(todayIso.slice(8, 10));
 
   const { data: dueSettings, error } = await admin
     .from("client_instagram_report_settings")
-    .select("client_id, auto_report_period_months, last_auto_report_month")
+    .select("client_id, auto_report_period_months, auto_report_day, last_auto_report_month")
     .eq("auto_report_enabled", true)
-    .limit(200); // filtra o mes em memoria abaixo -- poucas linhas esperadas, sem custo real
+    .limit(200); // filtra mes/dia em memoria abaixo -- poucas linhas esperadas, sem custo real
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   const due = (dueSettings ?? [])
-    .filter((settings) => settings.last_auto_report_month !== currentMonth)
+    .filter(
+      (settings) =>
+        settings.last_auto_report_month !== currentMonth && currentDay >= settings.auto_report_day,
+    )
     .slice(0, MAX_CLIENTS_PER_RUN);
 
   let processed = 0;

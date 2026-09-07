@@ -72,6 +72,7 @@ export const DOCUMENT_KIND_LABEL: Record<DocumentKind, string> = {
   strategy: "Estrategia de conteudo",
   brandbook: "Brandbook",
   mockup: "Mockup",
+  report: "Relatorio",
   other: "Outro documento",
 };
 
@@ -81,6 +82,7 @@ export const DOCUMENT_KINDS: DocumentKind[] = [
   "strategy",
   "brandbook",
   "mockup",
+  "report",
   "other",
 ];
 
@@ -98,6 +100,7 @@ export const DOCUMENT_KIND_DEFAULT_TITLE: Record<DocumentKind, string> = {
   strategy: "Estrategia de Conteudo",
   brandbook: "Brandbook",
   mockup: "Mockup",
+  report: "Relatorio",
   other: "",
 };
 

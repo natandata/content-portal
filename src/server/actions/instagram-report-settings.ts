@@ -14,17 +14,19 @@ const REPORTS_PATH = "/professional/reports";
 export async function loadInstagramReportSettings(clientId: string): Promise<{
   autoReportEnabled: boolean;
   autoReportPeriodMonths: 3 | 6 | 9;
+  autoReportDay: number;
 }> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("client_instagram_report_settings")
-    .select("auto_report_enabled, auto_report_period_months")
+    .select("auto_report_enabled, auto_report_period_months, auto_report_day")
     .eq("client_id", clientId)
     .maybeSingle();
 
   return {
     autoReportEnabled: data?.auto_report_enabled ?? false,
     autoReportPeriodMonths: (data?.auto_report_period_months as 3 | 6 | 9 | undefined) ?? 3,
+    autoReportDay: data?.auto_report_day ?? 1,
   };
 }
 
@@ -32,6 +34,7 @@ const settingsSchema = z.object({
   clientId: z.uuid(),
   autoReportEnabled: z.boolean(),
   autoReportPeriodMonths: z.union([z.literal(3), z.literal(6), z.literal(9)]),
+  autoReportDay: z.number().int().min(1).max(28),
 });
 
 /** Liga/desliga o relatorio automatico mensal do cliente — upsert porque a linha so nasce no primeiro save. */
@@ -51,6 +54,7 @@ export async function saveInstagramReportSettingsAction(
       client_id: parsed.data.clientId,
       auto_report_enabled: parsed.data.autoReportEnabled,
       auto_report_period_months: parsed.data.autoReportPeriodMonths,
+      auto_report_day: parsed.data.autoReportDay,
     } satisfies Partial<ClientInstagramReportSettingsRow> & { client_id: string },
     { onConflict: "client_id" },
   );

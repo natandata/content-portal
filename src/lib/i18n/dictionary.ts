@@ -216,6 +216,7 @@ export interface Dictionary {
       strategy: string;
       brandbook: string;
       mockup: string;
+      report: string;
       other: string;
     };
   };
@@ -628,6 +629,7 @@ const ptBR: Dictionary = {
       strategy: "Estrategia de conteudo",
       brandbook: "Brandbook",
       mockup: "Mockup",
+      report: "Relatorio",
       other: "Outro documento",
     },
   },
@@ -1028,6 +1030,7 @@ const en: Dictionary = {
       strategy: "Content strategy",
       brandbook: "Brandbook",
       mockup: "Mockup",
+      report: "Report",
       other: "Other document",
     },
   },

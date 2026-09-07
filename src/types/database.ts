@@ -25,7 +25,7 @@ export type ContractStatus =
   /** Documento que nao pede assinatura: foi entregue e pronto. */
   | "delivered";
 
-export type DocumentKind = "contract" | "strategy" | "brandbook" | "mockup" | "other";
+export type DocumentKind = "contract" | "strategy" | "brandbook" | "mockup" | "report" | "other";
 
 export type ContentType = "image" | "video" | "carousel";
 
@@ -640,6 +640,8 @@ export type ClientInstagramReportSettingsRow = {
   client_id: string;
   auto_report_enabled: boolean;
   auto_report_period_months: 3 | 6 | 9;
+  /** Dia do mes (1-28) em que o cron deve gerar o relatorio deste cliente. */
+  auto_report_day: number;
   /** 'YYYY-MM' -- trava de idempotencia do cron. */
   last_auto_report_month: string | null;
   updated_at: string;

@@ -1,0 +1,77 @@
+import "server-only";
+
+import { renderInstagramInsightsPdf } from "@/server/reports/instagram-insights-pdf";
+import { contractPath, BUCKETS } from "@/lib/paths";
+import { sendPushToClient } from "@/lib/push";
+import { createAdminClient } from "@/lib/supabase/server";
+import type { InstagramInsightsReportRow } from "@/types/database";
+
+/**
+ * Gera o PDF do relatorio de insights e entrega em Documentos (tabela
+ * `contracts`, mesmo bucket/fluxo dos documentos que a equipe ja envia --
+ * ganha preview, download assinado e a tela de Documentos do cliente de
+ * graca). Chamado tanto pelo disparo manual quanto pelo cron automatico.
+ *
+ * Melhor esforco de proposito: o relatorio em si (`instagram_insights_reports`)
+ * ja foi salvo com sucesso antes desta funcao rodar -- uma falha aqui (PDF ou
+ * Storage) nunca deve derrubar o relatorio que a pessoa ja pode ver na tela.
+ */
+export async function deliverInstagramInsightsReportPdf(params: {
+  clientId: string;
+  report: InstagramInsightsReportRow;
+  requestedBy: string | null;
+}): Promise<void> {
+  try {
+    const admin = createAdminClient();
+
+    const { data: client } = await admin
+      .from("clients")
+      .select("company_name")
+      .eq("id", params.clientId)
+      .maybeSingle();
+    if (!client) return;
+
+    const pdfBuffer = await renderInstagramInsightsPdf({
+      companyName: client.company_name,
+      report: params.report,
+    });
+
+    const generatedAt = new Date(params.report.completed_at ?? params.report.created_at);
+    const title = `Relatorio de Instagram (${params.report.period_months} meses) - ${generatedAt.toLocaleDateString("pt-BR")}`;
+
+    const { data: document, error: insertError } = await admin
+      .from("contracts")
+      .insert({
+        client_id: params.clientId,
+        title,
+        kind: "report",
+        requires_signature: false,
+        allow_gov_br_signature: false,
+        created_by: params.requestedBy,
+      })
+      .select("id")
+      .single();
+    if (insertError || !document) return;
+
+    const filePath = contractPath(params.clientId, document.id, "relatorio-instagram.pdf");
+    const { error: uploadError } = await admin.storage.from(BUCKETS.contracts).upload(filePath, pdfBuffer, {
+      contentType: "application/pdf",
+      upsert: false,
+    });
+    if (uploadError) return;
+
+    await admin
+      .from("contracts")
+      .update({ original_file_path: filePath, uploaded_at: new Date().toISOString(), status: "delivered" })
+      .eq("id", document.id);
+
+    await sendPushToClient(params.clientId, {
+      title: "Novo relatorio de Instagram",
+      body: `"${title}" ja esta disponivel em Documentos.`,
+      url: "/client/documents",
+      tag: `document-${document.id}`,
+    }).catch(() => {});
+  } catch {
+    // Melhor esforco -- ver comentario da funcao.
+  }
+}

@@ -3,6 +3,7 @@ import "server-only";
 import { callInstagramTool } from "@/lib/composio/client";
 import { composioConfig } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/server";
+import { deliverInstagramInsightsReportPdf } from "@/server/reports/instagram-report-delivery";
 import { describeError, fail, ok, type ActionResult } from "@/server/result";
 import type { InstagramInsightsReportRow } from "@/types/database";
 
@@ -164,6 +165,14 @@ export async function runInstagramInsightsReport(params: {
   if (updateError || !updated) {
     return fail(describeError(updateError, "Relatorio coletado, mas houve falha ao salvar."));
   }
+
+  // Melhor esforco -- entrega o PDF em Documentos, mas o relatorio ja esta
+  // salvo e visivel na tela mesmo se isso falhar (ver comentario da funcao).
+  await deliverInstagramInsightsReportPdf({
+    clientId: params.clientId,
+    report: updated,
+    requestedBy: params.requestedBy,
+  });
 
   return ok(updated);
 }

@@ -76,7 +76,7 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
             .then(({ data }) => data ?? []),
           loadInstagramReportSettings(clientId),
         ])
-      : [[], [], { autoReportEnabled: false, autoReportPeriodMonths: 3 as const }];
+      : [[], [], { autoReportEnabled: false, autoReportPeriodMonths: 3 as const, autoReportDay: 1 }];
 
   return (
     <>
@@ -183,6 +183,7 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
                     clientId={clientId}
                     enabled={autoReportSettings.autoReportEnabled}
                     periodMonths={autoReportSettings.autoReportPeriodMonths}
+                    day={autoReportSettings.autoReportDay}
                   />
                   <InstagramInsightsReportForm clientId={clientId} connections={instagramConnections} />
                   {insightsReports.length > 0 ? (
