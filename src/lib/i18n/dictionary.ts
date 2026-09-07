@@ -335,6 +335,11 @@ export interface Dictionary {
     projectsEmpty: string;
     activityTitle: string;
     activityEmpty: string;
+    meetingsTitle: string;
+    meetingsEmpty: string;
+    meetingsPending: (n: number) => string;
+    meetingsScheduled: (n: number) => string;
+    meetingsSeeAll: string;
   };
   postCalendar: {
     title: string;
@@ -713,6 +718,11 @@ const ptBR: Dictionary = {
     projectsEmpty: "Nenhum servico cadastrado ainda.",
     activityTitle: "Atividades recentes",
     activityEmpty: "Nenhuma atividade registrada ainda.",
+    meetingsTitle: "Reunioes",
+    meetingsEmpty: "Nenhuma reuniao por aqui ainda.",
+    meetingsPending: (n) => (n === 1 ? "1 aguardando resposta" : `${n} aguardando resposta`),
+    meetingsScheduled: (n) => (n === 1 ? "1 agendada" : `${n} agendadas`),
+    meetingsSeeAll: "Ver todas",
   },
   postCalendar: {
     title: "Calendario",
@@ -1100,6 +1110,11 @@ const en: Dictionary = {
     projectsEmpty: "No service registered yet.",
     activityTitle: "Recent activity",
     activityEmpty: "No activity logged yet.",
+    meetingsTitle: "Meetings",
+    meetingsEmpty: "No meetings yet.",
+    meetingsPending: (n) => (n === 1 ? "1 awaiting response" : `${n} awaiting response`),
+    meetingsScheduled: (n) => (n === 1 ? "1 scheduled" : `${n} scheduled`),
+    meetingsSeeAll: "See all",
   },
   postCalendar: {
     title: "Calendar",

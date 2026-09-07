@@ -10,6 +10,7 @@ import { requireClientActor } from "@/lib/auth";
 import { BulletinWidget } from "@/features/bulletin/bulletin-widget";
 import {
   ActiveProjectsWidget,
+  MeetingsWidget,
   PublicationsCalendarWidget,
   RecentActivityWidget,
 } from "@/features/client/dashboard-widgets";
@@ -78,6 +79,7 @@ export async function ClientDashboard() {
       <div className="mb-6 grid gap-5 lg:grid-cols-2">
         <PublicationsCalendarWidget supabase={supabase} locale={locale} />
         <ActiveProjectsWidget supabase={supabase} locale={locale} />
+        <MeetingsWidget supabase={supabase} clientId={actor.client.id} locale={locale} />
       </div>
 
       <div className="mb-6">
