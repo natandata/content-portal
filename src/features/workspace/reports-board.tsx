@@ -1,5 +1,6 @@
 import { AlertTriangle, BarChart3, Users } from "lucide-react";
 
+import { InstagramConnectCard } from "@/components/instagram/instagram-connect-card";
 import { ClientPicker } from "@/components/reports/client-picker";
 import { InstagramPublicReportCard } from "@/components/reports/instagram-public-report-card";
 import { InstagramPublicReportForm } from "@/components/reports/instagram-public-report-form";
@@ -12,7 +13,15 @@ import { requireStaff } from "@/lib/auth";
 import { apifyConfig } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
-export async function ReportsBoard({ clientId }: { clientId?: string }) {
+const ERROR_MESSAGE: Record<string, string> = {
+  instagram_denied: "Voce cancelou a conexao no Instagram.",
+  instagram_invalid_state: "A conexao expirou ou foi aberta em outra aba. Tente de novo.",
+  instagram_session: "Sua sessao expirou durante a conexao. Entre novamente e tente de novo.",
+  instagram_exchange_failed: "Falha ao confirmar a conexao com o Instagram. Tente de novo.",
+  instagram_save_failed: "A conexao funcionou, mas nao foi possivel salvar. Tente de novo.",
+};
+
+export async function ReportsBoard({ clientId, error }: { clientId?: string; error?: string }) {
   const actor = await requireStaff();
   const supabase = await createClient();
   const apifyConfigured = Boolean(apifyConfig());
@@ -63,6 +72,12 @@ export async function ReportsBoard({ clientId }: { clientId?: string }) {
         description="Cadastre e acompanhe as metricas de cada cliente por periodo. No futuro, um botao vai puxar essas metricas direto da conta do cliente."
         actions={clientId ? <MetricFormModal clientId={clientId} /> : undefined}
       />
+
+      {error && ERROR_MESSAGE[error] ? (
+        <Card className="mb-4 border-red-200 bg-red-50">
+          <p className="text-sm text-red-700">{ERROR_MESSAGE[error]}</p>
+        </Card>
+      ) : null}
 
       <div className="mb-5">
         <ClientPicker clients={clientOptions} value={clientId} />
@@ -125,6 +140,10 @@ export async function ReportsBoard({ clientId }: { clientId?: string }) {
                 ) : null}
               </div>
             )}
+          </Card>
+
+          <Card className="mt-4">
+            <InstagramConnectCard clientId={clientId} />
           </Card>
         </div>
       ) : null}

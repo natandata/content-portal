@@ -7,8 +7,8 @@ export const metadata: Metadata = { title: "Relatorios" };
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string }>;
+  searchParams: Promise<{ client?: string; error?: string }>;
 }) {
-  const { client } = await searchParams;
-  return <ReportsBoard clientId={client} />;
+  const { client, error } = await searchParams;
+  return <ReportsBoard clientId={client} error={error} />;
 }
