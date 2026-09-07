@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { checkConnectionStatus } from "@/lib/composio/client";
+import { callInstagramTool, checkConnectionStatus } from "@/lib/composio/client";
 import { INSTAGRAM_CONNECT_COOKIE } from "@/lib/composio/constants";
 import { appBaseUrl } from "@/lib/env";
 import { requireStaff } from "@/lib/auth";
@@ -54,6 +54,23 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
 
+  // Melhor esforco -- busca o username real da conta pra mostrar na lista
+  // (o rotulo digitado e opcional, e sem isso duas contas apareceriam iguais
+  // como "Conta conectada", facil de conectar a mesma duas vezes sem notar).
+  const userInfoResult = await callInstagramTool(
+    clientId,
+    cookiePayload.connectionId,
+    "INSTAGRAM_GET_USER_INFO",
+    {},
+  );
+  const instagramUsername = userInfoResult.ok
+    ? (() => {
+        const raw = userInfoResult.data as { username?: unknown; data?: { username?: unknown } };
+        const username = raw.username ?? raw.data?.username;
+        return typeof username === "string" && username.trim() ? username : null;
+      })()
+    : null;
+
   // A primeira conexao do cliente ja nasce principal -- as seguintes ficam
   // disponiveis para gerar relatorio na mao ate alguem trocar a principal.
   const { data: existing } = await admin
@@ -66,6 +83,7 @@ export async function GET(request: Request) {
     client_id: clientId,
     composio_connection_id: cookiePayload.connectionId,
     label: cookiePayload.label,
+    instagram_username: instagramUsername,
     is_principal: isFirstConnection,
     connected_at: new Date().toISOString(),
   });

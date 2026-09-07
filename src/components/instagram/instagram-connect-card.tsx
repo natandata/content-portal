@@ -50,7 +50,14 @@ export async function InstagramConnectCard({ clientId }: { clientId: string }) {
                   <div className="flex items-center gap-2 text-sm text-ink-700">
                     <Instagram className="size-4 shrink-0 text-ink-400" aria-hidden />
                     <span>
-                      {connection.label ?? (connection.instagramUsername ? `@${connection.instagramUsername}` : "Conta conectada")}
+                      {connection.instagramUsername ? (
+                        <>
+                          <strong className="font-medium">@{connection.instagramUsername}</strong>
+                          {connection.label ? <span className="text-ink-500"> · {connection.label}</span> : null}
+                        </>
+                      ) : (
+                        connection.label ?? "Conta conectada (username indisponivel)"
+                      )}
                     </span>
                     {connection.isPrincipal ? <Badge tone="info">Principal</Badge> : null}
                   </div>

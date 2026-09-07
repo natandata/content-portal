@@ -67,7 +67,7 @@ export function InstagramInsightsReportForm({
           >
             {connections.map((connection) => (
               <option key={connection.id} value={connection.id}>
-                {connection.label ?? connection.instagramUsername ?? "Conta conectada"}
+                {connection.instagramUsername ? `@${connection.instagramUsername}` : connection.label ?? "Conta conectada"}
                 {connection.isPrincipal ? " (principal)" : ""}
               </option>
             ))}
