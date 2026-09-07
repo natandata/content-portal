@@ -29,12 +29,15 @@ export async function deliverInstagramInsightsReportPdf(params: {
   try {
     const admin = createAdminClient();
 
-    const { data: client } = await admin
+    const { data: client, error: clientError } = await admin
       .from("clients")
       .select("company_name")
       .eq("id", params.clientId)
       .maybeSingle();
-    if (!client) return;
+    if (!client) {
+      console.error("[instagram-report-delivery] cliente nao encontrado", clientError, params.clientId);
+      return;
+    }
 
     const pdfBuffer = await renderInstagramInsightsPdf({
       companyName: client.company_name,
@@ -58,14 +61,20 @@ export async function deliverInstagramInsightsReportPdf(params: {
       })
       .select("id")
       .single();
-    if (insertError || !document) return;
+    if (insertError || !document) {
+      console.error("[instagram-report-delivery] falha ao criar o documento", insertError);
+      return;
+    }
 
     const filePath = contractPath(params.clientId, document.id, "relatorio-instagram.pdf");
     const { error: uploadError } = await admin.storage.from(BUCKETS.contracts).upload(filePath, pdfBuffer, {
       contentType: "application/pdf",
       upsert: false,
     });
-    if (uploadError) return;
+    if (uploadError) {
+      console.error("[instagram-report-delivery] falha ao enviar o PDF pro storage", uploadError);
+      return;
+    }
 
     await admin
       .from("contracts")
@@ -78,7 +87,8 @@ export async function deliverInstagramInsightsReportPdf(params: {
       url: "/professional/documents",
       tag: `document-${document.id}`,
     }).catch(() => {});
-  } catch {
-    // Melhor esforco -- ver comentario da funcao.
+  } catch (error) {
+    // Melhor esforco -- ver comentario da funcao -- mas nunca mais silencioso.
+    console.error("[instagram-report-delivery] falha inesperada", error);
   }
 }
