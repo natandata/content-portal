@@ -114,7 +114,7 @@ export async function runInstagramInsightsReport(params: {
 
   const { data: connection } = await admin
     .from("client_instagram_connections")
-    .select("composio_connection_id")
+    .select("composio_connection_id, instagram_username")
     .eq("id", params.connectionId)
     .eq("client_id", params.clientId)
     .maybeSingle();
@@ -132,6 +132,7 @@ export async function runInstagramInsightsReport(params: {
     .insert({
       client_id: params.clientId,
       connection_id: params.connectionId,
+      instagram_username: connection.instagram_username,
       period_months: params.periodMonths,
       status: "running",
       requested_by: params.requestedBy,

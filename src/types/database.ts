@@ -671,6 +671,8 @@ export type InstagramInsightsReportRow = {
   client_id: string;
   /** Qual conta gerou este relatorio -- nulo se a conexao foi removida depois. */
   connection_id: string | null;
+  /** Snapshot do @ da conta na hora da geracao -- nao muda se a conexao for renomeada/desconectada depois. */
+  instagram_username: string | null;
   period_months: 3 | 6 | 9;
   status: InstagramReportStatus;
   /** reach, accounts_engaged, total_interactions, etc. — janela do periodo inteiro. */

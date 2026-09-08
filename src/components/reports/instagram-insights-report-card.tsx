@@ -132,6 +132,12 @@ export function InstagramInsightsReportCard({ report }: { report: InstagramInsig
 
   return (
     <div className="space-y-5">
+      {/* Um cliente pode ter mais de uma conta conectada -- deixa claro de
+          onde estes dados vieram antes de qualquer numero. */}
+      <p className="inline-flex w-fit items-center gap-1.5 rounded-full bg-accent/10 px-3 py-1 text-sm font-semibold text-accent">
+        Conta: {report.instagram_username ? `@${report.instagram_username}` : "nao identificada"}
+      </p>
+
       <div>
         <p className="mb-2 text-xs font-semibold tracking-wide text-ink-500 uppercase">Resumo do periodo</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

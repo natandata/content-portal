@@ -30,6 +30,7 @@ const styles = StyleSheet.create({
   header: { marginBottom: 16 },
   brand: { fontSize: 9, color: "#888", marginBottom: 4 },
   title: { fontSize: 18, fontWeight: 700, marginBottom: 2 },
+  account: { fontSize: 11, fontWeight: 700, color: "#4f46e5", marginBottom: 2 },
   subtitle: { fontSize: 11, color: "#555" },
   statsGrid: { flexDirection: "row", flexWrap: "wrap", marginBottom: 20, gap: 10 },
   statBox: {
@@ -106,6 +107,9 @@ function InstagramInsightsPdfDocument({
         <View style={styles.header}>
           <Text style={styles.brand}>Content Portal · Relatorio de Instagram</Text>
           <Text style={styles.title}>{companyName}</Text>
+          <Text style={styles.account}>
+            Conta: {report.instagram_username ? `@${report.instagram_username}` : "nao identificada"}
+          </Text>
           <Text style={styles.subtitle}>
             Insights dos ultimos {report.period_months} meses -- gerado em {formatDateTime(report.completed_at ?? report.created_at)}
           </Text>
