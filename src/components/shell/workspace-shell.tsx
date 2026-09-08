@@ -9,6 +9,7 @@ import { NavBadge } from "@/components/shell/nav-badge";
 import { NavDropdown } from "@/components/shell/nav-dropdown";
 import { navBadgeCount, staffNavItems, type NavBadgeKey } from "@/components/shell/nav-items";
 import type { NavGroup, NavItem, NavLeafItem } from "@/components/shell/nav-items";
+import { PresenceTracker } from "@/components/shell/presence-tracker";
 import { ReloadAppButton } from "@/components/shell/reload-app-button";
 import { IconButton } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -23,12 +24,14 @@ function isLeafItem(item: NavItem): item is NavLeafItem {
 }
 
 export function WorkspaceShell({
+  userId,
   role,
   name,
   email,
   badges,
   children,
 }: {
+  userId: string;
   role: UserRole;
   name: string;
   email: string;
@@ -190,6 +193,7 @@ export function WorkspaceShell({
 
   return (
     <div className="flex min-h-dvh flex-col">
+      <PresenceTracker userId={userId} name={name} role={role} />
       {/*
        * Barra superior — desktop. Mesma posicao (topo, nao lateral) do shell
        * do cliente (`ClientShell`). `overflow-x-auto` na linha do menu: com

@@ -1,5 +1,6 @@
 import { Activity, HardDrive, Users, UserCog, Wallet, Images } from "lucide-react";
 
+import { OnlineStaffCard } from "@/components/admin/online-staff-card";
 import { Card, CardHeader, PageHeader, StatCard } from "@/components/ui/layout";
 import { EmptyState } from "@/components/ui/feedback";
 import { requireAdmin } from "@/lib/auth";
@@ -18,7 +19,7 @@ export async function AdminDashboard() {
 
   const [stats, activities] = await Promise.all([
     loadAdminDashboardStats(supabase),
-    loadClientActivities(supabase, 10),
+    loadClientActivities(supabase, 15),
   ]);
 
   return (
@@ -35,7 +36,9 @@ export async function AdminDashboard() {
         <StatCard label="Armazenamento usado" value={formatBytes(stats.storageBytes)} tone="info" />
       </div>
 
-      <div className="mb-6 grid gap-5 lg:grid-cols-2">
+      <div className="mb-6 grid gap-5 lg:grid-cols-3">
+        <OnlineStaffCard />
+
         <Card>
           <CardHeader
             title="Receita paga"

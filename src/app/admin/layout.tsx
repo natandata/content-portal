@@ -13,6 +13,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   return (
     <WorkspaceShell
+      userId={actor.authUser.id}
       role="admin"
       name={actor.displayName}
       email={actor.authUser.email ?? ""}

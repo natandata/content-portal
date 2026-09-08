@@ -15,6 +15,7 @@ export default async function ProfessionalLayout({ children }: { children: React
 
   return (
     <WorkspaceShell
+      userId={actor.authUser.id}
       role="professional"
       name={actor.displayName}
       email={actor.authUser.email ?? ""}
