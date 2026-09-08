@@ -487,6 +487,8 @@ export type StaffChatInboxEntry = {
   unread_count: number;
 }
 
+export type InvoiceRecurrence = "monthly" | "3_months" | "6_months";
+
 export type InvoiceRow = {
   id: string;
   client_id: string;
@@ -503,6 +505,14 @@ export type InvoiceRow = {
   paid_at: string | null;
   paid_by: string | null;
   last_reminder_sent_on: string | null;
+  /** monthly = sem prazo final; 3_months/6_months = total de ciclos, depois para sozinho. Nulo = cobranca avulsa. */
+  recurrence: InvoiceRecurrence | null;
+  /** Mesmo id em toda cobranca gerada pela mesma serie -- nulo pra avulsa. */
+  recurrence_group_id: string | null;
+  recurrence_cycle_number: number | null;
+  recurrence_total_cycles: number | null;
+  /** true interrompe a geracao de proximos ciclos -- setado em toda linha do grupo ao cancelar. */
+  recurrence_cancelled: boolean;
   /** Conta conectada que recebe esta cobranca. So preenchido em method 'stripe'. */
   stripe_account_id: string | null;
   stripe_checkout_session_id: string | null;

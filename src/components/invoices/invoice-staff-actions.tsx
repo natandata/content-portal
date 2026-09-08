@@ -7,22 +7,39 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
-import { deleteInvoiceAction, markInvoicePaidAction } from "@/server/actions/invoices";
+import { cancelInvoiceRecurrenceAction, deleteInvoiceAction, markInvoicePaidAction } from "@/server/actions/invoices";
 import type { InvoiceMethod, InvoiceStatus } from "@/types/database";
 
 export function InvoiceStaffActions({
   invoiceId,
   status,
   method,
+  recurrenceActive = false,
 }: {
   invoiceId: string;
   status: InvoiceStatus;
   method: InvoiceMethod;
+  /** true quando esta cobranca pertence a uma serie recorrente que ainda vai gerar proximos ciclos. */
+  recurrenceActive?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [paidConfirmOpen, setPaidConfirmOpen] = useState(false);
+  const [cancelRecurrenceOpen, setCancelRecurrenceOpen] = useState(false);
+
+  function cancelRecurrence() {
+    startTransition(async () => {
+      const result = await cancelInvoiceRecurrenceAction(invoiceId);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("Recorrencia cancelada -- os proximos ciclos nao serao mais gerados.");
+      setCancelRecurrenceOpen(false);
+      router.refresh();
+    });
+  }
 
   function markPaid() {
     startTransition(async () => {
@@ -52,6 +69,12 @@ export function InvoiceStaffActions({
           >
             <CheckCircle2 className="size-4" aria-hidden />
             Cobranca paga
+          </Button>
+        ) : null}
+
+        {recurrenceActive ? (
+          <Button size="sm" variant="outline" disabled={pending} onClick={() => setCancelRecurrenceOpen(true)}>
+            Cancelar recorrencia
           </Button>
         ) : null}
 
@@ -127,6 +150,28 @@ export function InvoiceStaffActions({
           Esta e uma cobranca de pagamento online: quando o cliente paga pelo portal, ela se
           marca sozinha. Marcar aqui muda so o registro do sistema — nao cobra e nao transfere
           nada na Stripe. Use isto apenas se o cliente pagou por fora.
+        </p>
+      </Modal>
+
+      <Modal
+        open={cancelRecurrenceOpen}
+        onClose={() => setCancelRecurrenceOpen(false)}
+        title="Cancelar recorrencia"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setCancelRecurrenceOpen(false)} disabled={pending}>
+              Voltar
+            </Button>
+            <Button variant="danger" loading={pending} onClick={cancelRecurrence}>
+              Cancelar recorrencia
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-ink-600">
+          As cobrancas ja geradas continuam valendo normalmente. So os proximos ciclos deixam de
+          ser criados.
         </p>
       </Modal>
     </>

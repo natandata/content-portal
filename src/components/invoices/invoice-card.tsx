@@ -48,6 +48,14 @@ export function InvoiceCard({
               <Icon className="size-3.5" aria-hidden />
               {invoiceMethodLabelFor(invoice.method, locale)}
             </Badge>
+            {invoice.recurrence_group_id ? (
+              <Badge tone="info">
+                {locale === "en" ? "Recurring" : "Recorrente"}
+                {invoice.recurrence_total_cycles != null
+                  ? ` · ${invoice.recurrence_cycle_number}/${invoice.recurrence_total_cycles}`
+                  : ` · ${invoice.recurrence_cycle_number}ª`}
+              </Badge>
+            ) : null}
           </div>
           <p className="mt-0.5 text-sm text-ink-500">
             {clientName ? (

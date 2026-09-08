@@ -164,6 +164,12 @@ export async function InvoicesList({
                     invoiceId={invoice.id}
                     status={invoice.status}
                     method={invoice.method}
+                    recurrenceActive={
+                      Boolean(invoice.recurrence_group_id) &&
+                      !invoice.recurrence_cancelled &&
+                      (invoice.recurrence_total_cycles == null ||
+                        (invoice.recurrence_cycle_number ?? 0) < invoice.recurrence_total_cycles)
+                    }
                   />
                 }
               />

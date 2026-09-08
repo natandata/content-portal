@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
@@ -24,6 +25,9 @@ const createSchema = z
     dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data de vencimento"),
     paymentLink: z.string().trim().optional(),
     pixKey: z.string().trim().optional(),
+    // Nulo/ausente = cobranca avulsa (comportamento de sempre). Ver
+    // src/server/invoices/recurrence.ts pro cron que gera os proximos ciclos.
+    recurrence: z.enum(["monthly", "3_months", "6_months"]).optional(),
   })
   .transform((data) => {
     if (data.method !== "link") return { ...data, paymentLink: undefined };
@@ -69,6 +73,13 @@ export async function createInvoiceAction(
     stripeAccountId = resolved.data;
   }
 
+  // "monthly" nunca para sozinho (recurrence_total_cycles fica nulo); os
+  // outros dois param depois desse tanto de ciclos -- o cron em
+  // src/server/invoices/recurrence.ts que decide quando gerar o proximo.
+  const recurrenceGroupId = parsed.data.recurrence ? randomUUID() : null;
+  const recurrenceTotalCycles =
+    parsed.data.recurrence === "3_months" ? 3 : parsed.data.recurrence === "6_months" ? 6 : null;
+
   const { data, error } = await supabase
     .from("invoices")
     .insert({
@@ -82,6 +93,10 @@ export async function createInvoiceAction(
       pix_key: parsed.data.method === "pix" ? (parsed.data.pixKey ?? null) : null,
       stripe_account_id: stripeAccountId,
       created_by: actor.authUser.id,
+      recurrence: parsed.data.recurrence ?? null,
+      recurrence_group_id: recurrenceGroupId,
+      recurrence_cycle_number: recurrenceGroupId ? 1 : null,
+      recurrence_total_cycles: recurrenceGroupId ? recurrenceTotalCycles : null,
     })
     .select("*")
     .single();
@@ -226,6 +241,35 @@ export async function deleteInvoiceAction(invoiceId: string): Promise<ActionResu
   if (error) {
     return fail(describeError(error, "Nao foi possivel excluir a cobranca."));
   }
+
+  revalidateInvoices(invoice.client_id);
+  return done();
+}
+
+/**
+ * Para a serie recorrente pra sempre -- marca TODA linha do grupo (nao so a
+ * mais recente), pra o cron de geracao (src/server/invoices/recurrence.ts)
+ * sempre enxergar o cancelamento independente de qual linha ele olhar.
+ * Cobrancas ja geradas continuam existindo e cobraveis normalmente; so o
+ * proximo ciclo nunca chega a ser criado.
+ */
+export async function cancelInvoiceRecurrenceAction(invoiceId: string): Promise<ActionResult<null>> {
+  await requireStaff();
+  const supabase = await createClient();
+
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("client_id, recurrence_group_id")
+    .eq("id", invoiceId)
+    .maybeSingle();
+  if (!invoice) return fail("Cobranca nao encontrada.");
+  if (!invoice.recurrence_group_id) return fail("Esta cobranca nao e recorrente.");
+
+  const { error } = await supabase
+    .from("invoices")
+    .update({ recurrence_cancelled: true })
+    .eq("recurrence_group_id", invoice.recurrence_group_id);
+  if (error) return fail(describeError(error, "Nao foi possivel cancelar a recorrencia."));
 
   revalidateInvoices(invoice.client_id);
   return done();

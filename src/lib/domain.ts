@@ -8,6 +8,7 @@ import type {
   CurrencyCode,
   DocumentKind,
   InvoiceMethod,
+  InvoiceRecurrence,
   InvoiceStatus,
   UserRole,
 } from "@/types/database";
@@ -310,6 +311,14 @@ export const CURRENCY_LABEL: Record<CurrencyCode, string> = {
 };
 
 export const INVOICE_METHODS: InvoiceMethod[] = ["boleto", "link", "pix", "stripe"];
+
+export const INVOICE_RECURRENCES: InvoiceRecurrence[] = ["monthly", "3_months", "6_months"];
+
+export const INVOICE_RECURRENCE_LABEL: Record<InvoiceRecurrence, string> = {
+  monthly: "Mensal (sem prazo final)",
+  "3_months": "Mensal por 3 meses",
+  "6_months": "Mensal por 6 meses",
+};
 
 export const INVOICE_METHOD_LABEL: Record<InvoiceMethod, string> = {
   boleto: "Boleto",

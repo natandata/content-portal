@@ -8,11 +8,18 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Field, FormError, Input, Select, Textarea } from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
-import { CURRENCIES, CURRENCY_LABEL, INVOICE_METHODS, INVOICE_METHOD_LABEL } from "@/lib/domain";
+import {
+  CURRENCIES,
+  CURRENCY_LABEL,
+  INVOICE_METHODS,
+  INVOICE_METHOD_LABEL,
+  INVOICE_RECURRENCES,
+  INVOICE_RECURRENCE_LABEL,
+} from "@/lib/domain";
 import { BUCKETS, invoiceBoletoPath } from "@/lib/paths";
 import { uploadToBucket, validateFile } from "@/lib/upload";
 import { formatBytes } from "@/lib/utils";
-import type { CurrencyCode, InvoiceMethod } from "@/types/database";
+import type { CurrencyCode, InvoiceMethod, InvoiceRecurrence } from "@/types/database";
 import { attachBoletoAction, createInvoiceAction } from "@/server/actions/invoices";
 
 export interface ClientOption {
@@ -41,6 +48,7 @@ export function InvoiceCreateModal({
   const [dueDate, setDueDate] = useState("");
   const [paymentLink, setPaymentLink] = useState("");
   const [pixKey, setPixKey] = useState("");
+  const [recurrence, setRecurrence] = useState<InvoiceRecurrence | "">("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -53,6 +61,7 @@ export function InvoiceCreateModal({
     setDueDate("");
     setPaymentLink("");
     setPixKey("");
+    setRecurrence("");
     setFile(null);
   }
 
@@ -88,6 +97,7 @@ export function InvoiceCreateModal({
         dueDate,
         paymentLink: method === "link" ? paymentLink : undefined,
         pixKey: method === "pix" ? pixKey : undefined,
+        recurrence: recurrence || undefined,
       });
       if (!created.ok) {
         setError(created.error);
@@ -237,6 +247,32 @@ export function InvoiceCreateModal({
               onChange={(event) => setDueDate(event.target.value)}
               disabled={busy}
             />
+          </Field>
+
+          <Field
+            label="Recorrencia"
+            htmlFor="invoice-recurrence"
+            hint={
+              recurrence
+                ? method === "boleto"
+                  ? "Os proximos ciclos aparecem em Cobrancas sem o PDF -- voce anexa mais perto do vencimento."
+                  : "Os proximos ciclos sao criados e avisados ao cliente sozinhos, uns dias antes de cada vencimento."
+                : undefined
+            }
+          >
+            <Select
+              id="invoice-recurrence"
+              value={recurrence}
+              onChange={(event) => setRecurrence(event.target.value as InvoiceRecurrence | "")}
+              disabled={busy}
+            >
+              <option value="">Nao repete</option>
+              {INVOICE_RECURRENCES.map((option) => (
+                <option key={option} value={option}>
+                  {INVOICE_RECURRENCE_LABEL[option]}
+                </option>
+              ))}
+            </Select>
           </Field>
 
           {method === "link" ? (
