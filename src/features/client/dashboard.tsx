@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Banknote, FileText, Images } from "lucide-react";
 
+import { ClientProfileBanner } from "@/components/clients/client-profile-banner";
 import { ContentCard } from "@/components/content/content-card";
 import { ApprovalActions } from "@/components/content/approval-actions";
 import { ContractStatusBadge } from "@/components/ui/badge";
@@ -16,6 +17,8 @@ import {
 } from "@/features/client/dashboard-widgets";
 import { AWAITING_CLIENT_STATUSES } from "@/lib/domain";
 import { getServerDictionary } from "@/lib/i18n/server";
+import { BUCKETS } from "@/lib/paths";
+import { signedUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { loadContentFileCounts, loadContentPreviews } from "@/server/queries";
 import type { ContentStatus } from "@/types/database";
@@ -25,21 +28,31 @@ export async function ClientDashboard() {
   const supabase = await createClient();
   const { locale, dict } = await getServerDictionary();
 
-  const [{ data: pending }, { data: statusRows }, { data: contracts }, { count: openInvoicesCount }] =
-    await Promise.all([
-      supabase
-        .from("contents")
-        .select("*")
-        .in("status", AWAITING_CLIENT_STATUSES)
-        .order("updated_at", { ascending: false }),
-      supabase.from("contents").select("status"),
-      supabase
-        .from("contracts")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(1),
-      supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
-    ]);
+  const [
+    { data: pending },
+    { data: statusRows },
+    { data: contracts },
+    { count: openInvoicesCount },
+    { data: clientProfile },
+  ] = await Promise.all([
+    supabase
+      .from("contents")
+      .select("*")
+      .in("status", AWAITING_CLIENT_STATUSES)
+      .order("updated_at", { ascending: false }),
+    supabase.from("contents").select("status"),
+    supabase
+      .from("contracts")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(1),
+    supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "open"),
+    supabase.from("client_profiles").select("avatar_path").eq("client_id", actor.client.id).maybeSingle(),
+  ]);
+
+  const avatarUrl = clientProfile?.avatar_path
+    ? await signedUrl(supabase, BUCKETS.profiles, clientProfile.avatar_path)
+    : null;
 
   const rows = pending ?? [];
   const ids = rows.map((row) => row.id);
@@ -56,6 +69,12 @@ export async function ClientDashboard() {
 
   return (
     <>
+      <ClientProfileBanner
+        companyName={actor.client.company_name}
+        coverColor={actor.client.cover_color}
+        avatarUrl={avatarUrl}
+      />
+
       <PageHeader
         title={dict.dashboard.hello(actor.client.name.split(" ")[0] ?? actor.client.name)}
         description={dict.dashboard.subtitle}
