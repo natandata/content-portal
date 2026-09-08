@@ -68,6 +68,11 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    /* Trava de seguranca contra rolagem/arrasto horizontal da pagina inteira
+       -- cada bloco de conteudo largo (tabela, grafico) ja rola dentro de si
+       mesmo; isso aqui e' so pra nunca sobrar 1px de overflow que force o
+       body inteiro a "sambar" de um lado pro outro no mobile. */
+    overflow-x: hidden;
   }
 
   body {
@@ -75,6 +80,8 @@
     color: var(--color-ink-900);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    width: 100%;
   }
 
   ::selection {
@@ -95,10 +102,15 @@
   }
 
   .field-input {
-    @apply w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink-900
+    /* text-base (16px) no mobile -- abaixo disso o Safari/iOS da zoom
+       sozinho ao focar o campo, que e' boa parte do "sambando" reportado.
+       Volta pro text-sm (14px) a partir do sm: (desktop nao tem esse
+       problema, e a densidade visual original era assim de proposito). */
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-base text-ink-900
       outline-none transition placeholder:text-ink-400
       focus:border-accent focus:ring-4 focus:ring-accent/10
-      disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400;
+      disabled:cursor-not-allowed disabled:bg-ink-50 disabled:text-ink-400
+      sm:text-sm;
   }
 
   .field-hint {

@@ -266,7 +266,7 @@ export function ClientsGallery({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar cliente..."
-            className="w-full bg-transparent text-sm text-ink-900 outline-none placeholder:text-ink-400"
+            className="w-full bg-transparent text-base text-ink-900 outline-none placeholder:text-ink-400 sm:text-sm"
           />
         </label>
       </div>

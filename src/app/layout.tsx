@@ -33,6 +33,12 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
+  // Trava o zoom por pinca/duplo toque -- e' pra parecer um app de verdade,
+  // nao uma pagina web onde a pessoa fica dando zoom e a tela "samba".
+  // maximumScale sozinho ja resolve a maioria dos navegadores; userScalable
+  // reforca nos que ainda respeitam a flag (Android/Chrome).
+  maximumScale: 1,
+  userScalable: false,
   // Instalado como app, a area segura do aparelho precisa ser respeitada.
   viewportFit: "cover",
 };
