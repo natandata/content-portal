@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { ContentMedia } from "@/components/content/content-media";
+import { InstagramPublishCard } from "@/components/content/instagram-publish-card";
 import { FeedPreviewModal } from "@/components/feed/feed-preview-modal";
 import { HistoryTimeline } from "@/components/content/history-timeline";
 import { StaffContentActions } from "@/components/content/staff-content-actions";
@@ -10,8 +11,10 @@ import { ContentStatusBadge } from "@/components/ui/badge";
 import { Card, CardHeader, PageHeader } from "@/components/ui/layout";
 import { basePath, requireStaff } from "@/lib/auth";
 import { CONTENT_TYPE_LABEL } from "@/lib/domain";
+import { composioConfig } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
+import { loadInstagramConnectionStatus } from "@/server/actions/instagram-connect";
 import {
   loadContentFiles,
   loadContentPreviews,
@@ -49,9 +52,10 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
       .maybeSingle(),
   ]);
 
-  const [feedEntries, ownPreviews] = await Promise.all([
+  const [feedEntries, ownPreviews, instagramConnections] = await Promise.all([
     loadFeedEntries(supabase, content.client_id),
     loadContentPreviews(supabase, [contentId]),
+    composioConfig() ? loadInstagramConnectionStatus(content.client_id) : Promise.resolve([]),
   ]);
 
   const clientName = client?.company_name ?? "Cliente";
@@ -128,6 +132,27 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
               />
             </div>
           </Card>
+
+          {composioConfig() ? (
+            <Card>
+              <CardHeader
+                title="Publicar no Instagram"
+                description="Publicacao direta pela API -- so feed/carrossel no momento."
+              />
+              <InstagramPublishCard
+                contentId={content.id}
+                contentType={content.type}
+                contentStatus={content.status}
+                connections={instagramConnections}
+                instagramConnectionId={content.instagram_connection_id}
+                publishStatus={content.publish_status}
+                publishError={content.publish_error}
+                scheduledDate={content.scheduled_date}
+                instagramMediaId={content.instagram_media_id}
+                publishedAt={content.published_at}
+              />
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader title="Historico" description="Tudo que aconteceu com este conteudo." />

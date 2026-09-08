@@ -85,6 +85,13 @@ export async function GET(request: Request) {
     label: cookiePayload.label,
     instagram_username: instagramUsername,
     is_principal: isFirstConnection,
+    // O escopo de publicacao e' do Auth Config da Composio (nao por
+    // conexao) -- toda autorizacao NOVA feita depois do Auth Config ganhar
+    // `instagram_business_content_publish` ja sai com o escopo. Se este
+    // deploy for antes do Auth Config ser atualizado, reconexoes feitas
+    // nesse intervalo vao mostrar `true` sem ter o escopo de verdade --
+    // atualizar o Auth Config ANTES ou junto deste deploy.
+    publish_scope_granted: true,
     connected_at: new Date().toISOString(),
   });
 

@@ -321,21 +321,26 @@ export async function submitContentAction(contentId: string): Promise<ActionResu
   return done();
 }
 
+/** Marcar como publicado manualmente (fora da plataforma) -- alternativa a publicacao direta em `instagram-publish.ts`. */
 export async function setContentPublishedAction(
   contentId: string,
 ): Promise<ActionResult<null>> {
   await requireStaff();
   const supabase = await createClient();
 
+  // So sai de "approved" pra "published" -- nunca foi assim antes desta
+  // guarda (era 100% aberto), e agora que existe publicacao automatizada
+  // (cron/direta) isso deixou de ser so uma falta de rigor tolerável.
   const { data, error } = await supabase
     .from("contents")
     .update({ status: "published" })
     .eq("id", contentId)
+    .eq("status", "approved")
     .select("client_id")
     .single();
 
   if (error || !data) {
-    return fail(describeError(error, "Nao foi possivel marcar como publicado."));
+    return fail(describeError(error, "So e possivel marcar como publicado um conteudo aprovado."));
   }
 
   await logHistory(contentId, "Conteudo marcado como publicado");

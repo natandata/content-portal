@@ -7,6 +7,7 @@ import { Badge, ContractStatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/feedback";
 import { Card, PageHeader } from "@/components/ui/layout";
 import { requireStaff } from "@/lib/auth";
+import { autentiqueConfig } from "@/lib/env";
 import { BUCKETS } from "@/lib/paths";
 import { signedUrlMap } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
@@ -164,7 +165,14 @@ export async function DocumentsList({
                 </div>
 
                 <div className="border-t border-line bg-ink-50/60 px-5 py-3">
-                  <DocumentStaffActions contractId={contract.id} status={contract.status} />
+                  <DocumentStaffActions
+                    contractId={contract.id}
+                    status={contract.status}
+                    requiresSignature={contract.requires_signature}
+                    hasOriginalFile={Boolean(contract.original_file_path)}
+                    signatureProvider={contract.signature_provider}
+                    autentiqueConfigured={Boolean(autentiqueConfig())}
+                  />
                 </div>
               </Card>
             );

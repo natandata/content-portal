@@ -136,6 +136,24 @@ export function composioConfig(): { apiKey: string; instagramAuthConfigId: strin
   return { apiKey, instagramAuthConfigId };
 }
 
+/**
+ * Token da API do Autentique (assinatura eletronica, terceira opcao ao lado
+ * do upload manual e do link do Gov.br). `webhookSecret` e' um segredo NOSSO
+ * (nao da conta do Autentique) -- o Autentique so suporta um webhook GLOBAL
+ * por conta (uma URL so pra todos os documentos), entao a autenticacao do
+ * `api/webhooks/autentique` e' esse segredo estatico na query string
+ * (configurado como parte da URL do webhook dentro do painel do
+ * Autentique), nao um HMAC por chamada. `null` = assinatura via Autentique
+ * desligada, mesmo contrato das outras integracoes -- o upload manual e o
+ * Gov.br continuam funcionando normalmente.
+ */
+export function autentiqueConfig(): { apiKey: string; webhookSecret: string } | null {
+  const apiKey = process.env.AUTENTIQUE_API_KEY;
+  const webhookSecret = process.env.AUTENTIQUE_WEBHOOK_SECRET;
+  if (!apiKey?.trim() || !webhookSecret?.trim()) return null;
+  return { apiKey, webhookSecret };
+}
+
 export const isSupabaseConfigured =
   publicEnv.supabaseUrl.length > 0 && publicEnv.supabaseAnonKey.length > 0;
 

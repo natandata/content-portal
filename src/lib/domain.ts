@@ -1,6 +1,7 @@
 import type { Locale } from "@/lib/i18n/locale";
 import type {
   BrandArchetype,
+  ContentPublishStatus,
   ContentStatus,
   ContentType,
   ContractStatus,
@@ -49,6 +50,23 @@ export const CONTENT_TYPE_LABEL: Record<ContentType, string> = {
   carousel: "Carrossel",
 };
 
+/** Mecanica de publicacao direta no Instagram -- separado de CONTENT_STATUS_LABEL (fluxo de aprovacao). */
+export const CONTENT_PUBLISH_STATUS_LABEL: Record<ContentPublishStatus, string> = {
+  idle: "Nao publicado",
+  scheduled: "Agendado",
+  publishing: "Publicando...",
+  published: "Publicado no Instagram",
+  failed: "Falha ao publicar",
+};
+
+export const CONTENT_PUBLISH_STATUS_TONE: Record<ContentPublishStatus, BadgeTone> = {
+  idle: "neutral",
+  scheduled: "info",
+  publishing: "info",
+  published: "success",
+  failed: "danger",
+};
+
 export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
   awaiting_signature: "Aguardando assinatura",
   signed: "Documento enviado",
@@ -57,6 +75,7 @@ export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
   replaced: "Substituido",
   delivered: "Entregue",
   pending_delivery: "Aguardando envio",
+  sent_for_signature: "Enviado para assinatura (Autentique)",
 };
 
 export const CONTRACT_STATUS_TONE: Record<ContractStatus, BadgeTone> = {
@@ -67,6 +86,7 @@ export const CONTRACT_STATUS_TONE: Record<ContractStatus, BadgeTone> = {
   replaced: "neutral",
   delivered: "success",
   pending_delivery: "warning",
+  sent_for_signature: "info",
 };
 
 export const DOCUMENT_KIND_LABEL: Record<DocumentKind, string> = {

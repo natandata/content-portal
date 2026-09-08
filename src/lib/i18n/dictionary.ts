@@ -211,6 +211,7 @@ export interface Dictionary {
       replaced: string;
       delivered: string;
       pending_delivery: string;
+      sent_for_signature: string;
     };
     documentKind: {
       contract: string;
@@ -625,6 +626,7 @@ const ptBR: Dictionary = {
       replaced: "Substituido",
       delivered: "Entregue",
       pending_delivery: "Aguardando envio",
+      sent_for_signature: "Enviado para assinatura (Autentique)",
     },
     documentKind: {
       contract: "Contrato",
@@ -1027,6 +1029,7 @@ const en: Dictionary = {
       replaced: "Replaced",
       delivered: "Delivered",
       pending_delivery: "Awaiting delivery",
+      sent_for_signature: "Sent for signature (Autentique)",
     },
     documentKind: {
       contract: "Contract",

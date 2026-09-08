@@ -128,6 +128,14 @@ export async function ClientDocuments() {
                       <FileCheck2 className="size-4 shrink-0" aria-hidden />
                       {dict.documents.approvedNotice}
                     </p>
+                  ) : contract.signature_provider === "autentique" ? (
+                    // Assinatura via Autentique: eles mandam o e-mail com o
+                    // link direto pro signatario -- nao mostramos upload
+                    // manual nem o atalho do Gov.br nesse caminho.
+                    <p className="text-sm text-ink-500">
+                      Aguardando assinatura via Autentique -- verifique o e-mail enviado pra
+                      quem vai assinar.
+                    </p>
                   ) : (
                     <>
                       {contract.allow_gov_br_signature ? (

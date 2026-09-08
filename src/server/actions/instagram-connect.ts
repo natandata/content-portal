@@ -118,14 +118,15 @@ export interface InstagramConnectionStatus {
   instagramUsername: string | null;
   label: string | null;
   isPrincipal: boolean;
+  publishScopeGranted: boolean;
 }
 
-/** Contas conectadas do cliente (pode ser mais de uma) — usado pelo cartao do Instagram na tela de Relatorios. */
+/** Contas conectadas do cliente (pode ser mais de uma) — usado pelo cartao do Instagram na tela de Relatorios e pelo seletor de publicacao. */
 export async function loadInstagramConnectionStatus(clientId: string): Promise<InstagramConnectionStatus[]> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("client_instagram_connections")
-    .select("id, instagram_username, label, is_principal")
+    .select("id, instagram_username, label, is_principal, publish_scope_granted")
     .eq("client_id", clientId)
     .order("is_principal", { ascending: false })
     .order("connected_at");
@@ -135,5 +136,6 @@ export async function loadInstagramConnectionStatus(clientId: string): Promise<I
     instagramUsername: row.instagram_username,
     label: row.label,
     isPrincipal: row.is_principal,
+    publishScopeGranted: row.publish_scope_granted,
   }));
 }

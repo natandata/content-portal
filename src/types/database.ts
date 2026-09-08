@@ -25,9 +25,13 @@ export type ContractStatus =
   /** Documento que nao pede assinatura: foi entregue e pronto. */
   | "delivered"
   /** Gerado (ex.: relatorio automatico), mas ainda nao liberado pro cliente ver. */
-  | "pending_delivery";
+  | "pending_delivery"
+  /** Enviado via Autentique, aguardando os signatarios -- nunca passa por under_review. */
+  | "sent_for_signature";
 
 export type DocumentKind = "contract" | "strategy" | "brandbook" | "mockup" | "report" | "other";
+
+export type SignatureProvider = "manual" | "gov_br" | "autentique";
 
 export type ContentType = "image" | "video" | "carousel";
 
@@ -126,6 +130,14 @@ export type CalendlyWebhookEventRow = {
   error: string | null;
 }
 
+export type AutentiqueWebhookEventRow = {
+  id: string;
+  event_type: string;
+  received_at: string;
+  processed_at: string | null;
+  error: string | null;
+}
+
 export type MeetingRequestedBy = "client" | "professional";
 export type MeetingStatus = "pending" | "approved" | "declined" | "cancelled" | "scheduled";
 export type MeetingMethod = "google_meet" | "calendly";
@@ -169,12 +181,23 @@ export type ContractRow = {
   allow_gov_br_signature: boolean;
   /** Falso enquanto aguarda liberacao manual (ex.: relatorio recem-gerado) -- cliente so ve quando vira true. */
   client_visible: boolean;
+  /** Qual caminho de assinatura foi escolhido -- manual (upload), gov_br (link externo) ou autentique (API real). */
+  signature_provider: SignatureProvider;
+  autentique_document_id: string | null;
+  autentique_signer_name: string | null;
+  autentique_signer_email: string | null;
+  autentique_signer_cpf: string | null;
+  autentique_sent_at: string | null;
+  autentique_signed_at: string | null;
+  autentique_error: string | null;
   created_by: string | null;
   uploaded_at: string | null;
   signed_at: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export type ContentPublishStatus = "idle" | "scheduled" | "publishing" | "published" | "failed";
 
 export type ContentRow = {
   id: string;
@@ -189,6 +212,15 @@ export type ContentRow = {
   scheduled_time: string | null;
   caption: string | null;
   internal_notes: string | null;
+  /** Qual conta Instagram do cliente recebe a publicacao direta (nulo = ainda nao escolhida). */
+  instagram_connection_id: string | null;
+  /** Mecanica de publicacao direta -- separado de `status` (fluxo de aprovacao). */
+  publish_status: ContentPublishStatus;
+  publish_error: string | null;
+  /** creation_id da Meta -- so diagnostico, nunca reusado num retry. */
+  publish_container_id: string | null;
+  instagram_media_id: string | null;
+  published_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -618,6 +650,8 @@ export type ClientInstagramConnectionRow = {
   label: string | null;
   instagram_username: string | null;
   is_principal: boolean;
+  /** true assim que a conexao foi (re)feita depois do Auth Config da Composio ganhar o escopo de publicacao. */
+  publish_scope_granted: boolean;
   connected_at: string;
 }
 
@@ -704,6 +738,7 @@ export type Database = {
         'user_id' | 'calendly_uri' | 'calendly_email' | 'scheduling_url' | 'access_token' | 'refresh_token'
       >;
       calendly_webhook_events: Table<CalendlyWebhookEventRow, 'id' | 'event_type'>;
+      autentique_webhook_events: Table<AutentiqueWebhookEventRow, 'id' | 'event_type'>;
       meeting_requests: Table<
         MeetingRequestRow,
         'client_id' | 'professional_id' | 'requested_by' | 'contact_email' | 'created_by'

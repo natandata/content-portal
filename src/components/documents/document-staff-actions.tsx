@@ -5,17 +5,27 @@ import { useState, useTransition } from "react";
 import { CheckCircle2, RotateCcw, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AutentiqueSendModal } from "@/components/documents/autentique-send-modal";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { cancelAutentiqueSignatureAction } from "@/server/actions/autentique-documents";
 import { deleteDocumentAction, sendDocumentToClientAction, setDocumentStatusAction } from "@/server/actions/documents";
-import type { ContractStatus } from "@/types/database";
+import type { ContractStatus, SignatureProvider } from "@/types/database";
 
 export function DocumentStaffActions({
   contractId,
   status,
+  requiresSignature = false,
+  hasOriginalFile = false,
+  signatureProvider = "manual",
+  autentiqueConfigured = false,
 }: {
   contractId: string;
   status: ContractStatus;
+  requiresSignature?: boolean;
+  hasOriginalFile?: boolean;
+  signatureProvider?: SignatureProvider;
+  autentiqueConfigured?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -90,6 +100,31 @@ export function DocumentStaffActions({
             onClick={() => update("replaced", "Documento marcado como substituido.")}
           >
             Marcar como substituido
+          </Button>
+        ) : null}
+
+        {autentiqueConfigured && requiresSignature && hasOriginalFile && signatureProvider !== "autentique" ? (
+          <AutentiqueSendModal contractId={contractId} />
+        ) : null}
+
+        {signatureProvider === "autentique" && status === "sent_for_signature" ? (
+          <Button
+            size="sm"
+            variant="outline"
+            loading={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await cancelAutentiqueSignatureAction(contractId);
+                if (!result.ok) {
+                  toast.error(result.error);
+                  return;
+                }
+                toast.success("Envio via Autentique cancelado -- voltou pro fluxo manual.");
+                router.refresh();
+              })
+            }
+          >
+            Cancelar envio via Autentique
           </Button>
         ) : null}
 
