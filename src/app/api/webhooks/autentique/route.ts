@@ -52,7 +52,12 @@ function verifySignature(rawBody: string, signatureHeader: string, secret: strin
 
 export async function POST(request: Request) {
   const config = autentiqueConfig();
-  if (!config) return NextResponse.json({ error: "Autentique nao configurado" }, { status: 404 });
+  // `webhookSecret` e' opcional (recurso Pro na conta Autentique) -- sem
+  // ele este endpoint fica desligado, e o app depende so do cron diario de
+  // reconciliamento pra fechar os documentos assinados.
+  if (!config || !config.webhookSecret) {
+    return NextResponse.json({ error: "Webhook do Autentique nao configurado" }, { status: 404 });
+  }
 
   const rawBody = await request.text();
   const signatureHeader = request.headers.get("x-autentique-signature");
