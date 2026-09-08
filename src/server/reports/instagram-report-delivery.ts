@@ -54,7 +54,8 @@ export async function deliverInstagramInsightsReportPdf(params: {
     });
 
     const generatedAt = new Date(params.report.completed_at ?? params.report.created_at);
-    const title = `Relatorio de Instagram (${params.report.period_months} meses) - ${generatedAt.toLocaleDateString("pt-BR")}`;
+    const accountLabel = params.report.instagram_username ? ` [@${params.report.instagram_username}]` : "";
+    const title = `Relatorio de Instagram${accountLabel} (${params.report.period_months} meses) - ${generatedAt.toLocaleDateString("pt-BR")}`;
 
     const { data: document, error: insertError } = await admin
       .from("contracts")
