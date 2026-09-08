@@ -124,10 +124,11 @@ export async function cancelAutentiqueSignatureAction(contractId: string): Promi
     })
     .eq("id", contractId)
     .eq("signature_provider", "autentique")
+    .eq("status", "sent_for_signature")
     .select("client_id")
     .maybeSingle();
   if (error) return fail(describeError(error, "Nao foi possivel cancelar o envio."));
-  if (!data) return fail("Este documento nao esta no fluxo do Autentique.");
+  if (!data) return fail("Este documento nao esta mais aguardando assinatura via Autentique.");
 
   revalidateDocuments(data.client_id);
   return done();

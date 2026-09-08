@@ -54,6 +54,9 @@ export async function completeIfSigned(
     return false;
   }
 
+  // "signed" (nao "approved") -- fica com data/hora visivel na tag do
+  // documento, e o staff ainda tem "Confirmar recebimento" disponivel (mesmo
+  // botao que ja existe pro fluxo manual) se quiser dar o aprovado final.
   const now = new Date().toISOString();
   await admin
     .from("contracts")
@@ -62,13 +65,13 @@ export async function completeIfSigned(
       signed_at: now,
       autentique_signed_at: now,
       autentique_error: null,
-      status: "approved",
+      status: "signed",
     })
     .eq("id", contract.id);
 
   await sendPushToClientStaff(contract.client_id, {
     title: "Documento assinado via Autentique",
-    body: `"${contract.title}" foi assinado por todos e ja esta aprovado.`,
+    body: `"${contract.title}" foi assinado por todos os signatarios.`,
     url: "/professional/documents",
     tag: `document-signed-${contract.id}`,
   }).catch(() => {});

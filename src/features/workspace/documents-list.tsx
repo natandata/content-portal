@@ -12,7 +12,7 @@ import { BUCKETS } from "@/lib/paths";
 import { signedUrlMap } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { DOCUMENT_KIND_LABEL } from "@/lib/domain";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { loadClientNames, loadProfessionalClientIds } from "@/server/queries";
 
 export async function DocumentsList({
@@ -112,6 +112,12 @@ export async function DocumentsList({
                       )}
                       Enviado em {formatDate(contract.uploaded_at ?? contract.created_at)}
                     </p>
+                    {contract.signed_at ? (
+                      <p className="mt-0.5 text-sm text-emerald-700">
+                        Assinado em {formatDateTime(contract.signed_at)}
+                        {contract.signature_provider === "autentique" ? " via Autentique" : ""}
+                      </p>
+                    ) : null}
                     {contract.notes ? (
                       <p className="mt-2 text-sm text-ink-600">{contract.notes}</p>
                     ) : null}

@@ -620,7 +620,7 @@ const ptBR: Dictionary = {
     },
     document: {
       awaiting_signature: "Aguardando assinatura",
-      signed: "Documento enviado",
+      signed: "Assinado",
       under_review: "Aguardando conferencia",
       approved: "Aprovado",
       replaced: "Substituido",
@@ -1023,7 +1023,7 @@ const en: Dictionary = {
     },
     document: {
       awaiting_signature: "Awaiting signature",
-      signed: "Document sent",
+      signed: "Signed",
       under_review: "Under review",
       approved: "Approved",
       replaced: "Replaced",

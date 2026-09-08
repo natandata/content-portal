@@ -69,7 +69,7 @@ export const CONTENT_PUBLISH_STATUS_TONE: Record<ContentPublishStatus, BadgeTone
 
 export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
   awaiting_signature: "Aguardando assinatura",
-  signed: "Documento enviado",
+  signed: "Assinado",
   under_review: "Aguardando conferencia",
   approved: "Aprovado",
   replaced: "Substituido",
@@ -80,7 +80,7 @@ export const CONTRACT_STATUS_LABEL: Record<ContractStatus, string> = {
 
 export const CONTRACT_STATUS_TONE: Record<ContractStatus, BadgeTone> = {
   awaiting_signature: "warning",
-  signed: "info",
+  signed: "success",
   under_review: "info",
   approved: "success",
   replaced: "neutral",
