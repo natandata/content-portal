@@ -3,6 +3,7 @@ import { AlertTriangle, BadgeCheck, ExternalLink, Loader2, MessageCircle, Thumbs
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/layout";
 import { formatDateTime } from "@/lib/utils";
+import { InstagramPublicReportDeleteButton } from "@/components/reports/instagram-public-report-delete-button";
 import type { InstagramPublicReportRow } from "@/types/database";
 
 function str(value: unknown): string | null {
@@ -21,14 +22,23 @@ function bool(value: unknown): boolean {
  * no banco) -- por isso toda leitura aqui e defensiva: um campo ausente so
  * some da tela, nunca quebra a renderizacao.
  */
-export function InstagramPublicReportCard({ report }: { report: InstagramPublicReportRow }) {
+export function InstagramPublicReportCard({
+  report,
+  clientId,
+}: {
+  report: InstagramPublicReportRow;
+  clientId: string;
+}) {
   if (report.status === "pending" || report.status === "running") {
     return (
       <Card>
-        <div className="flex items-center gap-3 text-sm text-ink-600">
-          <Loader2 className="size-4 shrink-0 animate-spin text-accent" aria-hidden />
-          Coletando dados de <strong className="text-ink-900">@{report.username}</strong>... isso pode levar
-          alguns minutos.
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 text-sm text-ink-600">
+            <Loader2 className="size-4 shrink-0 animate-spin text-accent" aria-hidden />
+            Coletando dados de <strong className="text-ink-900">@{report.username}</strong>... isso pode levar
+            alguns minutos.
+          </div>
+          <InstagramPublicReportDeleteButton reportId={report.id} clientId={clientId} />
         </div>
       </Card>
     );
@@ -37,12 +47,15 @@ export function InstagramPublicReportCard({ report }: { report: InstagramPublicR
   if (report.status === "failed") {
     return (
       <Card className="border-red-200 bg-red-50">
-        <div className="flex items-start gap-2 text-sm text-red-700">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <div>
-            <p>Falha ao gerar o relatorio de @{report.username}.</p>
-            {report.error ? <p className="mt-1 text-xs text-red-600">{report.error}</p> : null}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2 text-sm text-red-700">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <div>
+              <p>Falha ao gerar o relatorio de @{report.username}.</p>
+              {report.error ? <p className="mt-1 text-xs text-red-600">{report.error}</p> : null}
+            </div>
           </div>
+          <InstagramPublicReportDeleteButton reportId={report.id} clientId={clientId} />
         </div>
       </Card>
     );
@@ -84,9 +97,10 @@ export function InstagramPublicReportCard({ report }: { report: InstagramPublicR
             {fullName ? <p className="text-sm text-ink-500">{fullName}</p> : null}
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           {isBusiness ? <Badge tone="info">Business/Creator</Badge> : null}
           {isPrivate ? <Badge tone="neutral">Privado</Badge> : null}
+          <InstagramPublicReportDeleteButton reportId={report.id} clientId={clientId} />
         </div>
       </div>
 

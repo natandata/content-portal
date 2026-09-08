@@ -9,6 +9,7 @@ import { InstagramInsightsReportForm } from "@/components/reports/instagram-insi
 import { InstagramInsightsReportsClearButton } from "@/components/reports/instagram-insights-reports-clear-button";
 import { InstagramPublicReportCard } from "@/components/reports/instagram-public-report-card";
 import { InstagramPublicReportForm } from "@/components/reports/instagram-public-report-form";
+import { InstagramPublicReportsClearButton } from "@/components/reports/instagram-public-reports-clear-button";
 import { InstagramScheduledReportsList } from "@/components/reports/instagram-scheduled-reports-list";
 import { MetricFormModal } from "@/components/reports/metric-form-modal";
 import { MetricRow } from "@/components/reports/metric-row";
@@ -146,6 +147,11 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
             <CardHeader
               title="Perfil publico"
               description="Scrape de um @ qualquer (o do proprio cliente ou de um concorrente), sem login -- seguidores, bio e posts recentes."
+              actions={
+                (publicReports ?? []).length > 0 ? (
+                  <InstagramPublicReportsClearButton clientId={clientId} count={(publicReports ?? []).length} />
+                ) : undefined
+              }
             />
 
             {!apifyConfigured ? (
@@ -159,7 +165,7 @@ export async function ReportsBoard({ clientId, error }: { clientId?: string; err
                 {(publicReports ?? []).length > 0 ? (
                   <div className="space-y-4">
                     {(publicReports ?? []).map((report) => (
-                      <InstagramPublicReportCard key={report.id} report={report} />
+                      <InstagramPublicReportCard key={report.id} report={report} clientId={clientId} />
                     ))}
                   </div>
                 ) : null}
