@@ -6,6 +6,7 @@ import { INSTAGRAM_CONNECT_COOKIE } from "@/lib/composio/constants";
 import { appBaseUrl } from "@/lib/env";
 import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 
 /**
  * Volta do fluxo de conexao Instagram da Composio. Mesmo desenho das rotas
@@ -96,6 +97,13 @@ export async function GET(request: Request) {
   });
 
   if (error) return back("error=instagram_save_failed");
+
+  await logClientActivity(
+    admin,
+    clientId,
+    actor.displayName,
+    `Conectou o Instagram${instagramUsername ? ` (@${instagramUsername})` : ""}`,
+  );
 
   return back("done=instagram");
 }

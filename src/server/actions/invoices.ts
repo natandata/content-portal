@@ -222,12 +222,12 @@ export async function markInvoicePaidAction(invoiceId: string): Promise<ActionRe
 }
 
 export async function deleteInvoiceAction(invoiceId: string): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const supabase = await createClient();
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("client_id, boleto_file_path")
+    .select("client_id, title, boleto_file_path")
     .eq("id", invoiceId)
     .maybeSingle();
 
@@ -242,6 +242,7 @@ export async function deleteInvoiceAction(invoiceId: string): Promise<ActionResu
     return fail(describeError(error, "Nao foi possivel excluir a cobranca."));
   }
 
+  await logClientActivity(supabase, invoice.client_id, actor.displayName, `Excluiu a cobranca "${invoice.title}"`);
   revalidateInvoices(invoice.client_id);
   return done();
 }
@@ -254,12 +255,12 @@ export async function deleteInvoiceAction(invoiceId: string): Promise<ActionResu
  * proximo ciclo nunca chega a ser criado.
  */
 export async function cancelInvoiceRecurrenceAction(invoiceId: string): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const supabase = await createClient();
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("client_id, recurrence_group_id")
+    .select("client_id, title, recurrence_group_id")
     .eq("id", invoiceId)
     .maybeSingle();
   if (!invoice) return fail("Cobranca nao encontrada.");
@@ -271,6 +272,12 @@ export async function cancelInvoiceRecurrenceAction(invoiceId: string): Promise<
     .eq("recurrence_group_id", invoice.recurrence_group_id);
   if (error) return fail(describeError(error, "Nao foi possivel cancelar a recorrencia."));
 
+  await logClientActivity(
+    supabase,
+    invoice.client_id,
+    actor.displayName,
+    `Cancelou a recorrencia de "${invoice.title}"`,
+  );
   revalidateInvoices(invoice.client_id);
   return done();
 }

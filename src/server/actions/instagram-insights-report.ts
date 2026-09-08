@@ -4,6 +4,7 @@ import { callInstagramTool } from "@/lib/composio/client";
 import { composioConfig } from "@/lib/env";
 import { num } from "@/lib/instagram-insights";
 import { createAdminClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 import { deliverInstagramInsightsReportPdf } from "@/server/reports/instagram-report-delivery";
 import { describeError, fail, ok, type ActionResult } from "@/server/result";
 import type { InstagramInsightsReportRow } from "@/types/database";
@@ -289,6 +290,19 @@ export async function runInstagramInsightsReport(params: {
   if (updateError || !updated) {
     return fail(describeError(updateError, "Relatorio coletado, mas houve falha ao salvar."));
   }
+
+  // Melhor esforco -- se ninguem pediu (cron automatico), atribui ao
+  // "Automatico" em vez de buscar um nome que nao existe.
+  const requesterName = params.requestedBy
+    ? ((await admin.from("users").select("name").eq("id", params.requestedBy).maybeSingle()).data?.name ??
+      "Equipe")
+    : "Relatorio automatico";
+  await logClientActivity(
+    admin,
+    params.clientId,
+    requesterName,
+    `Emitiu relatorio de Instagram (${params.periodMonths} meses)${updated.instagram_username ? ` de @${updated.instagram_username}` : ""}`,
+  );
 
   // Melhor esforco -- entrega o PDF em Documentos, mas o relatorio ja esta
   // salvo e visivel na tela mesmo se isso falhar (ver comentario da funcao).

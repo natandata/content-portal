@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireStaff } from "@/lib/auth";
 import { BRAND_ARCHETYPES } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, type ActionResult } from "@/server/result";
 import type { BrandArchetype } from "@/types/database";
 
@@ -44,7 +45,7 @@ const brandingSchema = z.object({
 export async function saveClientBrandingAction(
   input: z.input<typeof brandingSchema>,
 ): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
 
   const parsed = brandingSchema.safeParse(input);
   if (!parsed.success) {
@@ -79,6 +80,8 @@ export async function saveClientBrandingAction(
   if (error) {
     return fail(describeError(error, "Nao foi possivel salvar o branding."));
   }
+
+  await logClientActivity(supabase, data.clientId, actor.displayName, "Atualizou o branding do cliente");
 
   revalidatePath(`/admin/clients/${data.clientId}`);
   revalidatePath(`/professional/clients/${data.clientId}`);

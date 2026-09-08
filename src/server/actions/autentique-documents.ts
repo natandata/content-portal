@@ -9,6 +9,7 @@ import { autentiqueConfig } from "@/lib/env";
 import { BUCKETS } from "@/lib/paths";
 import { sendPushToClient } from "@/lib/push";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, type ActionResult } from "@/server/result";
 
 /**
@@ -39,7 +40,7 @@ const sendSchema = z.object({
 export async function sendDocumentViaAutentiqueAction(
   input: z.input<typeof sendSchema>,
 ): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
 
   if (!autentiqueConfig()) {
     return fail("Assinatura via Autentique ainda nao foi configurada nesta instalacao.");
@@ -100,6 +101,13 @@ export async function sendDocumentViaAutentiqueAction(
     url: "/client/documents",
     tag: `document-${contract.id}`,
   }).catch(() => {});
+
+  await logClientActivity(
+    supabase,
+    contract.client_id,
+    actor.displayName,
+    `Enviou o documento "${contract.title}" via Autentique`,
+  );
 
   revalidateDocuments(contract.client_id);
   return done();

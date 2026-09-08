@@ -4,6 +4,7 @@ import { daysUntil } from "@/lib/domain";
 import { intlLocale } from "@/lib/i18n/locale";
 import { sendPushToClient, sendPushToClientStaff } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 import { revalidateInvoices } from "@/server/invoices/revalidate";
 import type { InvoiceRow } from "@/types/database";
 
@@ -137,6 +138,12 @@ export async function generateDueInvoiceRecurrences(limit = 30): Promise<{ check
 
     generated += 1;
     touchedClients.add(latest.client_id);
+    await logClientActivity(
+      admin,
+      latest.client_id,
+      "Recorrencia automatica",
+      `Gerou cobranca recorrente "${created.title}"`,
+    );
     await notifyNewCycle(created);
   }
 

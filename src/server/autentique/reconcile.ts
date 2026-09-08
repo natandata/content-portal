@@ -4,6 +4,7 @@ import { downloadSignedPdf, getDocumentStatus } from "@/lib/autentique/client";
 import { BUCKETS, signedContractPath } from "@/lib/paths";
 import { sendPushToClientStaff } from "@/lib/push";
 import { createAdminClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 
 /**
  * Nao e uma server action ("use server") de proposito -- `completeIfSigned`
@@ -68,6 +69,13 @@ export async function completeIfSigned(
       status: "signed",
     })
     .eq("id", contract.id);
+
+  await logClientActivity(
+    admin,
+    contract.client_id,
+    "Autentique",
+    `Documento assinado via Autentique: "${contract.title}"`,
+  );
 
   await sendPushToClientStaff(contract.client_id, {
     title: "Documento assinado via Autentique",

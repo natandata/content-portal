@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { ClientServiceRow } from "@/types/database";
 
@@ -54,6 +55,8 @@ export async function createClientServiceAction(
     return fail(describeError(error, "Nao foi possivel adicionar o servico."));
   }
 
+  await logClientActivity(supabase, parsed.data.clientId, actor.displayName, `Adicionou o servico "${data.title}"`);
+
   revalidateServices(parsed.data.clientId);
   return ok(data);
 }
@@ -64,7 +67,7 @@ export async function updateClientServiceAction(
   serviceId: string,
   input: z.input<typeof updateSchema>,
 ): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) {
     return fail(firstIssue(parsed.error.issues, "Dados invalidos."));
@@ -85,6 +88,8 @@ export async function updateClientServiceAction(
   if (error || !data) {
     return fail(describeError(error, "Nao foi possivel atualizar o servico."));
   }
+
+  await logClientActivity(supabase, data.client_id, actor.displayName, `Atualizou o servico "${parsed.data.title}"`);
 
   revalidateServices(data.client_id);
   return done();

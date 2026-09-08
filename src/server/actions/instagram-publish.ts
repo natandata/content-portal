@@ -13,6 +13,7 @@ import { BUCKETS } from "@/lib/paths";
 import { sendPushToClientStaff } from "@/lib/push";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { signedUrlMap } from "@/lib/storage";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, type ActionResult } from "@/server/result";
 
 /**
@@ -160,6 +161,10 @@ export async function runInstagramPublish(contentId: string): Promise<{ ok: bool
     url: `/professional/content/${contentId}`,
     tag: `content-publish-${contentId}`,
   }).catch(() => {});
+
+  // Sem "quem" aqui de proposito -- essa funcao roda tanto do clique
+  // imediato quanto do cron de agendamento, sem saber quem disparou.
+  await logClientActivity(admin, content.client_id, "Publicacao automatica", `Publicou "${content.title}" no Instagram`);
 
   return { ok: true };
 }

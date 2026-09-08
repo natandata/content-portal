@@ -9,6 +9,7 @@ import { cancelMeetEvent, createMeetEvent } from "@/lib/google/calendar";
 import { sendPushToClient, sendPushToClientStaff } from "@/lib/push";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { loadCalendlyConnectionStatus } from "@/server/actions/calendly-connect";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { MeetingRequestRow } from "@/types/database";
 
@@ -124,6 +125,7 @@ export async function requestMeetingAction(
       })).catch(() => {});
     }
 
+    await logClientActivity(admin, clientId, actor.displayName, "Pediu uma reuniao");
     revalidateMeetings(clientId);
     return done();
   }
@@ -167,6 +169,7 @@ export async function requestMeetingAction(
     })).catch(() => {});
   }
 
+  await logClientActivity(admin, clientId, actor.displayName, "Pediu uma reuniao");
   revalidateMeetings(clientId);
   return done();
 }
@@ -220,6 +223,7 @@ export async function respondMeetingRequestAction(
       .eq("id", meeting.id);
     if (error) return fail(describeError(error, "Nao foi possivel recusar o pedido."));
 
+    await logClientActivity(admin, meeting.client_id, actor.displayName, "Recusou o pedido de reuniao");
     revalidateMeetings(meeting.client_id);
     return done();
   }
@@ -278,6 +282,7 @@ export async function respondMeetingRequestAction(
     }).catch(() => {});
   }
 
+  await logClientActivity(admin, meeting.client_id, actor.displayName, "Aprovou o pedido de reuniao");
   revalidateMeetings(meeting.client_id);
   return done();
 }
@@ -321,6 +326,7 @@ export async function cancelMeetingRequestAction(requestId: string): Promise<Act
 
   if (error) return fail(describeError(error, "Nao foi possivel cancelar."));
 
+  await logClientActivity(admin, meeting.client_id, actor.displayName, "Cancelou a reuniao");
   revalidateMeetings(meeting.client_id);
   return done();
 }

@@ -13,6 +13,7 @@ import { INSTAGRAM_CONNECT_COOKIE } from "@/lib/composio/constants";
 import { requireStaff } from "@/lib/auth";
 import { appBaseUrl, composioConfig } from "@/lib/env";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, ok, type ActionResult } from "@/server/result";
 
 const REPORTS_PATH = "/professional/reports";
@@ -60,13 +61,13 @@ export async function disconnectInstagramAction(
   clientId: string,
   connectionId: string,
 ): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   if (!(await assertCanManageClient(clientId))) return fail("Cliente nao encontrado.");
 
   const admin = createAdminClient();
   const { data: connection } = await admin
     .from("client_instagram_connections")
-    .select("composio_connection_id")
+    .select("composio_connection_id, instagram_username")
     .eq("id", connectionId)
     .eq("client_id", clientId)
     .maybeSingle();
@@ -81,6 +82,13 @@ export async function disconnectInstagramAction(
   if (error) {
     return fail(describeError(error, "Nao foi possivel desconectar o Instagram."));
   }
+
+  await logClientActivity(
+    admin,
+    clientId,
+    actor.displayName,
+    `Desconectou o Instagram${connection.instagram_username ? ` (@${connection.instagram_username})` : ""}`,
+  );
 
   revalidatePath(REPORTS_PATH);
   return done();

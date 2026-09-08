@@ -8,6 +8,7 @@ import { LINK_FILE_TYPE, MAX_CAROUSEL_SLIDES, normalizeExternalUrl } from "@/lib
 import { BUCKETS } from "@/lib/paths";
 import { createClient } from "@/lib/supabase/server";
 import { sendPushToClient } from "@/lib/push";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { ContentRow } from "@/types/database";
 
@@ -124,6 +125,8 @@ export async function createContentDraftAction(
   if (error || !content) {
     return fail(describeError(error, "Nao foi possivel criar o conteudo."));
   }
+
+  await logClientActivity(supabase, data.clientId, actor.displayName, `Criou o conteudo "${content.title}"`);
 
   return ok(content);
 }
@@ -259,7 +262,7 @@ export async function replaceContentFilesAction(
 
 /** Envia para o cliente: o conteudo passa a aguardar aprovacao. */
 export async function submitContentAction(contentId: string): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const supabase = await createClient();
 
   const { count } = await supabase
@@ -292,6 +295,12 @@ export async function submitContentAction(contentId: string): Promise<ActionResu
   }
 
   await logHistory(contentId, "Conteudo enviado para aprovacao");
+  await logClientActivity(
+    supabase,
+    data.client_id,
+    actor.displayName,
+    wasAdjustment ? `Reenviou o conteudo "${before?.title}" ajustado` : `Enviou o conteudo "${before?.title}" para aprovacao`,
+  );
   revalidateContents(data.client_id, contentId);
 
   // Aguardado: em serverless, um fire-and-forget pode ser cortado quando a
@@ -325,7 +334,7 @@ export async function submitContentAction(contentId: string): Promise<ActionResu
 export async function setContentPublishedAction(
   contentId: string,
 ): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const supabase = await createClient();
 
   // So sai de "approved" pra "published" -- nunca foi assim antes desta
@@ -344,6 +353,7 @@ export async function setContentPublishedAction(
   }
 
   await logHistory(contentId, "Conteudo marcado como publicado");
+  await logClientActivity(supabase, data.client_id, actor.displayName, "Marcou um conteudo como publicado");
   revalidateContents(data.client_id, contentId);
   return done();
 }

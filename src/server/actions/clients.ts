@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getActor, requireStaff } from "@/lib/auth";
 import { COVER_PALETTE } from "@/lib/cover-palette";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { ClientRow } from "@/types/database";
 
@@ -115,6 +116,8 @@ export async function createClientAction(
     app_metadata: { role: "client", client_id: client.id },
   });
 
+  await logClientActivity(supabase, client.id, actor.displayName, "Cadastrou o cliente");
+
   revalidateClients();
   return ok(client);
 }
@@ -157,6 +160,8 @@ export async function updateClientAction(
     return fail(describeError(error, "Nao foi possivel atualizar o cliente."));
   }
 
+  await logClientActivity(supabase, id, actor.displayName, "Alterou os dados do cliente");
+
   revalidateClients();
   revalidatePath(`/admin/clients/${id}`);
   revalidatePath(`/professional/clients/${id}`);
@@ -167,13 +172,20 @@ export async function setClientStatusAction(
   id: string,
   status: "active" | "inactive",
 ): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const supabase = await createClient();
 
   const { error } = await supabase.from("clients").update({ status }).eq("id", id);
   if (error) {
     return fail(describeError(error, "Nao foi possivel alterar o status do cliente."));
   }
+
+  await logClientActivity(
+    supabase,
+    id,
+    actor.displayName,
+    status === "active" ? "Reativou o cliente" : "Arquivou o cliente",
+  );
 
   revalidateClients();
   revalidatePath(`/admin/clients/${id}`);
@@ -224,7 +236,7 @@ export async function updateClientCoverColorAction(
   clientId: string,
   color: string,
 ): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
 
   if (!Object.hasOwn(COVER_PALETTE, color)) {
     return fail("Cor invalida.");
@@ -236,6 +248,8 @@ export async function updateClientCoverColorAction(
   if (error) {
     return fail(describeError(error, "Nao foi possivel salvar a cor da capa."));
   }
+
+  await logClientActivity(supabase, clientId, actor.displayName, "Alterou a cor da capa do cliente");
 
   revalidateClients();
   revalidatePath(`/admin/clients/${clientId}`);

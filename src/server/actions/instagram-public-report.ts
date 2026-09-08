@@ -7,6 +7,7 @@ import { runInstagramProfileScraper } from "@/lib/apify/client";
 import { apifyConfig } from "@/lib/env";
 import { requireStaff } from "@/lib/auth";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 import { describeError, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { InstagramPublicReportRow } from "@/types/database";
 
@@ -83,6 +84,13 @@ export async function startPublicReportAction(
   if (updateError || !updated) {
     return fail(describeError(updateError, "Relatorio disparado, mas houve falha ao salvar o status."));
   }
+
+  await logClientActivity(
+    supabase,
+    parsed.data.clientId,
+    actor.displayName,
+    `Emitiu relatorio de perfil publico (@${parsed.data.username})`,
+  );
 
   revalidatePath("/professional/reports");
   return ok(updated);

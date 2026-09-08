@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, type ActionResult } from "@/server/result";
 import type { InstagramScheduledReportRow } from "@/types/database";
 
@@ -52,18 +53,35 @@ export async function scheduleInstagramReportAction(
     return fail(describeError(error, "Nao foi possivel agendar o relatorio."));
   }
 
+  await logClientActivity(
+    supabase,
+    parsed.data.clientId,
+    actor.displayName,
+    `Agendou um relatorio de Instagram (${parsed.data.periodMonths} meses)`,
+  );
+
   revalidatePath(REPORTS_PATH);
   return done();
 }
 
 export async function cancelScheduledReportAction(id: string): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const supabase = await createClient();
+
+  const { data: scheduled } = await supabase
+    .from("instagram_scheduled_reports")
+    .select("client_id")
+    .eq("id", id)
+    .maybeSingle();
 
   // So cancela o que ainda nao rodou -- um ja processado vira historico.
   const { error } = await supabase.from("instagram_scheduled_reports").delete().eq("id", id).eq("status", "pending");
   if (error) {
     return fail(describeError(error, "Nao foi possivel cancelar o agendamento."));
+  }
+
+  if (scheduled) {
+    await logClientActivity(supabase, scheduled.client_id, actor.displayName, "Cancelou o agendamento de relatorio de Instagram");
   }
 
   revalidatePath(REPORTS_PATH);

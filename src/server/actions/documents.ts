@@ -69,6 +69,8 @@ export async function createDocumentAction(
     return fail(describeError(error, "Nao foi possivel criar o documento."));
   }
 
+  await logClientActivity(supabase, parsed.data.clientId, actor.displayName, `Criou o documento "${data.title}"`);
+
   revalidateDocuments(parsed.data.clientId);
   return ok(data);
 }
@@ -77,7 +79,7 @@ export async function attachDocumentFileAction(
   contractId: string,
   filePath: string,
 ): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const supabase = await createClient();
 
   // Documento que nao pede assinatura ja nasce entregue: nao ha o que aguardar.
@@ -105,6 +107,7 @@ export async function attachDocumentFileAction(
     return fail(describeError(error, "Nao foi possivel anexar o arquivo."));
   }
 
+  await logClientActivity(supabase, data.client_id, actor.displayName, `Anexou o arquivo de "${document?.title ?? "documento"}"`);
   revalidateDocuments(data.client_id);
 
   await sendPushToClient(data.client_id, (locale) => {
@@ -130,11 +133,22 @@ export async function attachDocumentFileAction(
   return done();
 }
 
+const DOCUMENT_STATUS_ACTIVITY_LABEL: Record<ContractStatus, string> = {
+  awaiting_signature: "Reabriu o documento para assinatura",
+  signed: "Marcou o documento como assinado",
+  under_review: "Reabriu a conferencia do documento",
+  approved: "Aprovou o documento",
+  replaced: "Marcou o documento como substituido",
+  delivered: "Entregou o documento",
+  pending_delivery: "Marcou o documento como aguardando envio",
+  sent_for_signature: "Enviou o documento para assinatura",
+};
+
 export async function setDocumentStatusAction(
   contractId: string,
   status: ContractStatus,
 ): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -148,6 +162,8 @@ export async function setDocumentStatusAction(
     return fail(describeError(error, "Nao foi possivel atualizar o documento."));
   }
 
+  await logClientActivity(supabase, data.client_id, actor.displayName, DOCUMENT_STATUS_ACTIVITY_LABEL[status]);
+
   revalidateDocuments(data.client_id);
   return done();
 }
@@ -158,7 +174,7 @@ export async function setDocumentStatusAction(
  * Envio nunca e automatico de proposito: quem decide o momento e a pessoa.
  */
 export async function sendDocumentToClientAction(contractId: string): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -172,6 +188,7 @@ export async function sendDocumentToClientAction(contractId: string): Promise<Ac
     return fail(describeError(error, "Nao foi possivel enviar o documento."));
   }
 
+  await logClientActivity(supabase, data.client_id, actor.displayName, `Enviou o documento "${data.title}" ao cliente`);
   revalidateDocuments(data.client_id);
 
   await sendPushToClient(data.client_id, (locale) => {
@@ -188,12 +205,12 @@ export async function sendDocumentToClientAction(contractId: string): Promise<Ac
 }
 
 export async function deleteDocumentAction(contractId: string): Promise<ActionResult<null>> {
-  await requireStaff();
+  const actor = await requireStaff();
   const supabase = await createClient();
 
   const { data: contract } = await supabase
     .from("contracts")
-    .select("client_id, original_file_path, signed_file_path")
+    .select("client_id, title, original_file_path, signed_file_path")
     .eq("id", contractId)
     .maybeSingle();
 
@@ -211,6 +228,7 @@ export async function deleteDocumentAction(contractId: string): Promise<ActionRe
     return fail(describeError(error, "Nao foi possivel excluir o documento."));
   }
 
+  await logClientActivity(supabase, contract.client_id, actor.displayName, `Excluiu o documento "${contract.title}"`);
   revalidateDocuments(contract.client_id);
   return done();
 }
