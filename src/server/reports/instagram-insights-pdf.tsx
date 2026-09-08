@@ -7,6 +7,8 @@ import {
   metricTotal,
   num,
   postMetricValue,
+  reelAvgWatchSeconds,
+  reelRetentionPercent,
   str,
 } from "@/lib/instagram-insights";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -14,6 +16,7 @@ import type { InstagramInsightsReportRow } from "@/types/database";
 
 const MAX_POSTS_IN_PDF = 20;
 const MAX_STORIES_IN_PDF = 12;
+const MAX_REELS_IN_PDF = 20;
 
 const AUDIENCE_DIMENSION_LABEL: Record<string, string> = {
   age: "Idade",
@@ -75,6 +78,11 @@ function InstagramInsightsPdfDocument({
   const stories = (Array.isArray(report.stories) ? report.stories : []).slice(0, MAX_STORIES_IN_PDF);
   const audience = (report.audience ?? {}) as Record<string, unknown>;
   const audienceDimensions = Object.keys(audience);
+  const profileSnapshot = (report.profile_snapshot ?? {}) as Record<string, unknown>;
+  const allReels = (Array.isArray(report.posts) ? report.posts : []).filter(
+    (raw) => (raw as Record<string, unknown>).media_product_type === "REELS",
+  );
+  const reels = allReels.slice(0, MAX_REELS_IN_PDF);
 
   const stats: { label: string; value: number }[] = [
     { label: "Alcance", value: metricTotal(report.account_metrics, "reach") },
@@ -88,7 +96,8 @@ function InstagramInsightsPdfDocument({
     { label: "Visualizacoes", value: metricTotal(report.account_metrics, "views") },
     { label: "Visitas ao perfil", value: metricTotal(report.account_metrics, "profile_views") },
     { label: "Cliques no site", value: metricTotal(report.account_metrics, "website_clicks") },
-    { label: "Seguidores", value: metricTotal(report.account_metrics, "follower_count") },
+    { label: "Seguidores atuais", value: num(profileSnapshot.followers_count) ?? 0 },
+    { label: "Novos seguidores no periodo", value: metricTotal(report.account_metrics, "follower_count") },
   ];
 
   return (
@@ -110,6 +119,10 @@ function InstagramInsightsPdfDocument({
             </View>
           ))}
         </View>
+        <Text style={styles.sectionNote}>
+          Novos seguidores no periodo e o crescimento liquido (novos menos perdidos); Seguidores atuais e o total real
+          de agora -- a Meta nao expõe o total historico de um dia especifico do passado.
+        </Text>
 
         <Text style={styles.sectionTitle}>
           Posts do periodo {posts.length > 0 ? `(${posts.length}${posts.length === MAX_POSTS_IN_PDF ? "+" : ""})` : ""}
@@ -144,6 +157,42 @@ function InstagramInsightsPdfDocument({
                   <Text style={styles.cellNum}>{likes != null ? likes.toLocaleString("pt-BR") : "-"}</Text>
                   <Text style={styles.cellNum}>{comments != null ? comments.toLocaleString("pt-BR") : "-"}</Text>
                   <Text style={styles.cellNum}>{saved != null ? saved.toLocaleString("pt-BR") : "-"}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        <Text style={styles.sectionTitle}>
+          Retencao de Reels {allReels.length > 0 ? `(${allReels.length}${allReels.length === MAX_REELS_IN_PDF ? "+" : ""})` : ""}
+        </Text>
+        <Text style={styles.sectionNote}>
+          Retencao nos 3s iniciais (100% - taxa de abandono da Meta) -- a Meta nao expõe a curva completa de retencao.
+        </Text>
+
+        {reels.length === 0 ? (
+          <Text>Nenhum Reel no periodo.</Text>
+        ) : (
+          <View style={styles.table}>
+            <View style={styles.tableHeaderRow}>
+              <Text style={[styles.cellPost, styles.headerCell]}>Reel</Text>
+              <Text style={[styles.cellDate, styles.headerCell]}>Data</Text>
+              <Text style={[styles.cellNum, styles.headerCell]}>Retencao (3s)</Text>
+              <Text style={[styles.cellNum, styles.headerCell]}>Tempo assistido</Text>
+            </View>
+            {reels.map((raw, index) => {
+              const post = raw as Record<string, unknown>;
+              const caption = str(post.caption);
+              const timestamp = str(post.timestamp);
+              const retention = reelRetentionPercent(post.insights);
+              const watchSeconds = reelAvgWatchSeconds(post.insights);
+
+              return (
+                <View key={str(post.id) ?? index} style={styles.tableRow}>
+                  <Text style={styles.cellPost}>{(caption ?? "Sem legenda").slice(0, 90)}</Text>
+                  <Text style={styles.cellDate}>{timestamp ? formatDate(timestamp.slice(0, 10)) : "-"}</Text>
+                  <Text style={styles.cellNum}>{retention != null ? `${retention.toFixed(1)}%` : "-"}</Text>
+                  <Text style={styles.cellNum}>{watchSeconds != null ? `${watchSeconds.toFixed(1)}s` : "-"}</Text>
                 </View>
               );
             })}

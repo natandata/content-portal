@@ -2,6 +2,7 @@ import "server-only";
 
 import { callInstagramTool } from "@/lib/composio/client";
 import { composioConfig } from "@/lib/env";
+import { num } from "@/lib/instagram-insights";
 import { createAdminClient } from "@/lib/supabase/server";
 import { deliverInstagramInsightsReportPdf } from "@/server/reports/instagram-report-delivery";
 import { describeError, fail, ok, type ActionResult } from "@/server/result";
@@ -13,12 +14,19 @@ import type { InstagramInsightsReportRow } from "@/types/database";
  * maior; um modulo de action comum nao controla isso). Ver Etapa 4 do plano.
  */
 
-// O mais completo possivel dentre as metricas de conta validas (ver
-// INSTAGRAM_GET_USER_INSIGHTS) -- fica de fora so o que e de outra
-// plataforma (threads_*) ou pede parametro extra incompativel com uma
-// serie temporal (online_followers quebra por hora do dia, nao por dia).
-const ACCOUNT_METRICS = [
-  "reach",
+// So estas duas continuam com serie diaria de verdade (`period=day`) na
+// Graph API -- confirmado ao vivo (2026-09-08): todo o resto de engajamento
+// (likes/comments/etc) devolve vazio nesse modo, mesmo aparecendo como
+// valido no schema da ferramenta. E' por isso que o relatorio mostrava
+// zero em quase tudo antes desta correcao.
+const ACCOUNT_METRICS_DAY = ["reach", "follower_count"];
+
+// A Meta migrou essas metricas de engajamento pra so existirem via
+// `metric_type=total_value` (um total pro periodo inteiro, sem serie
+// diaria) -- confirmado ao vivo com numeros reais da conta conectada.
+// `since`/`until` continuam valendo pra escopar o total ao periodo do
+// relatorio (tambem confirmado ao vivo, comparando janelas diferentes).
+const ACCOUNT_METRICS_TOTAL = [
   "accounts_engaged",
   "total_interactions",
   "likes",
@@ -31,10 +39,23 @@ const ACCOUNT_METRICS = [
   "views",
   "profile_views",
   "website_clicks",
-  "follower_count",
 ];
 
 const MEDIA_METRICS = ["views", "reach", "saved", "likes", "comments", "shares", "total_interactions"];
+
+// So existem pra Reels -- pedir pra qualquer outro tipo de midia (foto,
+// carrossel) derruba a chamada INTEIRA com erro 400 (confirmado ao vivo),
+// entao isso e sempre uma segunda chamada separada, so quando o post e um
+// Reel (ver `mapWithConcurrency` abaixo). `reels_skip_rate` (% que abandonou
+// nos 3s iniciais) e a metrica mais proxima de "retencao" que a Graph API
+// oferece -- ela nao expõe a curva de retencao completa.
+const REEL_RETENTION_METRICS = ["ig_reels_avg_watch_time", "ig_reels_video_view_total_time", "reels_skip_rate"];
+
+// Campos explicitos (em vez do default da ferramenta) -- precisa de
+// `media_product_type` pra saber quais posts sao Reels (decide se pede
+// REEL_RETENTION_METRICS), o resto e so o que os parsers de fato leem.
+const MEDIA_FIELDS =
+  "id,caption,media_type,media_product_type,permalink,timestamp,total_like_count,total_comments_count,saved_count";
 
 // Metricas proprias de Stories -- a Meta rejeita a maioria das metricas de
 // post normais quando o media e um story (ver known_pitfalls da propria API).
@@ -130,22 +151,54 @@ export async function runInstagramInsightsReport(params: {
       .eq("id", reportId);
   }
 
-  const accountResult = await callInstagramTool(params.clientId, connectedAccountId, "INSTAGRAM_GET_USER_INSIGHTS", {
+  // Chamada critica -- reach/follower_count sao o minimo pro relatorio
+  // fazer sentido; se isso falhar, o relatorio falha (mesmo comportamento
+  // de antes desta correcao).
+  const accountDayResult = await callInstagramTool(params.clientId, connectedAccountId, "INSTAGRAM_GET_USER_INSIGHTS", {
     since: sinceTs,
     until: untilTs,
     period: "day",
-    metric: ACCOUNT_METRICS,
+    metric: ACCOUNT_METRICS_DAY,
   });
-  if (!accountResult.ok) {
-    await markFailed(accountResult.error);
-    return fail(accountResult.error);
+  if (!accountDayResult.ok) {
+    await markFailed(accountDayResult.error);
+    return fail(accountDayResult.error);
   }
+
+  // Melhor esforco -- engajamento agregado e "bonus" sobre o essencial
+  // acima; uma falha aqui nunca deve derrubar o relatorio inteiro.
+  const accountTotalResult = await callInstagramTool(params.clientId, connectedAccountId, "INSTAGRAM_GET_USER_INSIGHTS", {
+    since: sinceTs,
+    until: untilTs,
+    metric_type: "total_value",
+    metric: ACCOUNT_METRICS_TOTAL,
+  });
+
+  const accountMetrics = {
+    data: [...extractArray(accountDayResult.data), ...(accountTotalResult.ok ? extractArray(accountTotalResult.data) : [])],
+  };
+
+  // Snapshot real "agora" (followers_count/follows_count/media_count) --
+  // NAO e o mesmo que `follower_count` acima (que e o crescimento LIQUIDO no
+  // periodo, nao o total da conta). Melhor esforco: sem isso o relatorio
+  // so perde essa comparacao, nunca falha por causa dela.
+  const profileResult = await callInstagramTool(params.clientId, connectedAccountId, "INSTAGRAM_GET_USER_INFO", {
+    ig_user_id: "me",
+  });
+  const profileSnapshot = profileResult.ok
+    ? {
+        followers_count: num(profileResult.data.followers_count),
+        follows_count: num(profileResult.data.follows_count),
+        media_count: num(profileResult.data.media_count),
+      }
+    : null;
 
   const mediaResult = await callInstagramTool(params.clientId, connectedAccountId, "INSTAGRAM_GET_IG_USER_MEDIA", {
     ig_user_id: "me",
     since: sinceTs,
     until: untilTs,
     limit: MAX_POSTS,
+    fields: MEDIA_FIELDS,
   });
   if (!mediaResult.ok) {
     await markFailed(mediaResult.error);
@@ -165,7 +218,25 @@ export async function runInstagramInsightsReport(params: {
 
     // Um post individual falhar (ex.: media fora da janela de 2 anos) nao
     // derruba o relatorio inteiro -- ele so aparece sem as metricas extras.
-    return { ...post, insights: insightsResult.ok ? extractArray(insightsResult.data) : null };
+    if (!insightsResult.ok) return { ...post, insights: null };
+    const baseInsights = extractArray(insightsResult.data);
+
+    // Retencao so existe pra Reels -- pedir pra outro tipo de midia derruba
+    // a chamada com 400 (ver comentario de REEL_RETENTION_METRICS acima),
+    // entao so tenta quando o post e' de fato um Reel, e melhor-esforco
+    // (uma falha aqui nunca derruba os insights base ja obtidos).
+    const isReel = post.media_product_type === "REELS";
+    const reelInsightsResult = isReel
+      ? await callInstagramTool(params.clientId, connectedAccountId, "INSTAGRAM_GET_IG_MEDIA_INSIGHTS", {
+          ig_media_id: mediaId,
+          metric: REEL_RETENTION_METRICS,
+        })
+      : null;
+
+    return {
+      ...post,
+      insights: reelInsightsResult?.ok ? [...baseInsights, ...extractArray(reelInsightsResult.data)] : baseInsights,
+    };
   });
 
   // Stories e demografia sao melhor-esforco puro: nenhuma falha aqui deve
@@ -203,10 +274,11 @@ export async function runInstagramInsightsReport(params: {
     .from("instagram_insights_reports")
     .update({
       status: "done",
-      account_metrics: accountResult.data,
+      account_metrics: accountMetrics,
       posts: postsWithInsights,
       stories: storiesWithInsights,
       audience: Object.keys(audience).length > 0 ? audience : null,
+      profile_snapshot: profileSnapshot,
       completed_at: new Date().toISOString(),
     })
     .eq("id", report.id)

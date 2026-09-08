@@ -637,6 +637,8 @@ export type InstagramInsightsReportRow = {
   stories: unknown[] | null;
   /** Retrato atual do publico (idade/genero/cidade/pais) -- "agora", nao do periodo do relatorio. */
   audience: Record<string, unknown> | null;
+  /** Snapshot real (agora) de followers_count/follows_count/media_count -- NAO e o crescimento do periodo (isso vem de account_metrics.follower_count). */
+  profile_snapshot: Record<string, unknown> | null;
   requested_by: string | null;
   error: string | null;
   /** Erro da entrega do PDF em Documentos (etapa separada, best-effort) -- diagnostico, nunca mostrado ao usuario. */

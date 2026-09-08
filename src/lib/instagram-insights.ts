@@ -19,7 +19,17 @@ export function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-/** Uma serie de metrica (`period=day`): `{ data: [{ name, values: [{ value, end_time? }] }] }`. */
+/**
+ * Uma serie de metrica. Duas formas possiveis, dependendo de como a metrica
+ * foi pedida na Graph API:
+ * - `period=day` (serie diaria de verdade): `{ data: [{ name, values: [{ value, end_time? }] }] }`.
+ * - `metric_type=total_value` (a Meta descontinuou a serie diaria pra quase
+ *   toda metrica de engajamento de conta -- reach/follower_count sao as
+ *   excecoes que ainda tem `period=day` de verdade): `{ data: [{ name,
+ *   total_value: { value } }] }`, sem `values` nenhum. Vira uma serie de um
+ *   ponto so (sem `end_time`) -- `metricTotal` continua funcionando igual,
+ *   so nao da pra desenhar um sparkline de verdade com isso.
+ */
 export function metricSeries(raw: unknown, name: string): { value: number; endTime: string | null }[] {
   const data =
     raw && typeof raw === "object" && Array.isArray((raw as { data?: unknown }).data)
@@ -27,11 +37,20 @@ export function metricSeries(raw: unknown, name: string): { value: number; endTi
       : [];
   const entry = data.find(
     (item) => item && typeof item === "object" && (item as { name?: unknown }).name === name,
-  ) as { values?: unknown[] } | undefined;
+  ) as { values?: unknown[]; total_value?: { value?: unknown } } | undefined;
 
-  return (entry?.values ?? [])
-    .filter((v): v is Record<string, unknown> => Boolean(v) && typeof v === "object")
-    .map((v) => ({ value: num(v.value) ?? 0, endTime: str(v.end_time) }));
+  if (entry?.values) {
+    return entry.values
+      .filter((v): v is Record<string, unknown> => Boolean(v) && typeof v === "object")
+      .map((v) => ({ value: num(v.value) ?? 0, endTime: str(v.end_time) }));
+  }
+
+  if (entry?.total_value) {
+    const value = num(entry.total_value.value);
+    return value != null ? [{ value, endTime: null }] : [];
+  }
+
+  return [];
 }
 
 export function metricTotal(raw: unknown, name: string): number {
@@ -81,4 +100,22 @@ export function extractDemographicsEntries(raw: unknown): { label: string; value
   }
 
   return [];
+}
+
+/**
+ * Retencao "nos 3s iniciais" de um Reel = 100 - taxa de abandono
+ * (`reels_skip_rate`, ja em percentual segundo a Meta). Nao e a curva de
+ * retencao completa (a Meta nao expõe isso via API publica) -- so o recorte
+ * dos 3 primeiros segundos, mas e a metrica mais proxima de "retencao" que
+ * a Graph API oferece hoje.
+ */
+export function reelRetentionPercent(insights: unknown): number | null {
+  const skipRate = postMetricValue(insights, "reels_skip_rate");
+  return skipRate != null ? Math.max(0, 100 - skipRate) : null;
+}
+
+/** Tempo medio assistido de um Reel, em segundos (a Meta devolve em milissegundos). */
+export function reelAvgWatchSeconds(insights: unknown): number | null {
+  const ms = postMetricValue(insights, "ig_reels_avg_watch_time");
+  return ms != null ? ms / 1000 : null;
 }

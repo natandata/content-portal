@@ -7,6 +7,8 @@ import {
   metricTotal,
   num,
   postMetricValue,
+  reelAvgWatchSeconds,
+  reelRetentionPercent,
   str,
 } from "@/lib/instagram-insights";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -57,10 +59,29 @@ function AudienceBars({ dimension, entries }: { dimension: string; entries: { la
   );
 }
 
+function StatBox({ label, value }: { label: string; value: number | null }) {
+  return (
+    <div className="rounded-lg border border-line p-2.5">
+      <p className="text-base font-semibold tabular-nums text-ink-900">
+        {value != null ? value.toLocaleString("pt-BR") : "—"}
+      </p>
+      <p className="text-[11px] text-ink-500">{label}</p>
+    </div>
+  );
+}
+
 /**
  * Relatorio de insights (relatorio 2). `account_metrics`/`posts`/`stories`/
- * `audience` vem crus da Composio (jsonb, jeito Graph API) -- leitura
- * defensiva via `src/lib/instagram-insights.ts`, so guardado cru no banco.
+ * `audience`/`profile_snapshot` vem crus da Composio (jsonb, jeito Graph
+ * API) -- leitura defensiva via `src/lib/instagram-insights.ts`, so guardado
+ * cru no banco.
+ *
+ * A maioria das metricas de engajamento de conta so existe hoje via
+ * `metric_type=total_value` (sem serie diaria) -- por isso so `reach` e
+ * `follower_count` viram sparkline; o resto e mostrado como total do
+ * periodo na grade de estatisticas. `follower_count` no periodo e o
+ * CRESCIMENTO LIQUIDO (novos - perdidos), nao o total da conta -- o total
+ * real de agora vem de `profile_snapshot` (chamada separada).
  */
 export function InstagramInsightsReportCard({ report }: { report: InstagramInsightsReportRow }) {
   if (report.status === "pending" || report.status === "running") {
@@ -85,14 +106,41 @@ export function InstagramInsightsReportCard({ report }: { report: InstagramInsig
   }
 
   const reachSeries = metricSeries(report.account_metrics, "reach");
-  const interactionsSeries = metricSeries(report.account_metrics, "total_interactions");
+  const followerGrowthSeries = metricSeries(report.account_metrics, "follower_count");
   const posts = Array.isArray(report.posts) ? report.posts : [];
   const stories = Array.isArray(report.stories) ? report.stories : [];
   const audience = (report.audience ?? {}) as Record<string, unknown>;
   const audienceDimensions = Object.keys(audience);
+  const profileSnapshot = (report.profile_snapshot ?? {}) as Record<string, unknown>;
+  const reels = posts.filter((raw) => (raw as Record<string, unknown>).media_product_type === "REELS");
+
+  const stats: { label: string; value: number | null }[] = [
+    { label: "Alcance", value: metricTotal(report.account_metrics, "reach") },
+    { label: "Interacoes", value: metricTotal(report.account_metrics, "total_interactions") },
+    { label: "Contas engajadas", value: metricTotal(report.account_metrics, "accounts_engaged") },
+    { label: "Curtidas", value: metricTotal(report.account_metrics, "likes") },
+    { label: "Comentarios", value: metricTotal(report.account_metrics, "comments") },
+    { label: "Compartilhamentos", value: metricTotal(report.account_metrics, "shares") },
+    { label: "Salvamentos", value: metricTotal(report.account_metrics, "saves") },
+    { label: "Respostas", value: metricTotal(report.account_metrics, "replies") },
+    { label: "Visualizacoes", value: metricTotal(report.account_metrics, "views") },
+    { label: "Visitas ao perfil", value: metricTotal(report.account_metrics, "profile_views") },
+    { label: "Cliques no site", value: metricTotal(report.account_metrics, "website_clicks") },
+    { label: "Seguidores atuais", value: num(profileSnapshot.followers_count) },
+    { label: "Novos seguidores no periodo", value: metricTotal(report.account_metrics, "follower_count") },
+  ];
 
   return (
     <div className="space-y-5">
+      <div>
+        <p className="mb-2 text-xs font-semibold tracking-wide text-ink-500 uppercase">Resumo do periodo</p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {stats.map((stat) => (
+            <StatBox key={stat.label} label={stat.label} value={stat.value} />
+          ))}
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <p className="text-xs font-semibold tracking-wide text-ink-500 uppercase">
@@ -102,9 +150,9 @@ export function InstagramInsightsReportCard({ report }: { report: InstagramInsig
         </div>
         <div>
           <p className="text-xs font-semibold tracking-wide text-ink-500 uppercase">
-            Interacoes no periodo ({metricTotal(report.account_metrics, "total_interactions").toLocaleString("pt-BR")})
+            Novos seguidores no periodo ({metricTotal(report.account_metrics, "follower_count").toLocaleString("pt-BR")})
           </p>
-          <Sparkline points={interactionsSeries} formatLabel={instagramSparklineLabel} />
+          <Sparkline points={followerGrowthSeries} formatLabel={instagramSparklineLabel} />
         </div>
       </div>
 
@@ -172,6 +220,51 @@ export function InstagramInsightsReportCard({ report }: { report: InstagramInsig
       ) : (
         <p className="text-sm text-ink-500">Nenhum post encontrado no periodo.</p>
       )}
+
+      <div>
+        <p className="mb-1 text-xs font-semibold tracking-wide text-ink-500 uppercase">
+          Retencao de Reels {reels.length > 0 ? `(${reels.length})` : ""}
+        </p>
+        <p className="mb-2 text-xs text-ink-400">
+          Retencao estimada nos 3s iniciais (100% - taxa de abandono da Meta) -- a Meta nao expõe a curva completa de
+          retencao.
+        </p>
+        {reels.length === 0 ? (
+          <p className="text-sm text-ink-500">Nenhum Reel no periodo.</p>
+        ) : (
+          <div className="scroll-slim overflow-x-auto rounded-lg border border-line">
+            <table className="w-full min-w-[420px] text-sm">
+              <thead className="border-b border-line bg-ink-50 text-left text-xs font-semibold text-ink-500 uppercase">
+                <tr>
+                  <th className="px-3 py-2">Reel</th>
+                  <th className="px-3 py-2 text-right">Retencao (3s)</th>
+                  <th className="px-3 py-2 text-right">Tempo medio assistido</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {reels.map((raw, index) => {
+                  const post = raw as Record<string, unknown>;
+                  const caption = str(post.caption);
+                  const retention = reelRetentionPercent(post.insights);
+                  const watchSeconds = reelAvgWatchSeconds(post.insights);
+
+                  return (
+                    <tr key={str(post.id) ?? index} className="hover:bg-ink-50">
+                      <td className="max-w-[240px] truncate px-3 py-2 text-ink-700">{caption ?? "Sem legenda"}</td>
+                      <td className="px-3 py-2 text-right tabular-nums text-ink-700">
+                        {retention != null ? `${retention.toFixed(1)}%` : "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums text-ink-700">
+                        {watchSeconds != null ? `${watchSeconds.toFixed(1)}s` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       <div>
         <p className="mb-2 text-xs font-semibold tracking-wide text-ink-500 uppercase">
