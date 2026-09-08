@@ -142,13 +142,16 @@ export function InstagramInsightsReportCard({ report }: { report: InstagramInsig
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
+        {/* min-w-0 -- sem isso, a celula do grid cresce pra caber o conteudo
+            minimo do sparkline (muitas barras) em vez de deixar ELE rolar
+            por dentro, e a pagina inteira estoura pro lado. */}
+        <div className="min-w-0">
           <p className="text-xs font-semibold tracking-wide text-ink-500 uppercase">
             Alcance no periodo ({metricTotal(report.account_metrics, "reach").toLocaleString("pt-BR")})
           </p>
           <Sparkline points={reachSeries} formatLabel={instagramSparklineLabel} />
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold tracking-wide text-ink-500 uppercase">
             Novos seguidores no periodo ({metricTotal(report.account_metrics, "follower_count").toLocaleString("pt-BR")})
           </p>
