@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ExternalLink, Link2, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, Link2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button, IconButton } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { linkProviderLabel } from "@/lib/domain";
 import {
   createClientReferenceAction,
   deleteClientReferenceAction,
+  updateClientReferenceAction,
 } from "@/server/actions/client-references";
 import type { ClientReferenceRow } from "@/types/database";
 
@@ -30,6 +31,8 @@ export function ClientReferenceCard({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // Nulo = modal em modo "adicionar"; preenchido = editando essa referencia.
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +42,45 @@ export function ClientReferenceCard({
     setTitle("");
     setUrl("");
     setError(null);
+    setEditingId(null);
+  }
+
+  function openToAdd() {
+    reset();
+    setOpen(true);
+  }
+
+  function openToEdit(reference: ClientReferenceRow) {
+    setError(null);
+    setEditingId(reference.id);
+    setTitle(reference.title);
+    setUrl(reference.url);
+    setOpen(true);
+  }
+
+  function submit() {
+    setError(null);
+    if (title.trim().length < 2) {
+      setError("Informe o titulo da referencia.");
+      return;
+    }
+    if (!url.trim()) {
+      setError("Informe o link da referencia.");
+      return;
+    }
+    startTransition(async () => {
+      const result = editingId
+        ? await updateClientReferenceAction(editingId, { title, url })
+        : await createClientReferenceAction({ clientId, title, url });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      toast.success(editingId ? "Referencia atualizada." : "Referencia adicionada.");
+      setOpen(false);
+      reset();
+      router.refresh();
+    });
   }
 
   return (
@@ -46,7 +88,7 @@ export function ClientReferenceCard({
       <CardHeader
         title="Banco de Referencias"
         actions={
-          <IconButton label="Adicionar referencia" onClick={() => setOpen(true)}>
+          <IconButton label="Adicionar referencia" onClick={openToAdd}>
             <Plus className="size-4" />
           </IconButton>
         }
@@ -73,23 +115,33 @@ export function ClientReferenceCard({
                 </span>
                 <ExternalLink className="size-3 shrink-0 text-ink-300" aria-hidden />
               </a>
-              <IconButton
-                label="Remover referencia"
-                className="size-7 shrink-0 text-ink-400 hover:text-red-600"
-                disabled={pending}
-                onClick={() =>
-                  startTransition(async () => {
-                    const result = await deleteClientReferenceAction(reference.id);
-                    if (!result.ok) {
-                      toast.error(result.error);
-                      return;
-                    }
-                    router.refresh();
-                  })
-                }
-              >
-                <Trash2 className="size-3.5" />
-              </IconButton>
+              <div className="flex shrink-0 items-center gap-1">
+                <IconButton
+                  label="Editar referencia"
+                  className="size-7 text-ink-400 hover:text-ink-700"
+                  disabled={pending}
+                  onClick={() => openToEdit(reference)}
+                >
+                  <Pencil className="size-3.5" />
+                </IconButton>
+                <IconButton
+                  label="Remover referencia"
+                  className="size-7 text-ink-400 hover:text-red-600"
+                  disabled={pending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      const result = await deleteClientReferenceAction(reference.id);
+                      if (!result.ok) {
+                        toast.error(result.error);
+                        return;
+                      }
+                      router.refresh();
+                    })
+                  }
+                >
+                  <Trash2 className="size-3.5" />
+                </IconButton>
+              </div>
             </li>
           ))}
         </ul>
@@ -98,39 +150,15 @@ export function ClientReferenceCard({
       <Modal
         open={open}
         onClose={() => !pending && setOpen(false)}
-        title="Adicionar referencia"
+        title={editingId ? "Editar referencia" : "Adicionar referencia"}
         description='Ex.: "Reels de inspiracao" · link do YouTube/Instagram'
         footer={
           <>
             <Button variant="secondary" onClick={() => setOpen(false)} disabled={pending}>
               Cancelar
             </Button>
-            <Button
-              loading={pending}
-              onClick={() => {
-                setError(null);
-                if (title.trim().length < 2) {
-                  setError("Informe o titulo da referencia.");
-                  return;
-                }
-                if (!url.trim()) {
-                  setError("Informe o link da referencia.");
-                  return;
-                }
-                startTransition(async () => {
-                  const result = await createClientReferenceAction({ clientId, title, url });
-                  if (!result.ok) {
-                    setError(result.error);
-                    return;
-                  }
-                  toast.success("Referencia adicionada.");
-                  setOpen(false);
-                  reset();
-                  router.refresh();
-                });
-              }}
-            >
-              Adicionar
+            <Button loading={pending} onClick={submit}>
+              {editingId ? "Salvar" : "Adicionar"}
             </Button>
           </>
         }

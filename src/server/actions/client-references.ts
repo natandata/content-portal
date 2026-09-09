@@ -69,6 +69,41 @@ export async function createClientReferenceAction(
   return ok(data);
 }
 
+const updateSchema = schema.omit({ clientId: true });
+
+export async function updateClientReferenceAction(
+  referenceId: string,
+  input: z.input<typeof updateSchema>,
+): Promise<ActionResult<null>> {
+  const actor = await requireStaff();
+  const parsed = updateSchema.safeParse(input);
+  if (!parsed.success) {
+    return fail(firstIssue(parsed.error.issues, "Dados invalidos."));
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("client_references")
+    .update({ title: parsed.data.title, url: parsed.data.url })
+    .eq("id", referenceId)
+    .select("client_id")
+    .single();
+
+  if (error || !data) {
+    return fail(describeError(error, "Nao foi possivel atualizar a referencia."));
+  }
+
+  await logClientActivity(
+    supabase,
+    data.client_id,
+    actor.displayName,
+    `Atualizou a referencia "${parsed.data.title}"`,
+  );
+
+  revalidateReferences(data.client_id);
+  return done();
+}
+
 export async function deleteClientReferenceAction(referenceId: string): Promise<ActionResult<null>> {
   await requireStaff();
   const supabase = await createClient();
