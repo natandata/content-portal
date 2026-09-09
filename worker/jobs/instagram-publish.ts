@@ -1,38 +1,16 @@
-import { NextResponse } from "next/server";
-
-import { getPublishingLimit } from "@/lib/composio/instagram-publish";
-import { cronSecret } from "@/lib/env";
-import { createAdminClient } from "@/lib/supabase/server";
-import { runInstagramPublish } from "@/server/instagram/run-publish";
+import { getPublishingLimit } from "../../src/lib/composio/instagram-publish";
+import { createAdminClient } from "../../src/lib/supabase/admin";
+import { runInstagramPublish } from "../../src/server/instagram/run-publish";
 
 /**
- * Roda uma vez por dia (Vercel Cron -- ver vercel.json) e publica todo
- * conteudo com `publish_status='scheduled'` cuja `scheduled_date` ja
- * chegou. So data, sem hora -- mesma limitacao ja aceita no cron de
- * relatorios de Instagram (plano Hobby roda 1x/dia em horario impreciso).
- *
- * Cap deliberado por execucao: cada publicacao envolve criar um container
- * na Meta e esperar ele processar -- o que sobrar fica pro dia seguinte
- * (nada se perde, so atrasa, mesmo raciocinio do cron de relatorios).
- *
- * Checa a cota de publicacao (`getPublishingLimit`) uma vez por conexao
- * antes de processar seus itens -- se perto do teto, adia em vez de
- * estourar o limite no meio do lote (mantem `publish_status='scheduled'`,
- * tenta de novo no proximo dia).
+ * Reproduz o loop de lote/checagem de cota que hoje mora no corpo da rota
+ * `api/cron/instagram-publish` (nao em `runInstagramPublish`) -- ver
+ * comentario da rota original pra contexto completo.
  */
-export const runtime = "nodejs";
-export const maxDuration = 60;
-
 const MAX_PER_RUN = 5;
 const QUOTA_SKIP_THRESHOLD = 0.9; // acima de 90% da cota, adia
 
-export async function GET(request: Request) {
-  const secret = cronSecret();
-  const authHeader = request.headers.get("authorization");
-  if (!secret || authHeader !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
-  }
-
+async function main() {
   const admin = createAdminClient();
   const todayIso = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 
@@ -43,9 +21,7 @@ export async function GET(request: Request) {
     .lte("scheduled_date", todayIso)
     .limit(MAX_PER_RUN);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) throw new Error(error.message);
 
   const quotaCache = new Map<string, boolean>(); // connectionId -> "pode publicar"
   let processed = 0;
@@ -80,5 +56,12 @@ export async function GET(request: Request) {
     processed += 1;
   }
 
-  return NextResponse.json({ ok: true, due: due?.length ?? 0, processed, skippedQuota });
+  console.log(`[instagram-publish] due=${due?.length ?? 0} processed=${processed} skippedQuota=${skippedQuota}`);
 }
+
+// Sem process.exit(0) no sucesso de proposito -- ver comentario em
+// autentique-reconcile.ts (crash de libuv no Windows com saida forcada).
+main().catch((err) => {
+  console.error("[instagram-publish] failed:", err);
+  process.exit(1);
+});

@@ -2,6 +2,7 @@ node_modules
 .next
 out
 build
+worker/dist
 .DS_Store
 *.pem
 npm-debug.log*

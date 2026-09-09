@@ -4,7 +4,7 @@ import webpush from "web-push";
 
 import { vapidConfig } from "@/lib/env";
 import { isLocale, type Locale } from "@/lib/i18n/locale";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface PushPayload {
   title: string;

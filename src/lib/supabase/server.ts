@@ -3,8 +3,16 @@ import "server-only";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-import { requirePublicEnv, requireServiceRoleKey } from "@/lib/env";
+import { requirePublicEnv } from "@/lib/env";
 import type { Database } from "@/types/database";
+
+/**
+ * Client admin (service-role) mora em `./admin` -- sem NENHUMA dependencia
+ * do Next.js, pra poder ser importado por scripts standalone (workers do
+ * Railway). Reexportado aqui pra todo `import { createAdminClient } from
+ * "@/lib/supabase/server"` existente continuar funcionando sem mudanca.
+ */
+export { createAdminClient } from "./admin";
 
 /**
  * Cliente para Server Components, Server Actions e Route Handlers.
@@ -27,26 +35,6 @@ export async function createClient() {
         } catch {
           // Server Components nao podem escrever cookies; o middleware renova a sessao.
         }
-      },
-    },
-  });
-}
-
-/**
- * Cliente com service role. Ignora RLS — use apenas em operacoes administrativas
- * no servidor (criacao de usuarios, login por codigo, seed).
- */
-export function createAdminClient() {
-  const { supabaseUrl } = requirePublicEnv();
-
-  return createServerClient<Database>(supabaseUrl, requireServiceRoleKey(), {
-    auth: { autoRefreshToken: false, persistSession: false },
-    cookies: {
-      getAll() {
-        return [];
-      },
-      setAll() {
-        // Sem sessao: este cliente nunca escreve cookies.
       },
     },
   });

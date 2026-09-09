@@ -3,7 +3,7 @@ import "server-only";
 import { callInstagramTool } from "@/lib/composio/client";
 import { composioConfig } from "@/lib/env";
 import { num } from "@/lib/instagram-insights";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { logClientActivity } from "@/server/activity";
 import { deliverInstagramInsightsReportPdf } from "@/server/reports/instagram-report-delivery";
 import { describeError, fail, ok, type ActionResult } from "@/server/result";

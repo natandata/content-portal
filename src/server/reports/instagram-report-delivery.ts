@@ -3,7 +3,7 @@ import "server-only";
 import { renderInstagramInsightsPdf } from "@/server/reports/instagram-insights-pdf";
 import { contractPath, BUCKETS } from "@/lib/paths";
 import { sendPushToClientStaff } from "@/lib/push";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { InstagramInsightsReportRow } from "@/types/database";
 
 /**

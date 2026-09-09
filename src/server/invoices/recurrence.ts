@@ -3,7 +3,7 @@ import "server-only";
 import { daysUntil } from "@/lib/domain";
 import { intlLocale } from "@/lib/i18n/locale";
 import { sendPushToClient, sendPushToClientStaff } from "@/lib/push";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { logClientActivity } from "@/server/activity";
 import { revalidateInvoices } from "@/server/invoices/revalidate";
 import type { InvoiceRow } from "@/types/database";

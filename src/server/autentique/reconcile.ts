@@ -3,7 +3,7 @@ import "server-only";
 import { downloadSignedPdf, getDocumentStatus } from "@/lib/autentique/client";
 import { BUCKETS, signedContractPath } from "@/lib/paths";
 import { sendPushToClientStaff } from "@/lib/push";
-import { createAdminClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { logClientActivity } from "@/server/activity";
 
 /**
