@@ -202,6 +202,8 @@ export interface Dictionary {
       revision_requested: string;
       rejected: string;
       published: string;
+      /** Badge de conteudo feed_only -- nunca passou pelo fluxo de aprovacao. */
+      feedInsertion: string;
     };
     document: {
       awaiting_signature: string;
@@ -620,6 +622,7 @@ const ptBR: Dictionary = {
       revision_requested: "Alteracao solicitada",
       rejected: "Reprovado",
       published: "Publicado",
+      feedInsertion: "Insercao no feed",
     },
     document: {
       awaiting_signature: "Aguardando assinatura",
@@ -1026,6 +1029,7 @@ const en: Dictionary = {
       revision_requested: "Change requested",
       rejected: "Rejected",
       published: "Published",
+      feedInsertion: "Feed insertion",
     },
     document: {
       awaiting_signature: "Awaiting signature",

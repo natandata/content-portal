@@ -7,7 +7,7 @@ import { InstagramPublishCard } from "@/components/content/instagram-publish-car
 import { FeedPreviewModal } from "@/components/feed/feed-preview-modal";
 import { HistoryTimeline } from "@/components/content/history-timeline";
 import { StaffContentActions } from "@/components/content/staff-content-actions";
-import { ContentStatusBadge } from "@/components/ui/badge";
+import { Badge, ContentStatusBadge } from "@/components/ui/badge";
 import { Card, CardHeader, PageHeader } from "@/components/ui/layout";
 import { basePath, requireStaff } from "@/lib/auth";
 import { CONTENT_TYPE_LABEL } from "@/lib/domain";
@@ -89,7 +89,13 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
         }
         title={content.title}
         description={`${CONTENT_TYPE_LABEL[content.type]} · ${client?.company_name ?? "Cliente"}`}
-        actions={<ContentStatusBadge status={content.status} />}
+        actions={
+          content.feed_only ? (
+            <Badge tone="neutral">Insercao no feed</Badge>
+          ) : (
+            <ContentStatusBadge status={content.status} />
+          )
+        }
       />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">

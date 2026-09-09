@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { CalendarDays, Layers } from "lucide-react";
 
 import { ContentThumb } from "@/components/content/content-thumb";
-import { ContentStatusBadge } from "@/components/ui/badge";
+import { Badge, ContentStatusBadge } from "@/components/ui/badge";
 import { CONTENT_TYPE_LABEL } from "@/lib/domain";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import { DEFAULT_LOCALE, intlLocale, type Locale } from "@/lib/i18n/locale";
@@ -52,7 +52,13 @@ export function ContentCard({
             <Link href={href} className="focus-ring min-w-0 rounded">
               <h3 className="truncate text-[15px] font-semibold text-ink-900">{content.title}</h3>
             </Link>
-            <ContentStatusBadge status={content.status} locale={locale} className="shrink-0 self-start" />
+            {content.feed_only ? (
+              <Badge tone="neutral" className="shrink-0 self-start">
+                {dict.status.content.feedInsertion}
+              </Badge>
+            ) : (
+              <ContentStatusBadge status={content.status} locale={locale} className="shrink-0 self-start" />
+            )}
           </div>
 
           <p className="text-sm text-ink-500">

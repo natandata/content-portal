@@ -6,7 +6,7 @@ import { ApprovalActions } from "@/components/content/approval-actions";
 import { ContentMedia } from "@/components/content/content-media";
 import { FeedPreviewModal } from "@/components/feed/feed-preview-modal";
 import { HistoryTimeline } from "@/components/content/history-timeline";
-import { ContentStatusBadge } from "@/components/ui/badge";
+import { Badge, ContentStatusBadge } from "@/components/ui/badge";
 import { Card, CardHeader, PageHeader } from "@/components/ui/layout";
 import { requireClientActor } from "@/lib/auth";
 import { CONTENT_TYPE_LABEL } from "@/lib/domain";
@@ -74,7 +74,13 @@ export async function ClientContentDetail({ contentId }: { contentId: string }) 
         }
         title={content.title}
         description={`${typeLabel} · ${formatDate(content.scheduled_date, intlLocale(locale))}`}
-        actions={<ContentStatusBadge status={content.status} locale={locale} />}
+        actions={
+          content.feed_only ? (
+            <Badge tone="neutral">{dict.status.content.feedInsertion}</Badge>
+          ) : (
+            <ContentStatusBadge status={content.status} locale={locale} />
+          )
+        }
       />
 
       <div className="space-y-5">
