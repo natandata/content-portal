@@ -15,6 +15,7 @@ import { StaffContentActions } from "@/components/content/staff-content-actions"
 import { DocumentUploadModal } from "@/components/documents/document-upload-modal";
 import { MeetingRequestForm } from "@/components/meetings/meeting-request-form";
 import { MeetingRequestsList } from "@/components/meetings/meeting-requests-list";
+import { ClientReferenceCard } from "@/components/services/client-reference-card";
 import { ClientServicesCard } from "@/components/services/client-services-card";
 import { Badge, ContractStatusBadge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import { loadCalendlyConnectionStatus } from "@/server/actions/calendly-connect"
 import {
   loadClientContentCalendar,
   loadClientMeetings,
+  loadClientReferences,
   loadClientServices,
   loadContentFileCounts,
   loadContentPreviews,
@@ -74,8 +76,9 @@ export async function ClientDetail({
       .eq("client_id", clientId),
   ]);
 
-  const [services, { data: clientProfile }] = await Promise.all([
+  const [services, references, { data: clientProfile }] = await Promise.all([
     loadClientServices(supabase, clientId),
+    loadClientReferences(supabase, clientId),
     supabase.from("client_profiles").select("avatar_path").eq("client_id", clientId).maybeSingle(),
   ]);
 
@@ -327,6 +330,11 @@ export async function ClientDetail({
             id: "branding",
             label: "Branding",
             content: <ClientBrandingForm clientId={client.id} branding={branding} basePath={base} />,
+          },
+          {
+            id: "referencias",
+            label: "Banco de Referencias",
+            content: <ClientReferenceCard clientId={client.id} references={references} />,
           },
         ]}
       />

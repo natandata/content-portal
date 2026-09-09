@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Layers, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
 import { Field, FormError, Input, Select } from "@/components/ui/form";
 import { Card, CardHeader } from "@/components/ui/layout";
@@ -32,6 +33,7 @@ export function ClientServicesCard({
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState<CurrencyCode>("BRL");
+  const [isPartnership, setIsPartnership] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -39,6 +41,7 @@ export function ClientServicesCard({
     setTitle("");
     setAmount("");
     setCurrency("BRL");
+    setIsPartnership(false);
     setError(null);
   }
 
@@ -64,9 +67,13 @@ export function ClientServicesCard({
                 <span className="truncate">{service.title}</span>
               </span>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-sm font-medium text-ink-900 tabular-nums">
-                  {formatMoney(service.amount, service.currency)}
-                </span>
+                {service.is_partnership ? (
+                  <Badge tone="info">Parceria</Badge>
+                ) : (
+                  <span className="text-sm font-medium text-ink-900 tabular-nums">
+                    {formatMoney(service.amount!, service.currency)}
+                  </span>
+                )}
                 <IconButton
                   label="Remover servico"
                   className="size-7 text-ink-400 hover:text-red-600"
@@ -109,7 +116,7 @@ export function ClientServicesCard({
                   return;
                 }
                 const amountNumber = Number(amount);
-                if (!amount || Number.isNaN(amountNumber) || amountNumber <= 0) {
+                if (!isPartnership && (!amount || Number.isNaN(amountNumber) || amountNumber <= 0)) {
                   setError("Informe um valor maior que zero.");
                   return;
                 }
@@ -117,7 +124,8 @@ export function ClientServicesCard({
                   const result = await createClientServiceAction({
                     clientId,
                     title,
-                    amount: amountNumber,
+                    isPartnership,
+                    amount: isPartnership ? undefined : amountNumber,
                     currency,
                   });
                   if (!result.ok) {
@@ -146,35 +154,48 @@ export function ClientServicesCard({
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Valor" htmlFor="service-amount" required>
-              <Input
-                id="service-amount"
-                type="number"
-                min="0.01"
-                step="0.01"
-                inputMode="decimal"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                disabled={pending}
-              />
-            </Field>
+          <label className="flex items-center gap-2 text-sm text-ink-700">
+            <input
+              type="checkbox"
+              className="size-4 rounded border-ink-300"
+              checked={isPartnership}
+              onChange={(event) => setIsPartnership(event.target.checked)}
+              disabled={pending}
+            />
+            Parceria (sem cobranca)
+          </label>
 
-            <Field label="Moeda" htmlFor="service-currency" required>
-              <Select
-                id="service-currency"
-                value={currency}
-                onChange={(event) => setCurrency(event.target.value as CurrencyCode)}
-                disabled={pending}
-              >
-                {CURRENCIES.map((option) => (
-                  <option key={option} value={option}>
-                    {CURRENCY_LABEL[option]}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
+          {!isPartnership && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Valor" htmlFor="service-amount" required>
+                <Input
+                  id="service-amount"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                  disabled={pending}
+                />
+              </Field>
+
+              <Field label="Moeda" htmlFor="service-currency" required>
+                <Select
+                  id="service-currency"
+                  value={currency}
+                  onChange={(event) => setCurrency(event.target.value as CurrencyCode)}
+                  disabled={pending}
+                >
+                  {CURRENCIES.map((option) => (
+                    <option key={option} value={option}>
+                      {CURRENCY_LABEL[option]}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          )}
 
           <FormError>{error}</FormError>
         </div>

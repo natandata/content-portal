@@ -1,13 +1,19 @@
 import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { Activity, ArrowRight, CalendarDays, CalendarClock, Layers, Video } from "lucide-react";
+import { Activity, ArrowRight, CalendarDays, CalendarClock, ExternalLink, Layers, Link2, Video } from "lucide-react";
 
 import { Card, CardHeader } from "@/components/ui/layout";
-import { CONTENT_TYPE_LABEL, formatMoney } from "@/lib/domain";
+import { CONTENT_TYPE_LABEL, formatMoney, linkProviderLabel } from "@/lib/domain";
 import { getDictionary } from "@/lib/i18n/dictionary";
 import { intlLocale, type Locale } from "@/lib/i18n/locale";
 import { formatDate, formatRelativeDay } from "@/lib/utils";
-import { loadClientActivities, loadClientMeetings, loadClientServices, loadUpcomingContents } from "@/server/queries";
+import {
+  loadClientActivities,
+  loadClientMeetings,
+  loadClientReferences,
+  loadClientServices,
+  loadUpcomingContents,
+} from "@/server/queries";
 import type { Database, MeetingRequestRow } from "@/types/database";
 
 type Client = SupabaseClient<Database>;
@@ -76,8 +82,51 @@ export async function ActiveProjectsWidget({
                 <span className="truncate">{service.title}</span>
               </span>
               <span className="shrink-0 text-sm font-semibold text-ink-900 tabular-nums">
-                {formatMoney(service.amount, service.currency, locale)}
+                {service.is_partnership ? dict.partnershipLabel : formatMoney(service.amount!, service.currency, locale)}
               </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+/** Links de referencia que o profissional cadastrou pra o cliente gravar. */
+export async function ReferenceBankWidget({
+  supabase,
+  locale,
+}: {
+  supabase: Client;
+  locale: Locale;
+}) {
+  const dict = getDictionary(locale).dashboardWidgets;
+  const references = await loadClientReferences(supabase);
+
+  return (
+    <Card>
+      <CardHeader title={dict.referencesTitle} />
+      {references.length === 0 ? (
+        <p className="text-sm text-ink-500">{dict.referencesEmpty}</p>
+      ) : (
+        <ul className="space-y-3">
+          {references.map((reference) => (
+            <li key={reference.id}>
+              <a
+                href={reference.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="focus-ring flex items-center gap-2.5 rounded text-sm font-medium text-ink-900 hover:text-accent"
+              >
+                <Link2 className="size-4 shrink-0 text-ink-400" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{reference.title}</span>
+                  <span className="block truncate text-xs font-normal text-ink-400">
+                    {linkProviderLabel(reference.url)}
+                  </span>
+                </span>
+                <ExternalLink className="size-3.5 shrink-0 text-ink-300" aria-hidden />
+              </a>
             </li>
           ))}
         </ul>

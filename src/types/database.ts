@@ -559,8 +559,20 @@ export type ClientServiceRow = {
   client_id: string;
   created_by: string | null;
   title: string;
-  amount: number;
+  amount: number | null;
   currency: CurrencyCode;
+  is_partnership: boolean;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ClientReferenceRow = {
+  id: string;
+  client_id: string;
+  created_by: string | null;
+  title: string;
+  url: string;
   position: number;
   created_at: string;
   updated_at: string;
@@ -765,7 +777,8 @@ export type Database = {
       bulletin_posts: Table<BulletinPostRow, 'title' | 'body'>;
       bulletin_votes: Table<BulletinVoteRow, 'post_id' | 'user_id' | 'vote'>;
       invoices: Table<InvoiceRow, 'client_id' | 'title' | 'method' | 'amount' | 'due_date'>;
-      client_services: Table<ClientServiceRow, 'client_id' | 'title' | 'amount'>;
+      client_services: Table<ClientServiceRow, 'client_id' | 'title'>;
+      client_references: Table<ClientReferenceRow, 'client_id' | 'title' | 'url'>;
       client_activities: Table<ClientActivityRow, 'client_id' | 'actor_name' | 'action'>;
       staff_chat_threads: Table<StaffChatThreadRow, 'professional_id'>;
       staff_chat_messages: Table<StaffChatMessageRow, 'thread_id' | 'sender_id' | 'body'>;

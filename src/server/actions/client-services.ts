@@ -9,12 +9,25 @@ import { logClientActivity } from "@/server/activity";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { ClientServiceRow } from "@/types/database";
 
-const schema = z.object({
-  clientId: z.uuid("Selecione um cliente"),
+// Parceria = servico sem cobranca em dinheiro (permuta, cortesia, troca de
+// divulgacao) -- Valor/Moeda ficam sem sentido nesse caso, entao so exigimos
+// valor > 0 quando NAO for parceria (mesmo estilo de `.refine()` condicional
+// que createSchema usa em invoices.ts pra paymentLink/pixKey).
+const baseServiceFields = z.object({
   title: z.string().trim().min(2, "Informe o nome do servico"),
-  amount: z.coerce.number().positive("Informe um valor maior que zero"),
-  currency: z.enum(["BRL", "USD", "EUR", "GBP"]),
+  isPartnership: z.boolean().default(false),
+  amount: z.coerce.number().optional(),
+  currency: z.enum(["BRL", "USD", "EUR", "GBP"]).default("BRL"),
 });
+
+function withAmountRule<T extends typeof baseServiceFields>(base: T) {
+  return base.refine(
+    (data) => data.isPartnership || (data.amount !== undefined && data.amount > 0),
+    { message: "Informe um valor maior que zero.", path: ["amount"] },
+  );
+}
+
+const schema = withAmountRule(baseServiceFields.extend({ clientId: z.uuid("Selecione um cliente") }));
 
 function revalidateServices(clientId: string) {
   revalidatePath(`/admin/clients/${clientId}`);
@@ -43,8 +56,9 @@ export async function createClientServiceAction(
     .insert({
       client_id: parsed.data.clientId,
       title: parsed.data.title,
-      amount: parsed.data.amount,
+      amount: parsed.data.isPartnership ? null : parsed.data.amount!,
       currency: parsed.data.currency,
+      is_partnership: parsed.data.isPartnership,
       position: count ?? 0,
       created_by: actor.authUser.id,
     })
@@ -55,13 +69,18 @@ export async function createClientServiceAction(
     return fail(describeError(error, "Nao foi possivel adicionar o servico."));
   }
 
-  await logClientActivity(supabase, parsed.data.clientId, actor.displayName, `Adicionou o servico "${data.title}"`);
+  await logClientActivity(
+    supabase,
+    parsed.data.clientId,
+    actor.displayName,
+    `Adicionou o servico "${data.title}"${data.is_partnership ? " (parceria)" : ""}`,
+  );
 
   revalidateServices(parsed.data.clientId);
   return ok(data);
 }
 
-const updateSchema = schema.omit({ clientId: true });
+const updateSchema = withAmountRule(baseServiceFields);
 
 export async function updateClientServiceAction(
   serviceId: string,
@@ -78,8 +97,9 @@ export async function updateClientServiceAction(
     .from("client_services")
     .update({
       title: parsed.data.title,
-      amount: parsed.data.amount,
+      amount: parsed.data.isPartnership ? null : parsed.data.amount!,
       currency: parsed.data.currency,
+      is_partnership: parsed.data.isPartnership,
     })
     .eq("id", serviceId)
     .select("client_id")
@@ -89,7 +109,12 @@ export async function updateClientServiceAction(
     return fail(describeError(error, "Nao foi possivel atualizar o servico."));
   }
 
-  await logClientActivity(supabase, data.client_id, actor.displayName, `Atualizou o servico "${parsed.data.title}"`);
+  await logClientActivity(
+    supabase,
+    data.client_id,
+    actor.displayName,
+    `Atualizou o servico "${parsed.data.title}"${parsed.data.isPartnership ? " (parceria)" : ""}`,
+  );
 
   revalidateServices(data.client_id);
   return done();

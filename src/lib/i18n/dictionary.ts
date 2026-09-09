@@ -336,6 +336,9 @@ export interface Dictionary {
     calendarEmpty: string;
     projectsTitle: string;
     projectsEmpty: string;
+    partnershipLabel: string;
+    referencesTitle: string;
+    referencesEmpty: string;
     activityTitle: string;
     activityEmpty: string;
     meetingsTitle: string;
@@ -736,6 +739,9 @@ const ptBR: Dictionary = {
     calendarEmpty: "Nenhuma publicacao agendada por enquanto.",
     projectsTitle: "Projetos ativos",
     projectsEmpty: "Nenhum servico cadastrado ainda.",
+    partnershipLabel: "Parceria",
+    referencesTitle: "Banco de referencias",
+    referencesEmpty: "Nenhuma referencia cadastrada ainda.",
     activityTitle: "Atividades recentes",
     activityEmpty: "Nenhuma atividade registrada ainda.",
     meetingsTitle: "Reunioes",
@@ -1146,6 +1152,9 @@ const en: Dictionary = {
     calendarEmpty: "No publication scheduled yet.",
     projectsTitle: "Active projects",
     projectsEmpty: "No service registered yet.",
+    partnershipLabel: "Partnership",
+    referencesTitle: "Reference bank",
+    referencesEmpty: "No reference added yet.",
     activityTitle: "Recent activity",
     activityEmpty: "No activity logged yet.",
     meetingsTitle: "Meetings",

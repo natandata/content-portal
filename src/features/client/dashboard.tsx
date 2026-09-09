@@ -14,6 +14,7 @@ import {
   MeetingsWidget,
   PublicationsCalendarWidget,
   RecentActivityWidget,
+  ReferenceBankWidget,
 } from "@/features/client/dashboard-widgets";
 import { AWAITING_CLIENT_STATUSES } from "@/lib/domain";
 import { getServerDictionary } from "@/lib/i18n/server";
@@ -99,6 +100,7 @@ export async function ClientDashboard() {
         <PublicationsCalendarWidget supabase={supabase} locale={locale} />
         <ActiveProjectsWidget supabase={supabase} locale={locale} />
         <MeetingsWidget supabase={supabase} clientId={actor.client.id} locale={locale} />
+        <ReferenceBankWidget supabase={supabase} locale={locale} />
       </div>
 
       <div className="mb-6">

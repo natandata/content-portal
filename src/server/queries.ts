@@ -11,6 +11,7 @@ import type {
   BulletinAdminReportRow,
   BulletinFeedRow,
   ClientActivityRow,
+  ClientReferenceRow,
   ClientServiceRow,
   ClientStatus,
   ContentFileRow,
@@ -985,6 +986,17 @@ export async function loadClientServices(
   clientId?: string,
 ): Promise<ClientServiceRow[]> {
   let query = supabase.from("client_services").select("*").order("position", { ascending: true });
+  if (clientId) query = query.eq("client_id", clientId);
+  const { data } = await query;
+  return data ?? [];
+}
+
+/** Links do Banco de Referencias do cliente. Mesma ressalva do `clientId` acima. */
+export async function loadClientReferences(
+  supabase: Client,
+  clientId?: string,
+): Promise<ClientReferenceRow[]> {
+  let query = supabase.from("client_references").select("*").order("position", { ascending: true });
   if (clientId) query = query.eq("client_id", clientId);
   const { data } = await query;
   return data ?? [];
