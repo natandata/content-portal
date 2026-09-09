@@ -571,12 +571,15 @@ export type ClientServiceRow = {
   updated_at: string;
 }
 
+export type ReferenceFormat = "static" | "video";
+
 export type ClientReferenceRow = {
   id: string;
   client_id: string;
   created_by: string | null;
   title: string;
   url: string;
+  format: ReferenceFormat;
   position: number;
   created_at: string;
   updated_at: string;

@@ -18,6 +18,7 @@ const schema = z.object({
     .trim()
     .transform((value) => normalizeExternalUrl(value))
     .refine((value): value is string => value !== null, "Link invalido: use um endereco http(s)."),
+  format: z.enum(["static", "video"]),
 });
 
 function revalidateReferences(clientId: string) {
@@ -48,6 +49,7 @@ export async function createClientReferenceAction(
       client_id: parsed.data.clientId,
       title: parsed.data.title,
       url: parsed.data.url,
+      format: parsed.data.format,
       position: count ?? 0,
       created_by: actor.authUser.id,
     })
@@ -84,7 +86,7 @@ export async function updateClientReferenceAction(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("client_references")
-    .update({ title: parsed.data.title, url: parsed.data.url })
+    .update({ title: parsed.data.title, url: parsed.data.url, format: parsed.data.format })
     .eq("id", referenceId)
     .select("client_id")
     .single();

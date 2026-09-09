@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Activity, ArrowRight, CalendarDays, CalendarClock, ExternalLink, Layers, Link2, Video } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/layout";
 import { CONTENT_TYPE_LABEL, formatMoney, linkProviderLabel } from "@/lib/domain";
 import { getDictionary } from "@/lib/i18n/dictionary";
@@ -126,6 +127,9 @@ export async function ReferenceBankWidget({
                   </span>
                 </span>
                 <ExternalLink className="size-3.5 shrink-0 text-ink-300" aria-hidden />
+                <Badge tone={reference.format === "video" ? "info" : "neutral"} className="shrink-0">
+                  {reference.format === "video" ? dict.referenceFormatVideo : dict.referenceFormatStatic}
+                </Badge>
               </a>
             </li>
           ))}

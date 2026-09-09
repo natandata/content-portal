@@ -5,8 +5,9 @@ import { useState, useTransition } from "react";
 import { ExternalLink, Link2, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button, IconButton } from "@/components/ui/button";
-import { Field, FormError, Input } from "@/components/ui/form";
+import { Field, FormError, Input, Select } from "@/components/ui/form";
 import { Card, CardHeader } from "@/components/ui/layout";
 import { Modal } from "@/components/ui/modal";
 import { linkProviderLabel } from "@/lib/domain";
@@ -15,7 +16,12 @@ import {
   deleteClientReferenceAction,
   updateClientReferenceAction,
 } from "@/server/actions/client-references";
-import type { ClientReferenceRow } from "@/types/database";
+import type { ClientReferenceRow, ReferenceFormat } from "@/types/database";
+
+const FORMAT_LABEL: Record<ReferenceFormat, string> = {
+  static: "Estatico",
+  video: "Video",
+};
 
 /**
  * Banco de Referencias: links de conteudo que o profissional cadastra pra o
@@ -35,12 +41,14 @@ export function ClientReferenceCard({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
+  const [format, setFormat] = useState<ReferenceFormat>("video");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function reset() {
     setTitle("");
     setUrl("");
+    setFormat("video");
     setError(null);
     setEditingId(null);
   }
@@ -55,6 +63,7 @@ export function ClientReferenceCard({
     setEditingId(reference.id);
     setTitle(reference.title);
     setUrl(reference.url);
+    setFormat(reference.format);
     setOpen(true);
   }
 
@@ -70,8 +79,8 @@ export function ClientReferenceCard({
     }
     startTransition(async () => {
       const result = editingId
-        ? await updateClientReferenceAction(editingId, { title, url })
-        : await createClientReferenceAction({ clientId, title, url });
+        ? await updateClientReferenceAction(editingId, { title, url, format })
+        : await createClientReferenceAction({ clientId, title, url, format });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -115,7 +124,10 @@ export function ClientReferenceCard({
                 </span>
                 <ExternalLink className="size-3 shrink-0 text-ink-300" aria-hidden />
               </a>
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="flex shrink-0 items-center gap-2">
+                <Badge tone={reference.format === "video" ? "info" : "neutral"}>
+                  {FORMAT_LABEL[reference.format]}
+                </Badge>
                 <IconButton
                   label="Editar referencia"
                   className="size-7 text-ink-400 hover:text-ink-700"
@@ -182,6 +194,18 @@ export function ClientReferenceCard({
               onChange={(event) => setUrl(event.target.value)}
               disabled={pending}
             />
+          </Field>
+
+          <Field label="Formato" htmlFor="reference-format" required>
+            <Select
+              id="reference-format"
+              value={format}
+              onChange={(event) => setFormat(event.target.value as ReferenceFormat)}
+              disabled={pending}
+            >
+              <option value="video">Video</option>
+              <option value="static">Estatico</option>
+            </Select>
           </Field>
 
           <FormError>{error}</FormError>

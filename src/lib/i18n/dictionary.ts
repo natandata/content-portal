@@ -341,6 +341,8 @@ export interface Dictionary {
     partnershipLabel: string;
     referencesTitle: string;
     referencesEmpty: string;
+    referenceFormatStatic: string;
+    referenceFormatVideo: string;
     activityTitle: string;
     activityEmpty: string;
     meetingsTitle: string;
@@ -745,6 +747,8 @@ const ptBR: Dictionary = {
     partnershipLabel: "Parceria",
     referencesTitle: "Banco de referencias",
     referencesEmpty: "Nenhuma referencia cadastrada ainda.",
+    referenceFormatStatic: "Estatico",
+    referenceFormatVideo: "Video",
     activityTitle: "Atividades recentes",
     activityEmpty: "Nenhuma atividade registrada ainda.",
     meetingsTitle: "Reunioes",
@@ -1159,6 +1163,8 @@ const en: Dictionary = {
     partnershipLabel: "Partnership",
     referencesTitle: "Reference bank",
     referencesEmpty: "No reference added yet.",
+    referenceFormatStatic: "Static",
+    referenceFormatVideo: "Video",
     activityTitle: "Recent activity",
     activityEmpty: "No activity logged yet.",
     meetingsTitle: "Meetings",
