@@ -62,7 +62,7 @@ export function QuickFeedUpload({
 
     try {
       const title = `Foto do feed — ${new Date().toLocaleDateString("pt-BR")}`;
-      const created = await createContentDraftAction({ clientId, title, type: "image" });
+      const created = await createContentDraftAction({ clientId, title, type: "image", feedOnly: true });
       if (!created.ok) {
         setError(created.error);
         return;

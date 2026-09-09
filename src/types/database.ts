@@ -221,6 +221,10 @@ export type ContentRow = {
   publish_container_id: string | null;
   instagram_media_id: string | null;
   published_at: string | null;
+  /** Criado so pra compor o feed (upload rapido) -- nunca passou pelo fluxo
+   * real de aprovacao do cliente. Fica fora das contagens de conteudos
+   * enviados/aprovados. */
+  feed_only: boolean;
   created_at: string;
   updated_at: string;
 }

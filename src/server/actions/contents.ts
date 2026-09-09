@@ -20,6 +20,11 @@ const metadataSchema = z.object({
   scheduledDate: z.union([z.iso.date(), z.literal("")]).optional(),
   caption: z.string().trim().max(4000).optional(),
   internalNotes: z.string().trim().max(2000).optional(),
+  // Marca conteudo criado so pra compor o feed (QuickFeedUpload), sem nunca
+  // passar pelo fluxo de aprovacao do cliente -- fica fora das contagens de
+  // "conteudos enviados/aprovados" (ver loadDashboardStats, client-detail.tsx,
+  // features/client/dashboard.tsx). Ignorado em updateContentAction.
+  feedOnly: z.boolean().optional().default(false),
 });
 
 /** Arquivo enviado ao Storage. */
@@ -118,6 +123,7 @@ export async function createContentDraftAction(
       caption: data.caption || null,
       internal_notes: data.internalNotes || null,
       status: "draft",
+      feed_only: data.feedOnly,
     })
     .select("*")
     .single();

@@ -100,7 +100,8 @@ export async function ClientDetail({
   const { data: statusRows } = await supabase
     .from("contents")
     .select("status")
-    .eq("client_id", clientId);
+    .eq("client_id", clientId)
+    .eq("feed_only", false);
 
   const tally = (statuses: ContentStatus[]) =>
     (statusRows ?? []).filter((row) => statuses.includes(row.status)).length;

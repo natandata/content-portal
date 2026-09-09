@@ -254,14 +254,17 @@ export async function loadDashboardStats(supabase: Client): Promise<DashboardSta
     supabase
       .from("contents")
       .select("id", { count: "exact", head: true })
+      .eq("feed_only", false)
       .in("status", pendingStatuses),
     supabase
       .from("contents")
       .select("id", { count: "exact", head: true })
+      .eq("feed_only", false)
       .in("status", awaitingClientStatuses),
     supabase
       .from("contents")
       .select("id", { count: "exact", head: true })
+      .eq("feed_only", false)
       .in("status", ["approved", "published"] satisfies ContentStatus[]),
   ]);
 
@@ -404,7 +407,11 @@ export async function loadClientsGallery(
 
   const [{ data: contents }, { data: overdueInvoices }, { data: activities }, { data: profiles }, coverUrls] =
     await Promise.all([
-      supabase.from("contents").select("client_id, status, updated_at").in("client_id", ids),
+      supabase
+        .from("contents")
+        .select("client_id, status, updated_at")
+        .eq("feed_only", false)
+        .in("client_id", ids),
       supabase
         .from("invoices")
         .select("client_id")

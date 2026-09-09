@@ -41,7 +41,7 @@ export async function ClientDashboard() {
       .select("*")
       .in("status", AWAITING_CLIENT_STATUSES)
       .order("updated_at", { ascending: false }),
-    supabase.from("contents").select("status"),
+    supabase.from("contents").select("status").eq("feed_only", false),
     supabase
       .from("contracts")
       .select("*")
