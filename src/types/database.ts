@@ -12,7 +12,8 @@ export type ClientStatus = "active" | "inactive";
 
 export type ChatLinkTarget = "dashboard" | "content" | "documents" | "feed";
 
-export type InvoiceMethod = "boleto" | "link" | "pix" | "stripe";
+export type InvoiceMethod = "boleto" | "link" | "pix" | "stripe" | "mercadopago";
+export type NfeStatus = "pending" | "processing" | "issued" | "error";
 export type InvoiceStatus = "open" | "paid";
 export type CurrencyCode = "BRL" | "USD" | "EUR" | "GBP";
 
@@ -528,6 +529,20 @@ export type InvoiceRow = {
   stripe_hosted_url_expires_at: string | null;
   application_fee_cents: number | null;
   amount_paid_cents: number | null;
+  /** Preenchidos so quando method = 'mercadopago'. */
+  mercadopago_payment_id: string | null;
+  mercadopago_status: string | null;
+  mercadopago_qr_code: string | null;
+  mercadopago_qr_code_base64: string | null;
+  /** CPF exigido pela API do Mercado Pago pra criar o Pix -- nao existia em lugar nenhum do app ate agora. */
+  payer_name: string | null;
+  payer_cpf: string | null;
+  /** Nota fiscal (Focus NFe) -- independente do metodo de pagamento. */
+  nfe_status: NfeStatus | null;
+  nfe_ref: string | null;
+  nfe_number: string | null;
+  nfe_pdf_url: string | null;
+  nfe_error: string | null;
   created_at: string;
   updated_at: string;
 }

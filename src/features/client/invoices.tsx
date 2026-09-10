@@ -130,6 +130,24 @@ export async function ClientInvoices() {
                     label={dict.invoices.copyPix}
                     strings={{ copied: dict.invoices.copied, copyFailed: dict.invoices.copyFailed }}
                   />
+                ) : invoice.method === "mercadopago" ? (
+                  <div className="space-y-2 text-center">
+                    {invoice.mercadopago_qr_code_base64 ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`data:image/png;base64,${invoice.mercadopago_qr_code_base64}`}
+                        alt="QR Code Pix"
+                        className="mx-auto size-40 rounded-lg border border-line"
+                      />
+                    ) : null}
+                    {invoice.mercadopago_qr_code ? (
+                      <ClientCopyPixKey
+                        pixKey={invoice.mercadopago_qr_code}
+                        label={dict.invoices.copyPix}
+                        strings={{ copied: dict.invoices.copied, copyFailed: dict.invoices.copyFailed }}
+                      />
+                    ) : null}
+                  </div>
                 ) : invoice.status === "open" && invoice.stripe_payment_status !== "processing" ? (
                   <ClientStripePayButton
                     invoiceId={invoice.id}

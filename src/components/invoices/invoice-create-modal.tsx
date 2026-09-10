@@ -48,6 +48,8 @@ export function InvoiceCreateModal({
   const [dueDate, setDueDate] = useState("");
   const [paymentLink, setPaymentLink] = useState("");
   const [pixKey, setPixKey] = useState("");
+  const [payerName, setPayerName] = useState("");
+  const [payerCpf, setPayerCpf] = useState("");
   const [recurrence, setRecurrence] = useState<InvoiceRecurrence | "">("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +63,8 @@ export function InvoiceCreateModal({
     setDueDate("");
     setPaymentLink("");
     setPixKey("");
+    setPayerName("");
+    setPayerCpf("");
     setRecurrence("");
     setFile(null);
   }
@@ -97,6 +101,8 @@ export function InvoiceCreateModal({
         dueDate,
         paymentLink: method === "link" ? paymentLink : undefined,
         pixKey: method === "pix" ? pixKey : undefined,
+        payerName: method === "mercadopago" ? payerName : undefined,
+        payerCpf: method === "mercadopago" ? payerCpf : undefined,
         recurrence: recurrence || undefined,
       });
       if (!created.ok) {
@@ -205,8 +211,10 @@ export function InvoiceCreateModal({
 
           {/* Pagamento online liquida em BRL na conta conectada; as outras
               moedas seguem valendo para os metodos manuais. */}
-          {method === "stripe" && currency !== "BRL" ? (
-            <FormError>Pagamento online aceita apenas cobrancas em BRL.</FormError>
+          {(method === "stripe" || method === "mercadopago") && currency !== "BRL" ? (
+            <FormError>
+              {method === "stripe" ? "Pagamento online" : "Pix automatico"} aceita apenas cobrancas em BRL.
+            </FormError>
           ) : null}
 
           <div className="grid grid-cols-2 gap-3">
@@ -297,6 +305,28 @@ export function InvoiceCreateModal({
                 disabled={busy}
               />
             </Field>
+          ) : null}
+
+          {method === "mercadopago" ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Nome do pagador" htmlFor="invoice-payer-name" required>
+                <Input
+                  id="invoice-payer-name"
+                  value={payerName}
+                  onChange={(event) => setPayerName(event.target.value)}
+                  disabled={busy}
+                />
+              </Field>
+              <Field label="CPF do pagador" htmlFor="invoice-payer-cpf" hint="Exigido pelo Mercado Pago" required>
+                <Input
+                  id="invoice-payer-cpf"
+                  value={payerCpf}
+                  onChange={(event) => setPayerCpf(event.target.value)}
+                  placeholder="000.000.000-00"
+                  disabled={busy}
+                />
+              </Field>
+            </div>
           ) : null}
 
           {method === "boleto" ? (

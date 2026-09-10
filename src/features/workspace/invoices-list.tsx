@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate, safeFileName } from "@/lib/utils";
 import { loadClientNames, loadProfessionalClientIds } from "@/server/queries";
 
-const METHOD_ICON = { boleto: Banknote, link: Link2, pix: QrCode, stripe: CreditCard };
+const METHOD_ICON = { boleto: Banknote, link: Link2, pix: QrCode, stripe: CreditCard, mercadopago: QrCode };
 
 export async function InvoicesList({
   clientId,

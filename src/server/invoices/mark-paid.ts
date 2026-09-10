@@ -1,5 +1,6 @@
 import { sendPushToClient, sendPushToClientStaff } from "@/lib/push";
 import { logClientActivity } from "@/server/activity";
+import { emitNfeForInvoice } from "@/server/invoices/nfe";
 import { revalidateInvoices } from "@/server/invoices/revalidate";
 import type { createAdminClient } from "@/lib/supabase/server";
 import type { InvoiceRow } from "@/types/database";
@@ -71,4 +72,58 @@ export async function markInvoicePaidFromStripe(
   }).catch(() => {});
 
   revalidateInvoices(invoice.client_id);
+}
+
+/**
+ * Confirma o pagamento de uma cobranca a partir de um webhook do Mercado
+ * Pago. Mesmo espirito de `markInvoicePaidFromStripe` -- idempotente,
+ * autorizacao ja validada pela assinatura do webhook antes de chegar aqui.
+ * Dispara a emissao de nota fiscal em seguida (best-effort).
+ */
+export async function markInvoicePaidFromMercadoPago(
+  admin: AdminClient,
+  invoice: Pick<InvoiceRow, "id" | "client_id" | "title" | "amount" | "paid_at" | "payer_name" | "payer_cpf">,
+  mercadopagoPaymentId: string,
+): Promise<void> {
+  if (invoice.paid_at) return;
+
+  const { error } = await admin
+    .from("invoices")
+    .update({
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      paid_by: null,
+      mercadopago_status: "approved",
+      mercadopago_payment_id: mercadopagoPaymentId,
+    })
+    .eq("id", invoice.id);
+
+  if (error) throw new Error(error.message);
+
+  await logClientActivity(
+    admin,
+    invoice.client_id,
+    "Mercado Pago",
+    `Pagamento Pix confirmado: "${invoice.title}"`,
+  );
+
+  await sendPushToClient(invoice.client_id, (locale) => ({
+    title: locale === "en" ? "Payment confirmed" : "Pagamento confirmado",
+    body:
+      locale === "en"
+        ? `"${invoice.title}" has been paid. Thank you!`
+        : `"${invoice.title}" foi paga. Obrigado!`,
+    url: "/client/payments",
+    tag: `invoice-${invoice.id}`,
+  })).catch(() => {});
+
+  await sendPushToClientStaff(invoice.client_id, {
+    title: "Cobranca paga",
+    body: `"${invoice.title}" foi paga via Pix (Mercado Pago).`,
+    url: "/professional/payments",
+    tag: `invoice-paid-${invoice.id}`,
+  }).catch(() => {});
+
+  revalidateInvoices(invoice.client_id);
+  await emitNfeForInvoice(admin, invoice).catch(() => {});
 }

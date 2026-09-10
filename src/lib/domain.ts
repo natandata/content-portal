@@ -310,7 +310,7 @@ export const CURRENCY_LABEL: Record<CurrencyCode, string> = {
   GBP: "Libra esterlina (£)",
 };
 
-export const INVOICE_METHODS: InvoiceMethod[] = ["boleto", "link", "pix", "stripe"];
+export const INVOICE_METHODS: InvoiceMethod[] = ["boleto", "link", "pix", "stripe", "mercadopago"];
 
 export const INVOICE_RECURRENCES: InvoiceRecurrence[] = ["monthly", "3_months", "6_months"];
 
@@ -324,9 +324,10 @@ export const INVOICE_METHOD_LABEL: Record<InvoiceMethod, string> = {
   boleto: "Boleto",
   link: "Link de pagamento",
   pix: "Chave Pix",
-  // Os tres acima o profissional resolve por fora; neste o cliente paga dentro
-  // do portal e a cobranca se marca como paga sozinha.
+  // Os tres acima o profissional resolve por fora; nestes dois o cliente paga
+  // dentro do portal e a cobranca se marca como paga sozinha.
   stripe: "Pagamento online",
+  mercadopago: "Pix automatico (Mercado Pago)",
 };
 
 const INVOICE_METHOD_LABEL_EN: Record<InvoiceMethod, string> = {
@@ -334,6 +335,7 @@ const INVOICE_METHOD_LABEL_EN: Record<InvoiceMethod, string> = {
   link: "Payment link",
   pix: "Pix key",
   stripe: "Online payment",
+  mercadopago: "Automatic Pix (Mercado Pago)",
 };
 
 /**

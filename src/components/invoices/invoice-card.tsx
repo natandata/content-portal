@@ -14,6 +14,7 @@ const METHOD_ICON = {
   link: Link2,
   pix: QrCode,
   stripe: CreditCard,
+  mercadopago: QrCode,
 } as const;
 
 /**

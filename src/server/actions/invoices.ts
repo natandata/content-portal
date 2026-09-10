@@ -5,7 +5,9 @@ import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
 import { normalizeExternalUrl } from "@/lib/domain";
+import { mercadoPagoConfig } from "@/lib/env";
 import { intlLocale } from "@/lib/i18n/locale";
+import { createPixPayment } from "@/lib/mercadopago/client";
 import { BUCKETS } from "@/lib/paths";
 import { sendPushToClient } from "@/lib/push";
 import { canChargeWithStripe } from "@/lib/stripe/capabilities";
@@ -19,12 +21,14 @@ const createSchema = z
   .object({
     clientId: z.uuid("Selecione um cliente"),
     title: z.string().trim().min(2, "Informe o titulo da cobranca"),
-    method: z.enum(["boleto", "link", "pix", "stripe"]),
+    method: z.enum(["boleto", "link", "pix", "stripe", "mercadopago"]),
     amount: z.coerce.number().positive("Informe um valor maior que zero"),
     currency: z.enum(["BRL", "USD", "EUR", "GBP"]),
     dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data de vencimento"),
     paymentLink: z.string().trim().optional(),
     pixKey: z.string().trim().optional(),
+    payerName: z.string().trim().optional(),
+    payerCpf: z.string().trim().optional(),
     // Nulo/ausente = cobranca avulsa (comportamento de sempre). Ver
     // src/server/invoices/recurrence.ts pro cron que gera os proximos ciclos.
     recurrence: z.enum(["monthly", "3_months", "6_months"]).optional(),
@@ -46,6 +50,20 @@ const createSchema = z
   .refine((data) => data.method !== "stripe" || data.currency === "BRL", {
     message: "Pagamento online aceita apenas BRL.",
     path: ["currency"],
+  })
+  // Pix automatico (Mercado Pago) so BRL, e exige nome+CPF do pagador (a API
+  // do Mercado Pago recusa criar a cobranca sem isso).
+  .refine((data) => data.method !== "mercadopago" || data.currency === "BRL", {
+    message: "Pix automatico aceita apenas BRL.",
+    path: ["currency"],
+  })
+  .refine((data) => data.method !== "mercadopago" || Boolean(data.payerName?.trim()), {
+    message: "Informe o nome do pagador.",
+    path: ["payerName"],
+  })
+  .refine((data) => data.method !== "mercadopago" || Boolean(data.payerCpf?.replace(/\D/g, "").length === 11), {
+    message: "Informe um CPF valido (11 digitos).",
+    path: ["payerCpf"],
   });
 
 /** Cria a cobranca. Boleto ainda sem arquivo — vem depois via attachBoletoAction. */
@@ -80,6 +98,10 @@ export async function createInvoiceAction(
   const recurrenceTotalCycles =
     parsed.data.recurrence === "3_months" ? 3 : parsed.data.recurrence === "6_months" ? 6 : null;
 
+  if (parsed.data.method === "mercadopago" && !mercadoPagoConfig()) {
+    return fail("Pix automatico ainda nao foi configurado nesta instalacao.");
+  }
+
   const { data, error } = await supabase
     .from("invoices")
     .insert({
@@ -97,12 +119,55 @@ export async function createInvoiceAction(
       recurrence_group_id: recurrenceGroupId,
       recurrence_cycle_number: recurrenceGroupId ? 1 : null,
       recurrence_total_cycles: recurrenceGroupId ? recurrenceTotalCycles : null,
+      payer_name: parsed.data.method === "mercadopago" ? (parsed.data.payerName ?? null) : null,
+      payer_cpf: parsed.data.method === "mercadopago" ? (parsed.data.payerCpf ?? null) : null,
     })
     .select("*")
     .single();
 
   if (error || !data) {
     return fail(describeError(error, "Nao foi possivel criar a cobranca."));
+  }
+
+  // Pix automatico: cria a cobranca no Mercado Pago so depois de ter o id da
+  // linha (external_reference precisa apontar pra cobranca de verdade). Se a
+  // API do Mercado Pago recusar, desfaz a linha em vez de deixar uma
+  // cobranca "mercadopago" sem QR code nenhum.
+  if (parsed.data.method === "mercadopago") {
+    const config = mercadoPagoConfig()!;
+    const pix = await createPixPayment(config.accessToken, {
+      invoiceId: data.id,
+      amount: parsed.data.amount,
+      description: parsed.data.title,
+      payerEmail: actor.authUser.email ?? "sem-email@contentportal.local",
+      payerName: parsed.data.payerName!,
+      payerCpf: parsed.data.payerCpf!,
+    });
+
+    if (!pix.ok) {
+      await supabase.from("invoices").delete().eq("id", data.id);
+      return fail(`Nao foi possivel gerar o Pix: ${pix.error}`);
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from("invoices")
+      .update({
+        mercadopago_payment_id: String(pix.data.id),
+        mercadopago_status: pix.data.status,
+        mercadopago_qr_code: pix.data.qrCode,
+        mercadopago_qr_code_base64: pix.data.qrCodeBase64,
+      })
+      .eq("id", data.id)
+      .select("*")
+      .single();
+
+    if (updateError || !updated) {
+      return fail(describeError(updateError, "Pix criado, mas nao foi possivel salvar o QR code."));
+    }
+
+    await notifyAndLog(supabase, updated, actor.displayName);
+    revalidateInvoices(parsed.data.clientId);
+    return ok(updated);
   }
 
   // Boleto ainda espera o PDF: quem chamou anexa o arquivo e so entao avisamos
