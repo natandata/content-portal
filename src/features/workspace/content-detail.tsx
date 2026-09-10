@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { ContentMedia } from "@/components/content/content-media";
 import { InstagramPublishCard } from "@/components/content/instagram-publish-card";
+import { SocialPublishCard } from "@/components/content/social-publish-card";
 import { FeedPreviewModal } from "@/components/feed/feed-preview-modal";
 import { HistoryTimeline } from "@/components/content/history-timeline";
 import { StaffContentActions } from "@/components/content/staff-content-actions";
@@ -15,6 +16,8 @@ import { composioConfig } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { loadInstagramConnectionStatus } from "@/server/actions/instagram-connect";
+import { loadSocialConnectionsStatus } from "@/server/actions/social-connect";
+import { loadContentPublishTargets } from "@/server/actions/social-publish";
 import {
   loadContentFiles,
   loadContentPreviews,
@@ -52,10 +55,12 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
       .maybeSingle(),
   ]);
 
-  const [feedEntries, ownPreviews, instagramConnections] = await Promise.all([
+  const [feedEntries, ownPreviews, instagramConnections, socialConnections, publishTargets] = await Promise.all([
     loadFeedEntries(supabase, content.client_id),
     loadContentPreviews(supabase, [contentId]),
     composioConfig() ? loadInstagramConnectionStatus(content.client_id) : Promise.resolve([]),
+    composioConfig() ? loadSocialConnectionsStatus(content.client_id) : Promise.resolve([]),
+    loadContentPublishTargets(contentId),
   ]);
 
   const clientName = client?.company_name ?? "Cliente";
@@ -156,6 +161,21 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
                 scheduledDate={content.scheduled_date}
                 instagramMediaId={content.instagram_media_id}
                 publishedAt={content.published_at}
+              />
+            </Card>
+          ) : null}
+
+          {composioConfig() && socialConnections.length > 0 ? (
+            <Card>
+              <CardHeader
+                title="Publicar em outras redes"
+                description="TikTok, LinkedIn, Facebook, Pinterest e YouTube."
+              />
+              <SocialPublishCard
+                contentId={content.id}
+                connections={socialConnections}
+                targets={publishTargets}
+                canPublish={content.status === "approved"}
               />
             </Card>
           ) : null}

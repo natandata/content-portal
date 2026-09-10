@@ -17,6 +17,7 @@ import { MeetingRequestForm } from "@/components/meetings/meeting-request-form";
 import { MeetingRequestsList } from "@/components/meetings/meeting-requests-list";
 import { ClientReferenceCard } from "@/components/services/client-reference-card";
 import { ClientServicesCard } from "@/components/services/client-services-card";
+import { SocialConnectionsCard } from "@/components/services/social-connections-card";
 import { Badge, ContractStatusBadge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/feedback";
@@ -27,6 +28,7 @@ import { signedUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { loadCalendlyConnectionStatus } from "@/server/actions/calendly-connect";
+import { loadSocialConnectionsStatus } from "@/server/actions/social-connect";
 import {
   loadClientContentCalendar,
   loadClientMeetings,
@@ -76,9 +78,10 @@ export async function ClientDetail({
       .eq("client_id", clientId),
   ]);
 
-  const [services, references, { data: clientProfile }] = await Promise.all([
+  const [services, references, socialConnections, { data: clientProfile }] = await Promise.all([
     loadClientServices(supabase, clientId),
     loadClientReferences(supabase, clientId),
+    loadSocialConnectionsStatus(clientId),
     supabase.from("client_profiles").select("avatar_path").eq("client_id", clientId).maybeSingle(),
   ]);
 
@@ -302,6 +305,7 @@ export async function ClientDetail({
           </Card>
 
                   <ClientServicesCard clientId={client.id} services={services} />
+                  <SocialConnectionsCard clientId={client.id} connections={socialConnections} />
                 </div>
               </div>
             ),

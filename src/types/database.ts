@@ -684,6 +684,42 @@ export type ClientInstagramConnectionRow = {
   connected_at: string;
 }
 
+export type SocialPlatform = "tiktok" | "linkedin" | "facebook" | "pinterest" | "youtube";
+export type ContentPublishTargetStatus = "idle" | "scheduled" | "publishing" | "published" | "failed";
+
+/**
+ * Conexao de um cliente com uma rede social alem do Instagram (que tem seu
+ * proprio mecanismo, `client_instagram_connections`). `platform_data` varia
+ * por rede: Facebook guarda `{page_id, page_name}`; Pinterest guarda
+ * `{board_id, board_name}`; LinkedIn guarda `{author_urn, author_name}`;
+ * TikTok/YouTube nao precisam de nada extra.
+ */
+export type ClientSocialConnectionRow = {
+  id: string;
+  client_id: string;
+  platform: SocialPlatform;
+  composio_connection_id: string;
+  label: string | null;
+  platform_data: Record<string, unknown>;
+  is_principal: boolean;
+  connected_at: string;
+}
+
+/** Publicacao de um conteudo numa rede especifica -- 1 linha por (conteudo, rede), o mesmo conteudo pode ir pra varias redes em paralelo. */
+export type ContentPublishTargetRow = {
+  id: string;
+  content_id: string;
+  platform: SocialPlatform;
+  connection_id: string;
+  status: ContentPublishTargetStatus;
+  error: string | null;
+  /** publish_id (TikTok, assincrono) ou o id final do post/pin/video, conforme a rede. */
+  external_ref: string | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Relatorio 2: insights autenticados (3/6/9 meses) via Composio. So a serviceRole escreve. */
 export type InstagramInsightsReportRow = {
   id: string;
@@ -802,6 +838,8 @@ export type Database = {
         ClientInstagramConnectionRow,
         'client_id' | 'composio_connection_id'
       >;
+      client_social_connections: Table<ClientSocialConnectionRow, 'client_id' | 'platform' | 'composio_connection_id'>;
+      content_publish_targets: Table<ContentPublishTargetRow, 'content_id' | 'platform' | 'connection_id'>;
       instagram_insights_reports: Table<
         InstagramInsightsReportRow,
         'client_id' | 'period_months'

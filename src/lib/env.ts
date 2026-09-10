@@ -157,6 +157,74 @@ export function autentiqueConfig(): { apiKey: string; webhookSecret: string | nu
   return { apiKey, webhookSecret: webhookSecret?.trim() ? webhookSecret : null };
 }
 
+/**
+ * Auth Config id de cada rede social alem do Instagram, criado a mao no
+ * painel da Composio (mesmo pre-requisito manual do Instagram, uma vez por
+ * rede). `null` = aquela rede ainda nao foi configurada nesta instalacao.
+ */
+export function socialAuthConfigId(
+  platform: "tiktok" | "linkedin" | "facebook" | "pinterest" | "youtube",
+): string | null {
+  const envName = {
+    tiktok: "COMPOSIO_TIKTOK_AUTH_CONFIG_ID",
+    linkedin: "COMPOSIO_LINKEDIN_AUTH_CONFIG_ID",
+    facebook: "COMPOSIO_FACEBOOK_AUTH_CONFIG_ID",
+    pinterest: "COMPOSIO_PINTEREST_AUTH_CONFIG_ID",
+    youtube: "COMPOSIO_YOUTUBE_AUTH_CONFIG_ID",
+  }[platform];
+  const value = process.env[envName];
+  return value?.trim() ? value : null;
+}
+
+/**
+ * Credenciais do Mercado Pago (Pix/boleto automatico, alternativa nacional
+ * ao Stripe pra quem nao aceita cartao). `null` = pagamento automatico via
+ * Mercado Pago desligado -- boleto/Pix manual e Stripe continuam
+ * funcionando normalmente. `webhookSecret` e o "Assinatura secreta" gerado
+ * no painel de notificacoes do Mercado Pago, usado pra validar o header
+ * `x-signature` de cada webhook.
+ */
+export function mercadoPagoConfig(): { accessToken: string; webhookSecret: string } | null {
+  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  if (!accessToken?.trim() || !webhookSecret?.trim()) return null;
+  return { accessToken, webhookSecret };
+}
+
+/**
+ * Token da API do Focus NFe (emissao de nota fiscal de servico). `null` =
+ * emissao automatica desligada -- cobranca continua funcionando sem nota.
+ * `sandbox: true` aponta pro ambiente de homologacao do Focus NFe (nunca
+ * emite nota valida) -- fica ligado por padrao, so vira producao com a env
+ * var explicita, pra nunca emitir nota de verdade sem essa decisao clara.
+ */
+export function focusNfeConfig(): { apiToken: string; sandbox: boolean } | null {
+  const apiToken = process.env.FOCUS_NFE_API_TOKEN;
+  if (!apiToken?.trim()) return null;
+  return { apiToken, sandbox: process.env.FOCUS_NFE_ENV !== "production" };
+}
+
+/**
+ * Credenciais da Twilio (notificacao via WhatsApp Business API). `null` =
+ * WhatsApp desligado -- push notification continua sendo o canal principal.
+ * `whatsappFrom` e o numero do WhatsApp Sender aprovado pela Meta, no
+ * formato `whatsapp:+55...` que a Twilio exige.
+ */
+export function twilioConfig(): { accountSid: string; authToken: string; whatsappFrom: string } | null {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const whatsappFrom = process.env.TWILIO_WHATSAPP_FROM;
+  if (!accountSid?.trim() || !authToken?.trim() || !whatsappFrom?.trim()) return null;
+  return { accountSid, authToken, whatsappFrom };
+}
+
+/** Chave da API da Anthropic (geracao de legenda/roteiro assistida por IA). `null` = geracao desligada. */
+export function anthropicConfig(): { apiKey: string } | null {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey?.trim()) return null;
+  return { apiKey };
+}
+
 export const isSupabaseConfigured =
   publicEnv.supabaseUrl.length > 0 && publicEnv.supabaseAnonKey.length > 0;
 
