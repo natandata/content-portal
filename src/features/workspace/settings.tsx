@@ -1,20 +1,39 @@
 import Link from "next/link";
-import { CreditCard, Video } from "lucide-react";
+import { CreditCard, MessageCircle, Share2, Video } from "lucide-react";
 
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { NotificationSettings } from "@/components/notifications/notification-settings";
 import { PlatformFeeForm } from "@/components/professionals/platform-fee-form";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, PageHeader, StatCard } from "@/components/ui/layout";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { requireStaff } from "@/lib/auth";
+import { basePath, requireStaff } from "@/lib/auth";
 import { formatMoney, ROLE_LABEL } from "@/lib/domain";
+import {
+  anthropicConfig,
+  composioConfig,
+  focusNfeConfig,
+  mercadoPagoConfig,
+  socialAuthConfigId,
+  twilioConfig,
+} from "@/lib/env";
 import { DEFAULT_PLATFORM_FEE_PERCENT } from "@/lib/money";
 import { createClient } from "@/lib/supabase/server";
 
+const SOCIAL_PLATFORM_LABEL = {
+  tiktok: "TikTok",
+  linkedin: "LinkedIn",
+  facebook: "Facebook",
+  pinterest: "Pinterest",
+  youtube: "YouTube",
+} as const;
+
 export async function WorkspaceSettings() {
   const actor = await requireStaff();
+  const base = basePath(actor.role);
 
-  // So o admin mexe na comissao — busca so entra nesse papel.
+  // So o admin mexe na comissao e ve o status das integracoes da
+  // plataforma inteira — busca so entra nesse papel.
   const platformFeeData =
     actor.role === "admin" ? await loadPlatformFeeOverview() : null;
 
@@ -78,6 +97,22 @@ export async function WorkspaceSettings() {
           </Card>
         ) : null}
 
+        {/* Publicacoes: Instagram + as 5 redes adicionais, para admin e
+            profissional (ambos gerenciam clientes e conectam redes). */}
+        <Card>
+          <CardHeader
+            title="Publicacoes"
+            description="Conecte Instagram, TikTok, LinkedIn, Facebook, Pinterest e YouTube de cada cliente."
+          />
+          <Link
+            href={`${base}/settings/publications`}
+            className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-sm font-medium text-ink-800 transition hover:bg-ink-50"
+          >
+            <Share2 className="size-4" aria-hidden />
+            Abrir conexoes de redes sociais
+          </Link>
+        </Card>
+
         <Card>
           <CardHeader
             title="Aparencia"
@@ -136,7 +171,42 @@ export async function WorkspaceSettings() {
           </div>
         </Card>
       ) : null}
+
+      {actor.role === "admin" ? (
+        <Card className="mt-5">
+          <CardHeader
+            title="Integracoes da plataforma"
+            description="Credenciais unicas da agencia (nao por profissional). Configure nas variaveis de ambiente do projeto na Vercel."
+          />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <IntegrationStatusRow label="Instagram" configured={Boolean(composioConfig())} />
+            {(Object.keys(SOCIAL_PLATFORM_LABEL) as (keyof typeof SOCIAL_PLATFORM_LABEL)[]).map((platform) => (
+              <IntegrationStatusRow
+                key={platform}
+                label={SOCIAL_PLATFORM_LABEL[platform]}
+                configured={Boolean(socialAuthConfigId(platform))}
+              />
+            ))}
+            <IntegrationStatusRow label="Mercado Pago (Pix automatico)" configured={Boolean(mercadoPagoConfig())} />
+            <IntegrationStatusRow label="Focus NFe (nota fiscal)" configured={Boolean(focusNfeConfig())} />
+            <IntegrationStatusRow label="WhatsApp (Twilio)" configured={Boolean(twilioConfig())} />
+            <IntegrationStatusRow label="Legenda por IA" configured={Boolean(anthropicConfig())} />
+          </div>
+        </Card>
+      ) : null}
     </>
+  );
+}
+
+function IntegrationStatusRow({ label, configured }: { label: string; configured: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2">
+      <span className="flex items-center gap-2 text-sm text-ink-800">
+        {label === "WhatsApp (Twilio)" ? <MessageCircle className="size-3.5 text-ink-400" aria-hidden /> : null}
+        {label}
+      </span>
+      <Badge tone={configured ? "success" : "neutral"}>{configured ? "Configurado" : "Nao configurado"}</Badge>
+    </div>
   );
 }
 

@@ -1,4 +1,4 @@
-import { AlertTriangle, Clock, Info } from "lucide-react";
+import { AlertTriangle, Clock, Info, QrCode } from "lucide-react";
 
 import {
   ConnectDashboardButton,
@@ -8,7 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, PageHeader } from "@/components/ui/layout";
 import { requireStaff } from "@/lib/auth";
-import { stripeSecretKey } from "@/lib/env";
+import { mercadoPagoConfig, stripeSecretKey } from "@/lib/env";
 import { formatFeePercent } from "@/lib/money";
 import {
   CAPABILITY_LABEL,
@@ -150,6 +150,23 @@ export async function PaymentAccountSettings({ justReturned }: { justReturned?: 
         </Card>
 
         <div className="flex flex-col gap-4">
+          <Card>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
+                <QrCode className="size-4 text-ink-400" aria-hidden />
+                Pix automatico (Mercado Pago)
+              </h2>
+              <Badge tone={mercadoPagoConfig() ? "success" : "neutral"}>
+                {mercadoPagoConfig() ? "Configurado" : "Nao configurado"}
+              </Badge>
+            </div>
+            <p className="text-xs text-ink-500">
+              {mercadoPagoConfig()
+                ? "Ja disponivel como forma de cobranca -- escolha \"Pix automatico\" ao criar uma cobranca. O pagamento confirma sozinho, sem precisar marcar na mao."
+                : "Conta unica da agencia (nao por profissional, diferente da Stripe acima). Peca ao administrador configurar nas variaveis de ambiente do projeto."}
+            </p>
+          </Card>
+
           <Card>
             <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink-900">
               <Clock className="size-4 text-ink-400" aria-hidden />
