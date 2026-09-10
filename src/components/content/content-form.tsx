@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type SyntheticEvent } from "react";
+import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { LinkPicker } from "@/components/content/link-picker";
@@ -13,6 +14,7 @@ import { CONTENT_TYPE_LABEL, normalizeExternalUrl } from "@/lib/domain";
 import { BUCKETS, contentFilePath, thumbnailPath } from "@/lib/paths";
 import { createThumbnail, uploadToBucket } from "@/lib/upload";
 import { cn } from "@/lib/utils";
+import { generateCaptionSuggestionAction } from "@/server/actions/ai-caption";
 import {
   createContentDraftAction,
   replaceContentFilesAction,
@@ -112,6 +114,30 @@ export function ContentForm({
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [generatingCaption, setGeneratingCaption] = useState(false);
+
+  async function generateCaption() {
+    if (!clientId) {
+      toast.error("Selecione o cliente antes de gerar a legenda.");
+      return;
+    }
+    if (title.trim().length < 2) {
+      toast.error("Informe o titulo antes de gerar a legenda.");
+      return;
+    }
+    setGeneratingCaption(true);
+    try {
+      const result = await generateCaptionSuggestionAction({ clientId, title, type });
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setCaption(result.data);
+      toast.success("Legenda gerada. Revise antes de enviar.");
+    } finally {
+      setGeneratingCaption(false);
+    }
+  }
 
   const metadata = {
     clientId,
@@ -321,6 +347,18 @@ export function ContentForm({
               placeholder="Legenda que sera publicada junto do conteudo"
               disabled={busy}
             />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-2"
+              loading={generatingCaption}
+              disabled={busy}
+              onClick={() => void generateCaption()}
+            >
+              <Sparkles className="size-3.5" aria-hidden />
+              Gerar com IA
+            </Button>
           </Field>
 
           <Field
