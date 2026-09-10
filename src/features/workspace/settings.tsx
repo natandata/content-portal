@@ -14,6 +14,7 @@ import {
   composioConfig,
   focusNfeConfig,
   mercadoPagoConfig,
+  mercadoPagoOAuthConfig,
   socialAuthConfigId,
   twilioConfig,
 } from "@/lib/env";
@@ -187,7 +188,10 @@ export async function WorkspaceSettings() {
                 configured={Boolean(socialAuthConfigId(platform))}
               />
             ))}
-            <IntegrationStatusRow label="Mercado Pago (Pix automatico)" configured={Boolean(mercadoPagoConfig())} />
+            <IntegrationStatusRow
+              label="Mercado Pago (Pix automatico)"
+              configured={Boolean(mercadoPagoConfig() && mercadoPagoOAuthConfig())}
+            />
             <IntegrationStatusRow label="Focus NFe (nota fiscal)" configured={Boolean(focusNfeConfig())} />
             <IntegrationStatusRow label="WhatsApp (Twilio)" configured={Boolean(twilioConfig())} />
             <IntegrationStatusRow label="Legenda por IA" configured={Boolean(anthropicConfig())} />

@@ -537,6 +537,8 @@ export type InvoiceRow = {
   /** CPF exigido pela API do Mercado Pago pra criar o Pix -- nao existia em lugar nenhum do app ate agora. */
   payer_name: string | null;
   payer_cpf: string | null;
+  /** Conta Mercado Pago conectada que recebe esta cobranca. So preenchido em method 'mercadopago'. */
+  mercadopago_professional_id: string | null;
   /** Nota fiscal (Focus NFe) -- independente do metodo de pagamento. */
   nfe_status: NfeStatus | null;
   nfe_ref: string | null;
@@ -561,6 +563,18 @@ export type ProfessionalPaymentAccountRow = {
   account_synced_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Conta Mercado Pago conectada do profissional -- mesmo espirito de `professional_calendly_accounts`. */
+export type ProfessionalMercadoPagoAccountRow = {
+  user_id: string;
+  mercadopago_user_id: number;
+  public_key: string | null;
+  live_mode: boolean;
+  access_token: string;
+  refresh_token: string;
+  token_expires_at: string;
+  connected_at: string;
 }
 
 /** Dedupe de webhook: a PK e o proprio id do evento na Stripe. */
@@ -866,6 +880,10 @@ export type Database = {
       >;
       professional_payment_accounts: Table<ProfessionalPaymentAccountRow, 'user_id'>;
       stripe_events: Table<StripeEventRow, 'id' | 'type'>;
+      professional_mercadopago_accounts: Table<
+        ProfessionalMercadoPagoAccountRow,
+        'user_id' | 'mercadopago_user_id' | 'access_token' | 'refresh_token' | 'token_expires_at'
+      >;
     };
     Views: { [_ in never]: never };
     Functions: {

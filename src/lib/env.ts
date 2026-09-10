@@ -177,18 +177,36 @@ export function socialAuthConfigId(
 }
 
 /**
- * Credenciais do Mercado Pago (Pix/boleto automatico, alternativa nacional
- * ao Stripe pra quem nao aceita cartao). `null` = pagamento automatico via
- * Mercado Pago desligado -- boleto/Pix manual e Stripe continuam
- * funcionando normalmente. `webhookSecret` e o "Assinatura secreta" gerado
- * no painel de notificacoes do Mercado Pago, usado pra validar o header
- * `x-signature` de cada webhook.
+ * Segredo do webhook do Mercado Pago (Pix automatico, alternativa nacional
+ * ao Stripe pra quem nao aceita cartao). `null` = confirmacao automatica de
+ * Pix desligada -- boleto/Pix manual e Stripe continuam funcionando
+ * normalmente. E o "Assinatura secreta" gerado no painel de notificacoes do
+ * Mercado Pago, usado pra validar o header `x-signature` de cada webhook.
+ *
+ * Nao existe mais um `accessToken` unico da agencia aqui: e marketplace,
+ * cada profissional conecta a propria conta Mercado Pago (ver
+ * `mercadoPagoOAuthConfig` e `professional_mercadopago_accounts`) -- o token
+ * usado pra criar/consultar cada Pix vem daquela tabela, nunca de uma env var.
  */
-export function mercadoPagoConfig(): { accessToken: string; webhookSecret: string } | null {
-  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+export function mercadoPagoConfig(): { webhookSecret: string } | null {
   const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-  if (!accessToken?.trim() || !webhookSecret?.trim()) return null;
-  return { accessToken, webhookSecret };
+  if (!webhookSecret?.trim()) return null;
+  return { webhookSecret };
+}
+
+/**
+ * Credenciais OAuth da aplicacao Mercado Pago (Client ID/Secret) -- o que
+ * deixa cada profissional conectar a propria conta, mesmo espirito de
+ * `calendlyOAuthConfig`. `null` = ninguem consegue conectar (o card de Pix
+ * automatico fica sem botao de conectar).
+ */
+export function mercadoPagoOAuthConfig(): { clientId: string; clientSecret: string; redirectUri: string } | null {
+  const clientId = process.env.MERCADOPAGO_CLIENT_ID;
+  const clientSecret = process.env.MERCADOPAGO_CLIENT_SECRET;
+  if (!clientId?.trim() || !clientSecret?.trim()) return null;
+
+  const redirectUri = process.env.MERCADOPAGO_REDIRECT_URI?.trim() || `${appBaseUrl()}/api/auth/mercadopago/callback`;
+  return { clientId, clientSecret, redirectUri };
 }
 
 /**

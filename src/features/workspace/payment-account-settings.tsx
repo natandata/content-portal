@@ -1,6 +1,10 @@
 import { AlertTriangle, Clock, Info, QrCode } from "lucide-react";
 
 import {
+  MercadoPagoConnectButton,
+  MercadoPagoDisconnectButton,
+} from "@/components/mercadopago/mercadopago-connect-button";
+import {
   ConnectDashboardButton,
   ConnectOnboardingButton,
   ConnectStatusRefresh,
@@ -8,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, PageHeader } from "@/components/ui/layout";
 import { requireStaff } from "@/lib/auth";
-import { mercadoPagoConfig, stripeSecretKey } from "@/lib/env";
+import { mercadoPagoOAuthConfig, stripeSecretKey } from "@/lib/env";
 import { formatFeePercent } from "@/lib/money";
 import {
   CAPABILITY_LABEL,
@@ -22,6 +26,7 @@ import {
 } from "@/lib/stripe/capabilities";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
+import { loadMercadoPagoConnectionStatus } from "@/server/actions/mercadopago-connect";
 import { refreshConnectStatusAction } from "@/server/actions/stripe-connect";
 
 /**
@@ -47,6 +52,11 @@ export async function PaymentAccountSettings({ justReturned }: { justReturned?: 
 
   const status = connectStatusOf(account);
   const configured = Boolean(stripeSecretKey());
+
+  const mercadoPagoAvailable = Boolean(mercadoPagoOAuthConfig());
+  const mercadoPago = mercadoPagoAvailable
+    ? await loadMercadoPagoConnectionStatus(actor.authUser.id)
+    : { connected: false, connectedAt: null, liveMode: false };
 
   return (
     <>
@@ -156,15 +166,37 @@ export async function PaymentAccountSettings({ justReturned }: { justReturned?: 
                 <QrCode className="size-4 text-ink-400" aria-hidden />
                 Pix automatico (Mercado Pago)
               </h2>
-              <Badge tone={mercadoPagoConfig() ? "success" : "neutral"}>
-                {mercadoPagoConfig() ? "Configurado" : "Nao configurado"}
+              <Badge tone={mercadoPago.connected ? "success" : "neutral"}>
+                {mercadoPago.connected ? "Conectado" : "Nao conectado"}
               </Badge>
             </div>
-            <p className="text-xs text-ink-500">
-              {mercadoPagoConfig()
-                ? "Ja disponivel como forma de cobranca -- escolha \"Pix automatico\" ao criar uma cobranca. O pagamento confirma sozinho, sem precisar marcar na mao."
-                : "Conta unica da agencia (nao por profissional, diferente da Stripe acima). Peca ao administrador configurar nas variaveis de ambiente do projeto."}
-            </p>
+
+            {!mercadoPagoAvailable ? (
+              <p className="text-xs text-ink-500">
+                Ainda nao foi configurado nesta instalacao. Peca ao administrador configurar nas
+                variaveis de ambiente do projeto.
+              </p>
+            ) : mercadoPago.connected ? (
+              <div className="flex flex-col items-start gap-3">
+                <p className="text-xs text-ink-500">
+                  Conta propria conectada (igual a Stripe acima -- nao e uma conta unica da
+                  agencia). Ja disponivel como forma de cobranca: escolha &quot;Pix
+                  automatico&quot; ao criar uma cobranca. O pagamento confirma sozinho, sem
+                  precisar marcar na mao, e cai direto na sua conta.
+                  {mercadoPago.connectedAt ? ` Conectado em ${formatDateTime(mercadoPago.connectedAt)}.` : ""}
+                </p>
+                <MercadoPagoDisconnectButton />
+              </div>
+            ) : (
+              <div className="flex flex-col items-start gap-3">
+                <p className="text-xs text-ink-500">
+                  Conecte sua propria conta Mercado Pago para receber Pix automatico dos seus
+                  clientes -- o dinheiro cai direto nela, com a mesma comissao da plataforma
+                  configurada acima na Stripe.
+                </p>
+                <MercadoPagoConnectButton />
+              </div>
+            )}
           </Card>
 
           <Card>

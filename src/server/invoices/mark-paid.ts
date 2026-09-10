@@ -95,6 +95,7 @@ export async function markInvoicePaidFromMercadoPago(
       paid_by: null,
       mercadopago_status: "approved",
       mercadopago_payment_id: mercadopagoPaymentId,
+      amount_paid_cents: Math.round(invoice.amount * 100),
     })
     .eq("id", invoice.id);
 

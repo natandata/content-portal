@@ -5,15 +5,15 @@ import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
 import { normalizeExternalUrl } from "@/lib/domain";
-import { mercadoPagoConfig } from "@/lib/env";
 import { intlLocale } from "@/lib/i18n/locale";
 import { createPixPayment } from "@/lib/mercadopago/client";
 import { BUCKETS } from "@/lib/paths";
 import { sendPushToClient } from "@/lib/push";
 import { canChargeWithStripe } from "@/lib/stripe/capabilities";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { logClientActivity } from "@/server/activity";
 import { revalidateInvoices } from "@/server/invoices/revalidate";
+import { resolveMercadoPagoAccessToken, resolveMercadoPagoProfessionalForClient } from "@/server/mercadopago/resolve";
 import { describeError, done, fail, firstIssue, ok, type ActionResult } from "@/server/result";
 import type { InvoiceRow } from "@/types/database";
 
@@ -78,17 +78,25 @@ export async function createInvoiceAction(
   }
 
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   // Pagamento online precisa saber, ja na emissao, em qual conta conectada esta
   // cobranca vai liquidar. Guardar o id aqui (em vez de resolver pelo
   // clients.professional_id na hora de cobrar) mantem a cobranca liquidando na
   // conta de quem a emitiu, mesmo que o cliente troque de responsavel depois.
   let stripeAccountId: string | null = null;
+  let mercadoPagoProfessionalId: string | null = null;
 
   if (parsed.data.method === "stripe") {
     const resolved = await resolveStripeAccountForClient(supabase, parsed.data.clientId);
     if (!resolved.ok) return resolved;
     stripeAccountId = resolved.data;
+  }
+
+  if (parsed.data.method === "mercadopago") {
+    const resolved = await resolveMercadoPagoProfessionalForClient(supabase, admin, parsed.data.clientId);
+    if (!resolved.ok) return resolved;
+    mercadoPagoProfessionalId = resolved.data;
   }
 
   // "monthly" nunca para sozinho (recurrence_total_cycles fica nulo); os
@@ -97,10 +105,6 @@ export async function createInvoiceAction(
   const recurrenceGroupId = parsed.data.recurrence ? randomUUID() : null;
   const recurrenceTotalCycles =
     parsed.data.recurrence === "3_months" ? 3 : parsed.data.recurrence === "6_months" ? 6 : null;
-
-  if (parsed.data.method === "mercadopago" && !mercadoPagoConfig()) {
-    return fail("Pix automatico ainda nao foi configurado nesta instalacao.");
-  }
 
   const { data, error } = await supabase
     .from("invoices")
@@ -114,6 +118,7 @@ export async function createInvoiceAction(
       payment_link: parsed.data.method === "link" ? (parsed.data.paymentLink ?? null) : null,
       pix_key: parsed.data.method === "pix" ? (parsed.data.pixKey ?? null) : null,
       stripe_account_id: stripeAccountId,
+      mercadopago_professional_id: mercadoPagoProfessionalId,
       created_by: actor.authUser.id,
       recurrence: parsed.data.recurrence ?? null,
       recurrence_group_id: recurrenceGroupId,
@@ -134,14 +139,31 @@ export async function createInvoiceAction(
   // API do Mercado Pago recusar, desfaz a linha em vez de deixar uma
   // cobranca "mercadopago" sem QR code nenhum.
   if (parsed.data.method === "mercadopago") {
-    const config = mercadoPagoConfig()!;
-    const pix = await createPixPayment(config.accessToken, {
+    const resolvedToken = await resolveMercadoPagoAccessToken(admin, mercadoPagoProfessionalId!);
+    if (!resolvedToken) {
+      await supabase.from("invoices").delete().eq("id", data.id);
+      return fail("O profissional responsavel ainda nao conectou a conta Mercado Pago.");
+    }
+
+    // Mesma comissao da Stripe (professional_payment_accounts.platform_fee_percent) --
+    // um so lugar para configurar a comissao da plataforma, valendo para os
+    // dois meios de pagamento online.
+    const { data: paymentAccount } = await admin
+      .from("professional_payment_accounts")
+      .select("platform_fee_percent")
+      .eq("user_id", mercadoPagoProfessionalId!)
+      .maybeSingle();
+    const feePercent = paymentAccount?.platform_fee_percent ?? 1;
+    const applicationFee = Math.round(parsed.data.amount * (feePercent / 100) * 100) / 100;
+
+    const pix = await createPixPayment(resolvedToken.accessToken, {
       invoiceId: data.id,
       amount: parsed.data.amount,
       description: parsed.data.title,
       payerEmail: actor.authUser.email ?? "sem-email@contentportal.local",
       payerName: parsed.data.payerName!,
       payerCpf: parsed.data.payerCpf!,
+      applicationFee,
     });
 
     if (!pix.ok) {
@@ -156,6 +178,7 @@ export async function createInvoiceAction(
         mercadopago_status: pix.data.status,
         mercadopago_qr_code: pix.data.qrCode,
         mercadopago_qr_code_base64: pix.data.qrCodeBase64,
+        application_fee_cents: Math.round(applicationFee * 100),
       })
       .eq("id", data.id)
       .select("*")
