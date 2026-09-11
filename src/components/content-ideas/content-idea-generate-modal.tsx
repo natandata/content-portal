@@ -59,11 +59,6 @@ export function ContentIdeaGenerateModal({
       setError("Informe pelo menos 1 perfil de referencia.");
       return;
     }
-    if (!file) {
-      setError("Envie o relatorio de metricas (PDF ou imagem).");
-      return;
-    }
-
     setBusy(true);
 
     try {
@@ -77,11 +72,14 @@ export function ContentIdeaGenerateModal({
         return;
       }
 
-      const path = contentIdeaReportPath(clientId, started.data.id, file.name);
-      const upload = await uploadToBucket(BUCKETS.contentIdeaReports, path, file, file.type);
-      if (upload.error) {
-        setError(`Nao foi possivel enviar o relatorio: ${upload.error}`);
-        return;
+      let path: string | null = null;
+      if (file) {
+        path = contentIdeaReportPath(clientId, started.data.id, file.name);
+        const upload = await uploadToBucket(BUCKETS.contentIdeaReports, path, file, file.type);
+        if (upload.error) {
+          setError(`Nao foi possivel enviar o relatorio: ${upload.error}`);
+          return;
+        }
       }
 
       const attached = await attachContentIdeaReportAction(started.data.id, path);
@@ -164,7 +162,10 @@ export function ContentIdeaGenerateModal({
             ) : null}
           </Field>
 
-          <Field label="Relatorio de metricas (ultimos 3 meses)" required hint="PDF exportado do Meta Business Suite, ou um screenshot.">
+          <Field
+            label="Relatorio de metricas (ultimos 3 meses)"
+            hint="Opcional -- PDF exportado do Meta Business Suite, ou um screenshot."
+          >
             <input
               ref={inputRef}
               type="file"

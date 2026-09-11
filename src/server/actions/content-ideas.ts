@@ -68,14 +68,16 @@ export async function startContentIdeaGenerationAction(
 }
 
 /**
- * Recebe o caminho do relatorio ja enviado ao Storage, dispara os 2 runs da
- * Apify (bio + posts, cobrindo cliente + referencias de uma vez) e marca
- * `scraping`. O restante (analise por IA, criacao dos rascunhos) acontece na
- * rota de webhook quando os 2 runs voltarem (`generateContentIdeas`).
+ * Recebe o caminho do relatorio ja enviado ao Storage (ou `null` -- o
+ * relatorio e opcional, a IA trabalha so com os perfis quando ele falta),
+ * dispara os 2 runs da Apify (bio + posts, cobrindo cliente + referencias de
+ * uma vez) e marca `scraping`. O restante (analise por IA, criacao dos
+ * rascunhos) acontece na rota de webhook quando os 2 runs voltarem
+ * (`generateContentIdeas`).
  */
 export async function attachContentIdeaReportAction(
   generationId: string,
-  reportFilePath: string,
+  reportFilePath: string | null,
 ): Promise<ActionResult<null>> {
   await requireStaff();
 
@@ -147,7 +149,6 @@ export async function retryContentIdeaGenerationAction(generationId: string): Pr
     .maybeSingle();
 
   if (!previous) return fail("Geracao nao encontrada.");
-  if (!previous.report_file_path) return fail("Esta geracao nunca chegou a receber um relatorio -- inicie uma nova.");
 
   const started = await startContentIdeaGenerationAction({
     clientId: previous.client_id,

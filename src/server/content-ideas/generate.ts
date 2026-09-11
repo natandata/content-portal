@@ -84,9 +84,11 @@ export async function generateContentIdeas(admin: AdminClient, generationId: str
     .eq("client_id", generation.client_id)
     .order("position");
 
-  if (!generation.report_file_path) return fail("Relatorio de metricas nao foi enviado.");
-  const reportUrl = await signedUrl(supabase, BUCKETS.contentIdeaReports, generation.report_file_path);
-  if (!reportUrl) return fail("Nao foi possivel ler o relatorio enviado.");
+  // Relatorio e opcional -- quando enviado, entra como bloco de imagem/documento;
+  // sem ele, a IA trabalha so com os perfis de referencia e o branding.
+  const reportUrl = generation.report_file_path
+    ? await signedUrl(supabase, BUCKETS.contentIdeaReports, generation.report_file_path)
+    : null;
 
   const usernames = [generation.client_username, ...generation.reference_usernames];
   const summary = (generation.profiles_summary ?? {}) as Record<string, Record<string, unknown>>;
@@ -114,16 +116,19 @@ export async function generateContentIdeas(admin: AdminClient, generationId: str
         `Cliente: ${client.company_name}${client.tag ? ` (nicho/segmento: ${client.tag})` : ""}`,
         brandContext ? `\nContexto da marca:\n${brandContext}` : null,
         referencesContext ? `\nBanco de Referencias (inspiracao ja curada pela equipe):\n${referencesContext}` : null,
-        `\nRelatorio de metricas dos ultimos 3 meses (anexado a seguir):`,
+        reportUrl ? `\nRelatorio de metricas dos ultimos 3 meses (anexado a seguir):` : null,
       ]
         .filter(Boolean)
         .join("\n"),
     },
-    {
+  ];
+
+  if (reportUrl && generation.report_file_path) {
+    content.push({
       type: generation.report_file_path.toLowerCase().endsWith(".pdf") ? "document" : "image",
       source: { type: "url", url: reportUrl },
-    },
-  ];
+    });
+  }
 
   for (const username of usernames) {
     const isClient = username === generation.client_username;
