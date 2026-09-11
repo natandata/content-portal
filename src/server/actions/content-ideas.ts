@@ -48,8 +48,16 @@ export async function startContentIdeaGenerationAction(
   );
   if (referenceUsernames.length === 0) return fail("Informe pelo menos 1 perfil de referencia valido.");
 
+  // `content_idea_generations` so tem policy de SELECT (mesmo padrao de
+  // `instagram_public_reports`) -- confirma que o actor enxerga este
+  // cliente pelo client RLS-limitado antes de escrever pela serviceRole,
+  // senao qualquer staff logado poderia gerar ideias pra cliente alheio.
   const supabase = await createClient();
-  const { data: generation, error } = await supabase
+  const { data: client } = await supabase.from("clients").select("id").eq("id", parsed.data.clientId).maybeSingle();
+  if (!client) return fail("Cliente nao encontrado.");
+
+  const admin = createAdminClient();
+  const { data: generation, error } = await admin
     .from("content_idea_generations")
     .insert({
       client_id: parsed.data.clientId,
