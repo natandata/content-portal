@@ -676,6 +676,36 @@ export type ClientMetricRow = {
 
 export type InstagramReportStatus = "pending" | "running" | "done" | "failed";
 
+export type ContentIdeaGenerationStatus = "pending" | "scraping" | "analyzing" | "done" | "failed";
+
+/**
+ * Geracao de 20 ideias de conteudo por IA a partir de perfis de referencia
+ * do Instagram (cliente + ate 5 referencias) + relatorio de metricas
+ * enviado. Mesmo espirito assincrono de `InstagramPublicReportRow`, so a
+ * serviceRole escreve.
+ */
+export type ContentIdeaGenerationRow = {
+  id: string;
+  client_id: string;
+  requested_by: string | null;
+  status: ContentIdeaGenerationStatus;
+  client_username: string;
+  reference_usernames: string[];
+  /** Nulo ate o upload terminar -- o caminho no Storage inclui o id da propria linha. */
+  report_file_path: string | null;
+  apify_details_run_id: string | null;
+  apify_posts_run_id: string | null;
+  /** {username: {...bio/seguidores, cru como a Apify devolve}} */
+  profiles_summary: Record<string, unknown> | null;
+  /** {username: [{caption, displayUrl, ...}]} -- ate 9 posts por perfil. */
+  profiles_posts: Record<string, unknown> | null;
+  generated_ideas: unknown[] | null;
+  created_content_ids: string[] | null;
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
 /** Relatorio 1: scrape de um @ qualquer, sem login. So a serviceRole escreve. */
 export type InstagramPublicReportRow = {
   id: string;
@@ -883,6 +913,10 @@ export type Database = {
       professional_mercadopago_accounts: Table<
         ProfessionalMercadoPagoAccountRow,
         'user_id' | 'mercadopago_user_id' | 'access_token' | 'refresh_token' | 'token_expires_at'
+      >;
+      content_idea_generations: Table<
+        ContentIdeaGenerationRow,
+        'client_id' | 'client_username' | 'reference_usernames'
       >;
     };
     Views: { [_ in never]: never };

@@ -12,6 +12,7 @@ export const BUCKETS = {
   profiles: "profiles",
   invoices: "invoices",
   ideas: "ideas",
+  contentIdeaReports: "content-idea-reports",
 } as const;
 
 export type BucketName = (typeof BUCKETS)[keyof typeof BUCKETS];
@@ -67,4 +68,8 @@ export function highlightCoverPath(
 /** Bucket "ideas": primeiro segmento e o professional_id (dono da ideia). */
 export function ideaImagePath(professionalId: string, ideaId: string, fileName: string): string {
   return `${professionalId}/${ideaId}/${Date.now()}-${safeFileName(fileName)}`;
+}
+
+export function contentIdeaReportPath(clientId: string, generationId: string, fileName: string): string {
+  return `${clientId}/${generationId}/${Date.now()}-${safeFileName(fileName)}`;
 }

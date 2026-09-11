@@ -10,6 +10,7 @@ import { ClientDetailTabs } from "@/components/clients/client-detail-tabs";
 import { ClientFormModal } from "@/components/clients/client-form-modal";
 import { CopyCode } from "@/components/clients/copy-code";
 import { ClientContentCalendar } from "@/components/calendar/client-content-calendar";
+import { ContentIdeaHub } from "@/features/workspace/content-idea-hub";
 import { ContentCard } from "@/components/content/content-card";
 import { StaffContentActions } from "@/components/content/staff-content-actions";
 import { DocumentUploadModal } from "@/components/documents/document-upload-modal";
@@ -78,12 +79,19 @@ export async function ClientDetail({
       .eq("client_id", clientId),
   ]);
 
-  const [services, references, socialConnections, { data: clientProfile }] = await Promise.all([
-    loadClientServices(supabase, clientId),
-    loadClientReferences(supabase, clientId),
-    loadSocialConnectionsStatus(clientId),
-    supabase.from("client_profiles").select("avatar_path").eq("client_id", clientId).maybeSingle(),
-  ]);
+  const [services, references, socialConnections, { data: clientProfile }, { data: principalInstagram }] =
+    await Promise.all([
+      loadClientServices(supabase, clientId),
+      loadClientReferences(supabase, clientId),
+      loadSocialConnectionsStatus(clientId),
+      supabase.from("client_profiles").select("avatar_path").eq("client_id", clientId).maybeSingle(),
+      supabase
+        .from("client_instagram_connections")
+        .select("instagram_username")
+        .eq("client_id", clientId)
+        .eq("is_principal", true)
+        .maybeSingle(),
+    ]);
 
   const avatarUrl = clientProfile?.avatar_path
     ? await signedUrl(supabase, BUCKETS.profiles, clientProfile.avatar_path)
@@ -340,6 +348,17 @@ export async function ClientDetail({
             id: "referencias",
             label: "Banco de Referencias",
             content: <ClientReferenceCard clientId={client.id} references={references} />,
+          },
+          {
+            id: "ideias-ia",
+            label: "Ideias de Conteudo (IA)",
+            content: (
+              <ContentIdeaHub
+                clientId={client.id}
+                basePath={base}
+                defaultClientUsername={principalInstagram?.instagram_username ?? undefined}
+              />
+            ),
           },
         ]}
       />
