@@ -243,6 +243,26 @@ export function anthropicConfig(): { apiKey: string } | null {
   return { apiKey };
 }
 
+/**
+ * Credenciais pra disparar o worker do Railway que transcreve + reescreve os
+ * links do Banco de Referencias (baixa com yt-dlp, chama a API do Gemini --
+ * roda fora da Vercel de proposito, que nao tem Python/yt-dlp nem tempo de
+ * execucao suficiente). `null` = disparo desligado -- a tela mostra que a
+ * transcricao ainda nao foi configurada nesta instalacao.
+ *
+ * O token e um "Project Token" do Railway (escopo de 1 unico ambiente,
+ * gerado na aba Tokens das configuracoes do projeto) -- vai no header
+ * `Project-Access-Token`, nao `Authorization: Bearer` (esse e' pra token de
+ * conta/workspace, com acesso a tudo).
+ */
+export function railwayTriggerConfig(): { projectToken: string; serviceId: string; environmentId: string } | null {
+  const projectToken = process.env.RAILWAY_PROJECT_TOKEN;
+  const serviceId = process.env.RAILWAY_REFERENCE_TRANSCRIBE_SERVICE_ID;
+  const environmentId = process.env.RAILWAY_ENVIRONMENT_ID;
+  if (!projectToken?.trim() || !serviceId?.trim() || !environmentId?.trim()) return null;
+  return { projectToken, serviceId, environmentId };
+}
+
 export const isSupabaseConfigured =
   publicEnv.supabaseUrl.length > 0 && publicEnv.supabaseAnonKey.length > 0;
 

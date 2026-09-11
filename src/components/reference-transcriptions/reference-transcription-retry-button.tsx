@@ -6,9 +6,9 @@ import { RotateCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { retryContentIdeaGenerationAction } from "@/server/actions/content-ideas";
+import { retryReferenceTranscriptionsAction } from "@/server/actions/reference-transcriptions";
 
-export function ContentIdeaRetryButton({ generationId }: { generationId: string }) {
+export function ReferenceTranscriptionRetryButton({ transcriptionId }: { transcriptionId: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
 
@@ -19,12 +19,12 @@ export function ContentIdeaRetryButton({ generationId }: { generationId: string 
       loading={pending}
       onClick={() =>
         start(async () => {
-          const result = await retryContentIdeaGenerationAction(generationId);
+          const result = await retryReferenceTranscriptionsAction([transcriptionId]);
           if (!result.ok) {
             toast.error(result.error);
             return;
           }
-          toast.success("Geracao reiniciada.");
+          toast.success("Transcricao reiniciada.");
           router.refresh();
         })
       }

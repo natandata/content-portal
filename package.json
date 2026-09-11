@@ -16,7 +16,8 @@
     "worker:instagram-auto-reports": "node --conditions=react-server worker/dist/instagram-auto-reports.mjs",
     "worker:instagram-publish": "node --conditions=react-server worker/dist/instagram-publish.mjs",
     "worker:invoice-recurrence": "node --conditions=react-server worker/dist/invoice-recurrence.mjs",
-    "worker:invoice-reminders": "node --conditions=react-server worker/dist/invoice-reminders.mjs"
+    "worker:invoice-reminders": "node --conditions=react-server worker/dist/invoice-reminders.mjs",
+    "worker:reference-transcribe": "node --conditions=react-server worker/dist/reference-transcribe.mjs"
   },
   "dependencies": {
     "@composio/core": "^0.18.1",

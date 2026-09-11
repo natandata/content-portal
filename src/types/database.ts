@@ -676,31 +676,22 @@ export type ClientMetricRow = {
 
 export type InstagramReportStatus = "pending" | "running" | "done" | "failed";
 
-export type ContentIdeaGenerationStatus = "pending" | "scraping" | "analyzing" | "done" | "failed";
+export type ClientReferenceTranscriptionStatus = "pending" | "processing" | "done" | "failed";
 
 /**
- * Geracao de 20 ideias de conteudo por IA a partir de perfis de referencia
- * do Instagram (cliente + ate 5 referencias) + relatorio de metricas
- * enviado. Mesmo espirito assincrono de `InstagramPublicReportRow`, so a
- * serviceRole escreve.
+ * Transcricao + reescrita (evitar plagio) de 1 link do Banco de
+ * Referencias. O trabalho pesado (baixar com yt-dlp, transcrever e
+ * reescrever via Gemini) roda num worker do Railway disparado sob demanda,
+ * so a serviceRole escreve.
  */
-export type ContentIdeaGenerationRow = {
+export type ClientReferenceTranscriptionRow = {
   id: string;
   client_id: string;
+  reference_id: string;
   requested_by: string | null;
-  status: ContentIdeaGenerationStatus;
-  client_username: string;
-  reference_usernames: string[];
-  /** Nulo ate o upload terminar -- o caminho no Storage inclui o id da propria linha. */
-  report_file_path: string | null;
-  apify_details_run_id: string | null;
-  apify_posts_run_id: string | null;
-  /** {username: {...bio/seguidores, cru como a Apify devolve}} */
-  profiles_summary: Record<string, unknown> | null;
-  /** {username: [{caption, displayUrl, ...}]} -- ate 9 posts por perfil. */
-  profiles_posts: Record<string, unknown> | null;
-  generated_ideas: unknown[] | null;
-  created_content_ids: string[] | null;
+  status: ClientReferenceTranscriptionStatus;
+  transcript: string | null;
+  rewritten_text: string | null;
   error: string | null;
   created_at: string;
   completed_at: string | null;
@@ -914,9 +905,9 @@ export type Database = {
         ProfessionalMercadoPagoAccountRow,
         'user_id' | 'mercadopago_user_id' | 'access_token' | 'refresh_token' | 'token_expires_at'
       >;
-      content_idea_generations: Table<
-        ContentIdeaGenerationRow,
-        'client_id' | 'client_username' | 'reference_usernames'
+      client_reference_transcriptions: Table<
+        ClientReferenceTranscriptionRow,
+        'client_id' | 'reference_id'
       >;
     };
     Views: { [_ in never]: never };
