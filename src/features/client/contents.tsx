@@ -14,12 +14,15 @@ export async function ClientContents() {
   const supabase = await createClient();
   const { locale, dict } = await getServerDictionary();
 
-  // O cliente nunca ve rascunhos: eles ainda estao em producao.
+  // O cliente nunca ve rascunhos: eles ainda estao em producao. Ordem
+  // cronologica (data agendada, depois horario) -- nao por ultima
+  // atualizacao, senao a lista embaralha toda vez que a equipe edita algo.
   const { data: contents } = await supabase
     .from("contents")
     .select("*")
     .neq("status", "draft")
-    .order("updated_at", { ascending: false });
+    .order("scheduled_date", { ascending: true, nullsFirst: false })
+    .order("scheduled_time", { ascending: true, nullsFirst: false });
 
   const rows = contents ?? [];
   const ids = rows.map((row) => row.id);
