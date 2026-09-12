@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { ApprovalActions } from "@/components/content/approval-actions";
-import { ContentMedia } from "@/components/content/content-media";
+import { InstagramPostPreview } from "@/components/content/instagram-post-preview";
 import { FeedPreviewModal } from "@/components/feed/feed-preview-modal";
 import { HistoryTimeline } from "@/components/content/history-timeline";
 import { Badge, ContentStatusBadge } from "@/components/ui/badge";
@@ -84,9 +84,12 @@ export async function ClientContentDetail({ contentId }: { contentId: string }) 
       />
 
       <div className="space-y-5">
-        <ContentMedia
+        <InstagramPostPreview
           type={content.type}
           title={content.title}
+          caption={content.caption}
+          username={profile.username || actor.client.company_name}
+          avatarUrl={profile.avatarUrl}
           locale={locale}
           files={files.map((file) => ({
             id: file.id,
@@ -122,13 +125,6 @@ export async function ClientContentDetail({ contentId }: { contentId: string }) 
             />
           </div>
         </Card>
-
-        {content.caption ? (
-          <Card>
-            <CardHeader title={dict.content.caption} />
-            <p className="whitespace-pre-wrap text-sm text-ink-700">{content.caption}</p>
-          </Card>
-        ) : null}
 
         {content.description ? (
           <Card>

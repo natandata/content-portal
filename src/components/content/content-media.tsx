@@ -17,7 +17,7 @@ export interface MediaFile {
   position: number;
 }
 
-function Missing({ label }: { label: string }) {
+export function Missing({ label }: { label: string }) {
   return (
     <div className="flex aspect-square w-full flex-col items-center justify-center gap-2 bg-ink-100 text-ink-400">
       <FileWarning className="size-6" aria-hidden />
@@ -66,7 +66,7 @@ function ExternalCard({
   );
 }
 
-function Slide({
+export function Slide({
   file,
   title,
   t,
