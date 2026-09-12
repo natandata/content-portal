@@ -60,7 +60,9 @@ function addDays(date: Date, amount: number): Date {
 /**
  * Card que "salta" da data ao passar o mouse — puro CSS (:hover), sem estado
  * em React. E o que garante abrir e fechar sem nenhuma demora: nao ha
- * transicao de opacidade nem debounce, so `hidden`/`block` no hover do pai.
+ * transicao de opacidade nem debounce, so `hidden`/`block` no hover do
+ * PROPRIO pill (`group/post`), nao mais da celula do dia inteira — cada post
+ * tem sua propria pre-visualizacao agora, nao so o primeiro.
  */
 function DayPreview({
   post,
@@ -81,7 +83,7 @@ function DayPreview({
       href={`${basePath}/content/${post.id}`}
       onClick={(event) => event.stopPropagation()}
       className={cn(
-        "focus-ring absolute top-full z-20 mt-1 hidden w-56 overflow-hidden rounded-xl border border-line bg-surface shadow-lg group-hover/day:block",
+        "focus-ring absolute top-full z-20 mt-1 hidden w-56 overflow-hidden rounded-xl border border-line bg-surface shadow-lg group-hover/post:block",
         align === "start" ? "left-0" : "right-0",
       )}
     >
@@ -116,6 +118,36 @@ function DayPreview({
   );
 }
 
+/** Um post na celula do dia + sua propria pre-visualizacao, ancorada nele (nao na celula inteira). */
+function PostPill({
+  post,
+  basePath,
+  align,
+  statusLabels,
+  typeLabels,
+}: {
+  post: ClientCalendarPost;
+  basePath: string;
+  align: "start" | "end";
+  statusLabels: Record<string, string>;
+  typeLabels: Record<string, string>;
+}) {
+  return (
+    <div className="group/post relative">
+      <div
+        className={cn(
+          "flex items-center gap-1 truncate rounded-md px-1.5 py-1 text-[11px] font-medium",
+          TONE_BAR[CONTENT_STATUS_TONE[post.status]],
+        )}
+      >
+        {post.time ? <span className="shrink-0 tabular-nums text-ink-500">{post.time.slice(0, 5)}</span> : null}
+        <span className="truncate">{post.title}</span>
+      </div>
+      <DayPreview post={post} basePath={basePath} align={align} statusLabels={statusLabels} typeLabels={typeLabels} />
+    </div>
+  );
+}
+
 function DayCell({
   day,
   inMonth,
@@ -137,12 +169,10 @@ function DayCell({
   statusLabels: Record<string, string>;
   typeLabels: Record<string, string>;
 }) {
-  const first = posts[0];
-
   return (
     <div
       className={cn(
-        "group/day relative min-h-[92px] border-r border-b border-line p-1.5 last:border-r-0",
+        "relative min-h-[92px] border-r border-b border-line p-1.5 last:border-r-0",
         !inMonth && "bg-ink-50/40",
       )}
     >
@@ -158,27 +188,19 @@ function DayCell({
       {posts.length > 0 ? (
         <div className="space-y-1">
           {posts.slice(0, 2).map((post) => (
-            <div
+            <PostPill
               key={post.id}
-              className={cn(
-                "flex items-center gap-1 truncate rounded-md px-1.5 py-1 text-[11px] font-medium",
-                TONE_BAR[CONTENT_STATUS_TONE[post.status]],
-              )}
-            >
-              {post.time ? <span className="shrink-0 tabular-nums text-ink-500">{post.time.slice(0, 5)}</span> : null}
-              <span className="truncate">{post.title}</span>
-            </div>
+              post={post}
+              basePath={basePath}
+              align={align}
+              statusLabels={statusLabels}
+              typeLabels={typeLabels}
+            />
           ))}
           {posts.length > 2 ? (
             <p className="px-1.5 text-[10px] text-ink-400">{moreLabel(posts.length - 2)}</p>
           ) : null}
         </div>
-      ) : null}
-
-      {/* O preview mostra sempre o primeiro post do dia — se tiver mais de um,
-          o card em si (ou "+N mais") continua clicavel para ver a lista completa. */}
-      {first ? (
-        <DayPreview post={first} basePath={basePath} align={align} statusLabels={statusLabels} typeLabels={typeLabels} />
       ) : null}
     </div>
   );
