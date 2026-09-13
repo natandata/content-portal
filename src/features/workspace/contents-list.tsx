@@ -1,4 +1,5 @@
-import { Images } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Images } from "lucide-react";
 
 import { ContentCard } from "@/components/content/content-card";
 import { StaffContentActions } from "@/components/content/staff-content-actions";
@@ -54,6 +55,8 @@ export async function ContentsList({
 
   const [{ data: contents }, { data: clients }] = await Promise.all([query, clientsQuery]);
 
+  const currentClient = clientId ? (clients ?? []).find((client) => client.id === clientId) : undefined;
+
   const rows = contents ?? [];
   const ids = rows.map((row) => row.id);
 
@@ -69,6 +72,17 @@ export async function ContentsList({
   return (
     <>
       <PageHeader
+        breadcrumb={
+          currentClient ? (
+            <Link
+              href={`${base}/clients/${currentClient.id}`}
+              className="focus-ring inline-flex items-center gap-1.5 rounded text-sm text-ink-500 hover:text-ink-900"
+            >
+              <ArrowLeft className="size-4" aria-hidden />
+              {currentClient.company_name}
+            </Link>
+          ) : undefined
+        }
         title="Conteudos"
         description="Cada card traz a capa, o status e as acoes na base."
         actions={<LinkButton href={`${base}/content/new`}>Novo conteudo</LinkButton>}
