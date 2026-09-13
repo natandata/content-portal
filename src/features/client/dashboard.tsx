@@ -82,18 +82,25 @@ export async function ClientDashboard() {
       />
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard label={dict.dashboard.awaitingYou} value={rows.length} tone="warning" />
+        <StatCard
+          label={dict.dashboard.awaitingYou}
+          value={rows.length}
+          tone="warning"
+          href="/client/content?filter=awaiting"
+        />
         <StatCard
           label={dict.dashboard.approved}
           value={tally(["approved", "published"])}
           tone="success"
+          href="/client/content?filter=approved"
         />
         <StatCard
           label={dict.dashboard.inRevision}
           value={tally(["revision_requested", "rejected"])}
           tone="info"
+          href="/client/content?filter=revision"
         />
-        <StatCard label={dict.dashboard.totalReceived} value={statusRows?.length ?? 0} />
+        <StatCard label={dict.dashboard.totalReceived} value={statusRows?.length ?? 0} href="/client/content" />
       </div>
 
       <div className="mb-6 grid gap-5 lg:grid-cols-2">

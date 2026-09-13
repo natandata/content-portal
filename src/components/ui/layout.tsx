@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -68,11 +69,14 @@ export function StatCard({
   value,
   hint,
   tone = "neutral",
+  href,
 }: {
   label: string;
   value: number | string;
   hint?: string;
   tone?: "neutral" | "warning" | "success" | "info";
+  /** Quando presente, o cartao inteiro vira um link pra tela que detalha esse numero. */
+  href?: string;
 }) {
   const accent = {
     neutral: "text-ink-900",
@@ -81,13 +85,23 @@ export function StatCard({
     info: "text-accent",
   }[tone];
 
-  return (
-    <div className="card p-5">
+  const content = (
+    <>
       <p className="text-sm text-ink-500">{label}</p>
       <p className={cn("mt-2 text-3xl font-semibold tabular-nums tracking-tight", accent)}>
         {value}
       </p>
       {hint ? <p className="mt-1 text-xs text-ink-400">{hint}</p> : null}
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="focus-ring card block p-5 transition hover:border-ink-300 hover:shadow-sm">
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className="card p-5">{content}</div>;
 }
