@@ -82,6 +82,8 @@ export type ClientRow = {
   tag: string | null;
   tour_seen_at: string | null;
   notifications_prompted_at: string | null;
+  /** Quando a equipe fixou o cliente no topo da galeria; null = nao fixado. */
+  pinned_at: string | null;
   /** "pt-BR" | "en" — sincronizado do cookie de idioma via `set_preferred_locale`. */
   preferred_locale: string;
   created_at: string;

@@ -371,6 +371,8 @@ export interface ClientGalleryRow {
   staleActivity: boolean;
   /** Contagem por status, para o card (rascunho / ajuste / aguardando aprovacao / aprovados). */
   contentCounts: { draft: number; adjustment: number; awaitingApproval: number; approved: number };
+  /** Fixado no topo da galeria pela equipe. */
+  pinned: boolean;
 }
 
 /** "@handle" de exibicao a partir do nome de contato — so cosmetico, nunca usado para auth. */
@@ -393,7 +395,11 @@ export async function loadClientsGallery(
   supabase: Client,
   options: { professionalId?: string } = {},
 ): Promise<ClientGalleryRow[]> {
-  let clientsQuery = supabase.from("clients").select("*").order("company_name");
+  let clientsQuery = supabase
+    .from("clients")
+    .select("*")
+    .order("pinned_at", { ascending: false, nullsFirst: false })
+    .order("company_name");
   if (options.professionalId) clientsQuery = clientsQuery.eq("professional_id", options.professionalId);
   const { data: clients } = await clientsQuery;
   const rows = clients ?? [];
@@ -509,6 +515,7 @@ export async function loadClientsGallery(
       needsAdjustment: adjustmentByClient.has(client.id),
       overdueInvoice: overdueSet.has(client.id),
       staleActivity,
+      pinned: Boolean(client.pinned_at),
     };
   });
 }

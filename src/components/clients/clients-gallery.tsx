@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
 import {
   AlertTriangle,
   Grid3x3,
   LayoutList,
+  Pin,
   Search,
   SlidersHorizontal,
 } from "lucide-react";
@@ -16,6 +18,7 @@ import { coverGradientClass } from "@/lib/cover-palette";
 import type { BadgeTone } from "@/lib/domain";
 import { tagColorClass } from "@/lib/tag-colors";
 import { cn, initials } from "@/lib/utils";
+import { toggleClientPinAction } from "@/server/actions/clients";
 import type { ClientGalleryRow } from "@/server/queries";
 
 type DisplayStatus = "ajuste" | "aguardando" | "ok" | "inativo";
@@ -68,6 +71,39 @@ const VIEWS: { id: View; label: string; icon: typeof Grid3x3 }[] = [
   { id: "atencao", label: "Atencao", icon: AlertTriangle },
 ];
 
+/**
+ * Alfinete pra fixar/desafixar no topo da galeria (ordenacao ja vem pronta
+ * do servidor -- `loadClientsGallery` ordena por `pinned_at`). Fica dentro
+ * do `Link` do card, entao precisa parar o clique de navegar.
+ */
+function PinButton({ client, className }: { client: ClientGalleryRow; className?: string }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <button
+      type="button"
+      title={client.pinned ? "Desafixar cliente" : "Fixar cliente no topo"}
+      aria-pressed={client.pinned}
+      disabled={isPending}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        startTransition(async () => {
+          await toggleClientPinAction(client.id, !client.pinned);
+          router.refresh();
+        });
+      }}
+      className={cn(
+        "focus-ring inline-flex items-center justify-center rounded-full transition disabled:opacity-60",
+        className,
+      )}
+    >
+      <Pin className={cn("size-3.5", client.pinned && "fill-current")} aria-hidden />
+    </button>
+  );
+}
+
 function ClientCard({
   client,
   href,
@@ -102,6 +138,13 @@ function ClientCard({
             </span>
           ) : null}
           <Badge tone={meta.tone}>{meta.label}</Badge>
+          <PinButton
+            client={client}
+            className={cn(
+              "size-6 text-ink-300 hover:bg-ink-100 hover:text-ink-600",
+              client.pinned && "text-accent hover:text-accent",
+            )}
+          />
         </div>
       </Link>
     );
@@ -113,7 +156,7 @@ function ClientCard({
     <Link
       href={href}
       title={attentionReason(client) || undefined}
-      className="focus-ring group flex flex-col overflow-hidden rounded-xl border border-line bg-surface transition hover:border-ink-300 hover:shadow-sm"
+      className="focus-ring group relative flex flex-col overflow-hidden rounded-xl border border-line bg-surface transition hover:border-ink-300 hover:shadow-sm"
     >
       {/* So cor — a mesma escolhida na tela do cliente. */}
       <div className={cn("relative h-16 w-full shrink-0 bg-gradient-to-br", coverGradientClass(client.coverColor))}>
@@ -135,6 +178,15 @@ function ClientCard({
           )}
         </span>
       </div>
+
+      <PinButton
+        client={client}
+        className={cn(
+          "absolute top-2.5 left-2.5 size-6 bg-black/30 text-white/70 backdrop-blur-sm hover:bg-black/45 hover:text-white",
+          client.pinned && "text-amber-300 opacity-100 hover:text-amber-200",
+          !client.pinned && "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+        )}
+      />
 
       <div className="min-w-0 flex-1 p-4 pt-6">
         <div className="flex items-center gap-1.5">

@@ -193,6 +193,27 @@ export async function setClientStatusAction(
   return done();
 }
 
+/** Fixa/desafixa o cliente no topo da galeria — so preferencia de organizacao, sem historico. */
+export async function toggleClientPinAction(
+  id: string,
+  pinned: boolean,
+): Promise<ActionResult<null>> {
+  await requireStaff();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("clients")
+    .update({ pinned_at: pinned ? new Date().toISOString() : null })
+    .eq("id", id);
+
+  if (error) {
+    return fail(describeError(error, "Nao foi possivel fixar o cliente."));
+  }
+
+  revalidateClients();
+  return done();
+}
+
 export async function deleteClientAction(id: string): Promise<ActionResult<null>> {
   await requireStaff();
 
