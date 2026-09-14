@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/utils";
 import {
   loadClientNames,
+  loadContentDownloadFiles,
   loadContentFileCounts,
   loadContentPreviews,
   loadProfessionalClientIds,
@@ -44,13 +45,14 @@ export async function ApprovalsList({ professionalId }: { professionalId?: strin
   const all = [...(needsAction ?? []), ...(waiting ?? [])];
   const ids = all.map((content) => content.id);
 
-  const [previews, counts, names] = await Promise.all([
+  const [previews, counts, names, downloadFiles] = await Promise.all([
     loadContentPreviews(supabase, ids),
     loadContentFileCounts(supabase, ids),
     loadClientNames(
       supabase,
       all.map((content) => content.client_id),
     ),
+    loadContentDownloadFiles(supabase, ids),
   ]);
 
   const feedback =
@@ -109,6 +111,7 @@ export async function ApprovalsList({ professionalId }: { professionalId?: strin
                         contentId={content.id}
                         status={content.status}
                         basePath={base}
+                        downloadUrls={downloadFiles.get(content.id) ?? []}
                       />
                     }
                   />
@@ -156,6 +159,7 @@ export async function ApprovalsList({ professionalId }: { professionalId?: strin
                     contentId={content.id}
                     status={content.status}
                     basePath={base}
+                    downloadUrls={downloadFiles.get(content.id) ?? []}
                   />
                 }
               />

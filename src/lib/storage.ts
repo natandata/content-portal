@@ -47,13 +47,14 @@ export async function signedUrlMap(
   bucket: BucketName,
   paths: (string | null | undefined)[],
   expiresIn = SIGNED_URL_TTL,
+  options?: { download?: boolean },
 ): Promise<Map<string, string>> {
   const unique = Array.from(new Set(paths.filter((path): path is string => Boolean(path))));
   const result = new Map<string, string>();
 
   if (unique.length === 0) return result;
 
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrls(unique, expiresIn);
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrls(unique, expiresIn, options);
   if (error || !data) return result;
 
   for (const entry of data) {

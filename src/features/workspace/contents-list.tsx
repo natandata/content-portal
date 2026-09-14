@@ -11,6 +11,7 @@ import { CONTENT_STATUS_LABEL, CONTENT_STATUS_ORDER } from "@/lib/domain";
 import { createClient } from "@/lib/supabase/server";
 import {
   loadClientNames,
+  loadContentDownloadFiles,
   loadContentFileCounts,
   loadContentPreviews,
   loadProfessionalClientIds,
@@ -60,13 +61,14 @@ export async function ContentsList({
   const rows = contents ?? [];
   const ids = rows.map((row) => row.id);
 
-  const [previews, counts, names] = await Promise.all([
+  const [previews, counts, names, downloadFiles] = await Promise.all([
     loadContentPreviews(supabase, ids),
     loadContentFileCounts(supabase, ids),
     loadClientNames(
       supabase,
       rows.map((row) => row.client_id),
     ),
+    loadContentDownloadFiles(supabase, ids),
   ]);
 
   return (
@@ -125,6 +127,7 @@ export async function ContentsList({
                   contentId={content.id}
                   status={content.status}
                   basePath={base}
+                  downloadUrls={downloadFiles.get(content.id) ?? []}
                 />
               }
             />

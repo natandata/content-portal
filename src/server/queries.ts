@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FeedEntry } from "@/components/feed/feed-grid";
 import type { ProfileView } from "@/components/feed/instagram-profile";
 import { BUCKETS } from "@/lib/paths";
-import { signedUrl, signedUrlMap } from "@/lib/storage";
+import { SIGNED_URL_TTL, signedUrl, signedUrlMap } from "@/lib/storage";
 import { AWAITING_CLIENT_STATUSES, NEEDS_TEAM_ACTION_STATUSES, type BadgeTone } from "@/lib/domain";
 import type {
   BulletinAdminReportRow,
@@ -101,6 +101,47 @@ export async function loadContentFileCounts(
   }
 
   return counts;
+}
+
+/**
+ * Arquivos de varios conteudos com URL assinada de download forcado
+ * (`Content-Disposition: attachment`) -- usado no botao "Baixar" da lista do
+ * profissional, pra baixar o post e poder publicar manualmente. So arquivos
+ * de verdade no Storage entram aqui; link externo (`external_url`) nao tem
+ * o que forcar, entao fica de fora.
+ */
+export async function loadContentDownloadFiles(
+  supabase: Client,
+  contentIds: string[],
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (contentIds.length === 0) return map;
+
+  const { data: files } = await supabase
+    .from("content_files")
+    .select("content_id, file_path, position")
+    .in("content_id", contentIds)
+    .order("position");
+
+  if (!files || files.length === 0) return map;
+
+  const urls = await signedUrlMap(
+    supabase,
+    BUCKETS.content,
+    files.map((file) => file.file_path),
+    SIGNED_URL_TTL,
+    { download: true },
+  );
+
+  for (const file of files) {
+    const url = file.file_path ? urls.get(file.file_path) : undefined;
+    if (!url) continue;
+    const list = map.get(file.content_id) ?? [];
+    list.push(url);
+    map.set(file.content_id, list);
+  }
+
+  return map;
 }
 
 /** Todos os arquivos de um conteudo, com URLs assinadas prontas para exibicao. */

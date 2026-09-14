@@ -6,6 +6,7 @@ import { CheckCheck, Eye, Pencil, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button, LinkButton } from "@/components/ui/button";
+import { DownloadContentButton } from "@/components/content/download-content-button";
 import { Modal } from "@/components/ui/modal";
 import {
   deleteContentAction,
@@ -19,11 +20,14 @@ export function StaffContentActions({
   status,
   basePath,
   onDeletedHref,
+  downloadUrls,
 }: {
   contentId: string;
   status: ContentStatus;
   basePath: string;
   onDeletedHref?: string;
+  /** URLs de download forcado dos arquivos do post -- baixa tudo pra publicar manualmente. */
+  downloadUrls?: string[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -93,6 +97,8 @@ export function StaffContentActions({
             Marcar como publicado
           </Button>
         ) : null}
+
+        {downloadUrls ? <DownloadContentButton urls={downloadUrls} /> : null}
 
         <Button
           size="sm"

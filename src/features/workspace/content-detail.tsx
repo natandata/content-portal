@@ -19,6 +19,7 @@ import { loadInstagramConnectionStatus } from "@/server/actions/instagram-connec
 import { loadSocialConnectionsStatus } from "@/server/actions/social-connect";
 import { loadContentPublishTargets } from "@/server/actions/social-publish";
 import {
+  loadContentDownloadFiles,
   loadContentFiles,
   loadContentPreviews,
   loadFeedEntries,
@@ -55,13 +56,15 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
       .maybeSingle(),
   ]);
 
-  const [feedEntries, ownPreviews, instagramConnections, socialConnections, publishTargets] = await Promise.all([
-    loadFeedEntries(supabase, content.client_id),
-    loadContentPreviews(supabase, [contentId]),
-    composioConfig() ? loadInstagramConnectionStatus(content.client_id) : Promise.resolve([]),
-    composioConfig() ? loadSocialConnectionsStatus(content.client_id) : Promise.resolve([]),
-    loadContentPublishTargets(contentId),
-  ]);
+  const [feedEntries, ownPreviews, instagramConnections, socialConnections, publishTargets, downloadFiles] =
+    await Promise.all([
+      loadFeedEntries(supabase, content.client_id),
+      loadContentPreviews(supabase, [contentId]),
+      composioConfig() ? loadInstagramConnectionStatus(content.client_id) : Promise.resolve([]),
+      composioConfig() ? loadSocialConnectionsStatus(content.client_id) : Promise.resolve([]),
+      loadContentPublishTargets(contentId),
+      loadContentDownloadFiles(supabase, [contentId]),
+    ]);
 
   const clientName = client?.company_name ?? "Cliente";
   const profile = await loadProfileView(
@@ -123,6 +126,7 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
               status={content.status}
               basePath={base}
               onDeletedHref={`${base}/content`}
+              downloadUrls={downloadFiles.get(content.id) ?? []}
             />
 
             <div className="mt-3">
