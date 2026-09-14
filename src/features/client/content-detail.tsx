@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { ApprovalActions } from "@/components/content/approval-actions";
 import { InstagramPostPreview } from "@/components/content/instagram-post-preview";
+import { TrackContentView } from "@/components/content/track-content-view";
 import { FeedPreviewModal } from "@/components/feed/feed-preview-modal";
 import { HistoryTimeline } from "@/components/content/history-timeline";
 import { Badge, ContentStatusBadge } from "@/components/ui/badge";
@@ -84,6 +85,8 @@ export async function ClientContentDetail({ contentId }: { contentId: string }) 
       />
 
       <div className="space-y-5">
+        <TrackContentView contentId={content.id} />
+
         <InstagramPostPreview
           type={content.type}
           title={content.title}
