@@ -1,8 +1,7 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
-
 import { createAdminClient } from "@/lib/supabase/admin";
+import { hashApiKey } from "@/server/mcp/issue-key";
 import { fail, done, type ActionResult } from "@/server/result";
 import type { UserRole } from "@/types/database";
 
@@ -26,7 +25,7 @@ export async function resolveMcpActor(authorizationHeader: string | null): Promi
   if (!token) return null;
 
   const admin = createAdminClient();
-  const keyHash = createHash("sha256").update(token).digest("hex");
+  const keyHash = hashApiKey(token);
 
   const { data: key } = await admin
     .from("professional_api_keys")

@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
 
+import { appBaseUrl } from "@/lib/env";
 import { addClientServiceTool } from "@/server/mcp/client-services";
 import { createClientTool, findClientTool } from "@/server/mcp/clients";
 import { resolveMcpActor, type McpActor } from "@/server/mcp/auth";
@@ -151,9 +152,16 @@ function buildServer(actor: McpActor): McpServer {
 async function handle(request: Request): Promise<Response> {
   const actor = await resolveMcpActor(request.headers.get("authorization"));
   if (!actor) {
+    // WWW-Authenticate aponta pro metadado de recurso protegido (RFC 9728) --
+    // e' assim que o conector do claude.ai/app descobre o servidor de
+    // autorizacao (`.well-known/oauth-authorization-server`, ver
+    // `src/app/api/mcp/metadata/*`) e dispara o fluxo de OAuth sozinho.
     return new Response(JSON.stringify({ error: "Chave de API invalida, ausente ou revogada." }), {
       status: 401,
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "www-authenticate": `Bearer resource_metadata="${appBaseUrl()}/.well-known/oauth-protected-resource"`,
+      },
     });
   }
 

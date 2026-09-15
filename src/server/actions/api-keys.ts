@@ -1,26 +1,21 @@
 "use server";
 
-import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
+import { issueApiKey } from "@/server/mcp/issue-key";
 import { describeError, done, fail, ok, type ActionResult } from "@/server/result";
 
 /**
  * Chaves de API do assistente MCP (Claude) -- ver `src/app/api/mcp/route.ts`.
  * A chave em si (`sk_live_...`) so existe uma vez, na resposta desta acao; o
- * banco guarda so o hash SHA-256, mesmo espirito de senha nunca em texto
- * puro. Sempre pertence ao proprio ator (nao existe "gerar para outro
- * profissional" -- cada um gera a sua).
+ * banco guarda so o hash SHA-256 (emissao real em
+ * `src/server/mcp/issue-key.ts`, compartilhada com o fluxo de OAuth do
+ * conector do claude.ai/app). Sempre pertence ao proprio ator -- nao existe
+ * "gerar para outro profissional" por aqui, cada um gera a sua.
  */
-
-const KEY_PREFIX = "sk_live_";
-
-function hashKey(key: string): string {
-  return createHash("sha256").update(key).digest("hex");
-}
 
 function revalidate() {
   revalidatePath("/admin/settings");
@@ -45,28 +40,13 @@ export async function createApiKeyAction(
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Dados invalidos.");
 
-  const admin = createAdminClient();
-  const secret = randomBytes(32).toString("base64url");
-  const key = `${KEY_PREFIX}${secret}`;
-
-  const { data, error } = await admin
-    .from("professional_api_keys")
-    .insert({
-      professional_id: actor.authUser.id,
-      name: parsed.data.name,
-      key_hash: hashKey(key),
-    })
-    .select("id, name, created_at, last_used_at")
-    .single();
-
-  if (error || !data) {
-    return fail(describeError(error, "Nao foi possivel gerar a chave."));
-  }
+  const issued = await issueApiKey(actor.authUser.id, parsed.data.name);
+  if (!issued.ok) return issued;
 
   revalidate();
   return ok({
-    key,
-    row: { id: data.id, name: data.name, createdAt: data.created_at, lastUsedAt: data.last_used_at },
+    key: issued.data.key,
+    row: { id: issued.data.id, name: issued.data.name, createdAt: issued.data.createdAt, lastUsedAt: null },
   });
 }
 

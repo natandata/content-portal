@@ -35,6 +35,22 @@ const nextConfig: NextConfig = {
       { source: "/client/contract", destination: "/client/documents", permanent: true },
     ];
   },
+
+  // Metadados de descoberta OAuth do servidor MCP (RFC 8414/9728) -- pastas
+  // com "." no nome sao raras no App Router, entao os handlers reais moram
+  // em /api/mcp/metadata/* e sao reescritos pros caminhos padrao que o
+  // conector do claude.ai/app espera. `:resourcePath*` cobre a variante que
+  // insere o caminho do recurso (`/.well-known/oauth-protected-resource/api/mcp`).
+  async rewrites() {
+    return [
+      { source: "/.well-known/oauth-authorization-server", destination: "/api/mcp/metadata/authorization-server" },
+      { source: "/.well-known/oauth-protected-resource", destination: "/api/mcp/metadata/protected-resource" },
+      {
+        source: "/.well-known/oauth-protected-resource/:resourcePath*",
+        destination: "/api/mcp/metadata/protected-resource",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

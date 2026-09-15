@@ -617,6 +617,26 @@ export type ProfessionalApiKeyRow = {
   revoked_at: string | null;
 }
 
+/** Cliente OAuth registrado dinamicamente (RFC 7591) pelo conector MCP do claude.ai/app -- sem client_secret, so PKCE. */
+export type McpOAuthClientRow = {
+  client_id: string;
+  client_name: string | null;
+  redirect_uris: string[];
+  created_at: string;
+}
+
+/** Codigo de autorizacao de uso unico (fluxo Authorization Code + PKCE) -- vira uma professional_api_keys ao ser trocado. */
+export type McpOAuthCodeRow = {
+  code: string;
+  client_id: string;
+  professional_id: string;
+  redirect_uri: string;
+  code_challenge: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+}
+
 export type ReferenceFormat = "static" | "video";
 
 export type ClientReferenceRow = {
@@ -889,6 +909,11 @@ export type Database = {
       invoices: Table<InvoiceRow, 'client_id' | 'title' | 'method' | 'amount' | 'due_date'>;
       client_services: Table<ClientServiceRow, 'client_id' | 'title'>;
       professional_api_keys: Table<ProfessionalApiKeyRow, 'professional_id' | 'name' | 'key_hash'>;
+      mcp_oauth_clients: Table<McpOAuthClientRow, 'client_id' | 'redirect_uris'>;
+      mcp_oauth_codes: Table<
+        McpOAuthCodeRow,
+        'code' | 'client_id' | 'professional_id' | 'redirect_uri' | 'code_challenge' | 'expires_at'
+      >;
       client_references: Table<ClientReferenceRow, 'client_id' | 'title' | 'url'>;
       client_activities: Table<ClientActivityRow, 'client_id' | 'actor_name' | 'action'>;
       staff_chat_threads: Table<StaffChatThreadRow, 'professional_id'>;
