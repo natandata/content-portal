@@ -506,6 +506,8 @@ export type InvoiceRow = {
   currency: CurrencyCode;
   due_date: string;
   boleto_file_path: string | null;
+  /** Anexo generico (nota, contrato, escopo) -- qualquer metodo de cobranca, diferente do slot exclusivo do boleto acima. */
+  attachment_path: string | null;
   payment_link: string | null;
   pix_key: string | null;
   status: InvoiceStatus;
@@ -597,9 +599,22 @@ export type ClientServiceRow = {
   amount: number | null;
   currency: CurrencyCode;
   is_partnership: boolean;
+  /** Data combinada de inicio deste servico -- opcional, cada servico do mesmo cliente pode comecar num dia diferente. */
+  start_date: string | null;
   position: number;
   created_at: string;
   updated_at: string;
+}
+
+/** Chave de API por profissional -- usada pelo servidor MCP (assistente Claude) pra autenticar sem cookie de sessao. */
+export type ProfessionalApiKeyRow = {
+  id: string;
+  professional_id: string;
+  name: string;
+  key_hash: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
 }
 
 export type ReferenceFormat = "static" | "video";
@@ -873,6 +888,7 @@ export type Database = {
       bulletin_votes: Table<BulletinVoteRow, 'post_id' | 'user_id' | 'vote'>;
       invoices: Table<InvoiceRow, 'client_id' | 'title' | 'method' | 'amount' | 'due_date'>;
       client_services: Table<ClientServiceRow, 'client_id' | 'title'>;
+      professional_api_keys: Table<ProfessionalApiKeyRow, 'professional_id' | 'name' | 'key_hash'>;
       client_references: Table<ClientReferenceRow, 'client_id' | 'title' | 'url'>;
       client_activities: Table<ClientActivityRow, 'client_id' | 'actor_name' | 'action'>;
       staff_chat_threads: Table<StaffChatThreadRow, 'professional_id'>;

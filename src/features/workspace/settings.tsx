@@ -4,6 +4,7 @@ import { CreditCard, MessageCircle, Share2, Video } from "lucide-react";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { NotificationSettings } from "@/components/notifications/notification-settings";
 import { PlatformFeeForm } from "@/components/professionals/platform-fee-form";
+import { ApiKeysCard } from "@/components/settings/api-keys-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, PageHeader, StatCard } from "@/components/ui/layout";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -136,6 +137,10 @@ export async function WorkspaceSettings() {
             description="Recomendado logo no primeiro acesso."
           />
           <ChangePasswordForm />
+        </Card>
+
+        <Card>
+          <ApiKeysCard />
         </Card>
       </div>
 

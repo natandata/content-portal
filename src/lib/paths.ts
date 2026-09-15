@@ -46,6 +46,11 @@ export function invoiceBoletoPath(clientId: string, invoiceId: string, fileName:
   return `${clientId}/${invoiceId}/${Date.now()}-${safeFileName(fileName)}`;
 }
 
+/** Anexo generico da cobranca (nota, contrato, escopo) -- qualquer metodo, diferente do slot do boleto acima. */
+export function invoiceAttachmentPath(clientId: string, invoiceId: string, fileName: string): string {
+  return `${clientId}/${invoiceId}/anexo-${Date.now()}-${safeFileName(fileName)}`;
+}
+
 export function avatarPath(clientId: string, fileName: string): string {
   return `${clientId}/avatar-${Date.now()}.${fileExtension(fileName)}`;
 }
