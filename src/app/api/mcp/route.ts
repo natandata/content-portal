@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { appBaseUrl } from "@/lib/env";
 import { addClientServiceTool } from "@/server/mcp/client-services";
-import { createClientTool, findClientTool } from "@/server/mcp/clients";
+import { createClientTool, deleteClientTool, findClientTool } from "@/server/mcp/clients";
 import { resolveMcpActor, type McpActor } from "@/server/mcp/auth";
 import { sendDocumentForSignatureTool } from "@/server/mcp/documents";
 import { attachDocumentToChargeTool, createMercadoPagoChargeTool } from "@/server/mcp/invoices";
@@ -71,6 +71,20 @@ function buildServer(actor: McpActor): McpServer {
       },
     },
     async (input) => toolResult(await createClientTool(actor, input)),
+  );
+
+  server.registerTool(
+    "delete_client",
+    {
+      title: "Apagar cliente",
+      description:
+        "Apaga um cliente PERMANENTEMENTE, junto com servicos, cobrancas, documentos e conteudos dele -- acao irreversivel. Confirme sempre com a pessoa antes de chamar esta ferramenta, e passe o nome exato da empresa em confirmCompanyName (a ferramenta recusa se nao bater com o cadastro).",
+      inputSchema: {
+        clientId: z.string().uuid().describe("id do cliente -- use find_client se nao souber"),
+        confirmCompanyName: z.string().min(1).describe("Nome exato da empresa do cliente, pra confirmar que e o cliente certo"),
+      },
+    },
+    async (input) => toolResult(await deleteClientTool(actor, input)),
   );
 
   server.registerTool(

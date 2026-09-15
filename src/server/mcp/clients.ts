@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logClientActivity } from "@/server/activity";
-import type { McpActor } from "@/server/mcp/auth";
+import { assertClientOwnership, type McpActor } from "@/server/mcp/auth";
 import { describeError, fail, ok, type ActionResult } from "@/server/result";
 import type { ClientRow } from "@/types/database";
 
@@ -88,6 +88,43 @@ export async function createClientTool(
   await logClientActivity(admin, client.id, actor.displayName, "Cadastrou o cliente");
 
   return ok({ id: client.id, accessCode: client.access_code });
+}
+
+/**
+ * Apaga um cliente -- irreversivel (cascata: servicos, cobrancas,
+ * documentos, conteudos etc.). Por seguranca, exige que quem chamou
+ * confirme o nome exato da empresa (nao basta so o id) -- barra exclusao
+ * por engano vinda de um pedido ambiguo na conversa.
+ */
+export async function deleteClientTool(
+  actor: McpActor,
+  input: { clientId: string; confirmCompanyName: string },
+): Promise<ActionResult<null>> {
+  if (!input.confirmCompanyName?.trim()) {
+    return fail("Informe o nome exato da empresa do cliente para confirmar a exclusao.");
+  }
+
+  const admin = createAdminClient();
+  const ownership = await assertClientOwnership(admin, actor, input.clientId);
+  if (!ownership.ok) return ownership;
+
+  const { data: client } = await admin
+    .from("clients")
+    .select("id, company_name")
+    .eq("id", input.clientId)
+    .maybeSingle();
+  if (!client) return fail("Cliente nao encontrado.");
+
+  if (client.company_name.trim().toLowerCase() !== input.confirmCompanyName.trim().toLowerCase()) {
+    return fail(
+      `O nome da empresa informado nao confere com o cadastro ("${client.company_name}"). Confirme o nome exato antes de apagar.`,
+    );
+  }
+
+  const { error } = await admin.from("clients").delete().eq("id", input.clientId);
+  if (error) return fail(describeError(error, "Nao foi possivel apagar o cliente."));
+
+  return ok(null);
 }
 
 /** Busca clientes por nome/empresa, escopado ao ator (admin ve todos; profissional so os proprios). */
