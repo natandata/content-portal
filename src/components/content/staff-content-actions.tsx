@@ -2,18 +2,28 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { CheckCheck, Eye, Pencil, Send, Trash2 } from "lucide-react";
+import { CheckCheck, CheckCircle2, Eye, Pencil, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button, LinkButton } from "@/components/ui/button";
 import { DownloadContentButton } from "@/components/content/download-content-button";
+import { Field, Textarea } from "@/components/ui/form";
 import { Modal } from "@/components/ui/modal";
 import {
+  approveContentAsStaffAction,
   deleteContentAction,
   setContentPublishedAction,
   submitContentAction,
 } from "@/server/actions/contents";
 import type { ContentStatus } from "@/types/database";
+
+/** Status em que o conteudo ainda nao tem uma decisao do cliente registrada. */
+const PENDING_DECISION_STATUSES: ContentStatus[] = [
+  "submitted",
+  "awaiting_approval",
+  "revision_requested",
+  "rejected",
+];
 
 export function StaffContentActions({
   contentId,
@@ -32,9 +42,12 @@ export function StaffContentActions({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [approveOpen, setApproveOpen] = useState(false);
+  const [approveNote, setApproveNote] = useState("");
 
   const canSubmit = status !== "awaiting_approval" && status !== "published";
   const canPublish = status === "approved";
+  const canApproveAsStaff = PENDING_DECISION_STATUSES.includes(status);
 
   function run(operation: () => Promise<{ ok: boolean; error?: string }>, message: string) {
     startTransition(async () => {
@@ -98,6 +111,19 @@ export function StaffContentActions({
           </Button>
         ) : null}
 
+        {canApproveAsStaff ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2 text-emerald-700 hover:bg-emerald-50"
+            disabled={pending}
+            onClick={() => setApproveOpen(true)}
+          >
+            <CheckCircle2 className="size-4" aria-hidden />
+            Aprovar em nome do cliente
+          </Button>
+        ) : null}
+
         {downloadUrls ? <DownloadContentButton urls={downloadUrls} /> : null}
 
         <Button
@@ -148,6 +174,60 @@ export function StaffContentActions({
           Os arquivos, o historico e a posicao no feed serao removidos. Esta acao nao pode ser
           desfeita.
         </p>
+      </Modal>
+
+      <Modal
+        open={approveOpen}
+        onClose={() => {
+          if (!pending) {
+            setApproveOpen(false);
+            setApproveNote("");
+          }
+        }}
+        title="Aprovar em nome do cliente"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setApproveOpen(false)} disabled={pending}>
+              Cancelar
+            </Button>
+            <Button
+              variant="success"
+              loading={pending}
+              onClick={() =>
+                startTransition(async () => {
+                  const result = await approveContentAsStaffAction(contentId, approveNote);
+                  if (!result.ok) {
+                    toast.error(result.error);
+                    return;
+                  }
+                  toast.success("Conteudo aprovado em nome do cliente.");
+                  setApproveOpen(false);
+                  setApproveNote("");
+                  router.refresh();
+                })
+              }
+            >
+              Confirmar aprovacao
+            </Button>
+          </>
+        }
+      >
+        <p className="mb-3 text-sm text-ink-600">
+          Use quando o cliente confirmou por fora do app (WhatsApp, telefone etc.) em vez de aprovar
+          direto no portal. Fica registrado no historico que foi a equipe quem confirmou, nao o
+          cliente.
+        </p>
+        <Field label="Observacao (opcional)" htmlFor="approve-note">
+          <Textarea
+            id="approve-note"
+            rows={3}
+            value={approveNote}
+            onChange={(event) => setApproveNote(event.target.value)}
+            placeholder="Ex.: cliente aprovou via WhatsApp em 16/09"
+            disabled={pending}
+          />
+        </Field>
       </Modal>
     </>
   );

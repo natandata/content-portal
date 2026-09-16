@@ -1062,6 +1062,7 @@ const en: Dictionary = {
     "Cliente reprovou o conteudo": "Client rejected the content",
     "Cliente solicitou alteracao": "Client requested a change",
     "Cliente visualizou o conteudo": "Client viewed the content",
+    "Equipe aprovou em nome do cliente": "Team approved on the client's behalf",
   },
   history: { empty: "No activity recorded yet." },
   feedPreview: {

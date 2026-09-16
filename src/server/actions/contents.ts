@@ -364,6 +364,46 @@ export async function setContentPublishedAction(
   return done();
 }
 
+/**
+ * Aprova em nome do cliente -- pro caso do cliente confirmar por fora do
+ * app (WhatsApp, telefone) em vez de aprovar direto no portal. Diferente da
+ * aprovacao de verdade do cliente (RPC `submit_approval`, so chamavel pelo
+ * proprio cliente): esta so muda o status e registra no historico deixando
+ * claro que foi a equipe quem confirmou, pra nao virar "o cliente aprovou"
+ * por engano (mesmo cuidado de `TrackContentView`/"Cliente visualizou").
+ */
+export async function approveContentAsStaffAction(
+  contentId: string,
+  note?: string,
+): Promise<ActionResult<null>> {
+  const actor = await requireStaff();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("contents")
+    .update({ status: "approved" })
+    .eq("id", contentId)
+    .in("status", ["submitted", "awaiting_approval", "revision_requested", "rejected"])
+    .select("client_id, title")
+    .single();
+
+  if (error || !data) {
+    return fail(describeError(error, "Nao foi possivel aprovar este conteudo."));
+  }
+
+  const trimmedNote = note?.trim() || null;
+  await logHistory(contentId, "Equipe aprovou em nome do cliente", trimmedNote);
+  await logClientActivity(
+    supabase,
+    data.client_id,
+    actor.displayName,
+    `Aprovou "${data.title}" em nome do cliente${trimmedNote ? ` (${trimmedNote})` : ""}`,
+  );
+
+  revalidateContents(data.client_id, contentId);
+  return done();
+}
+
 const scheduleSchema = z.object({
   scheduledDate: z.union([z.iso.date(), z.literal("")]).optional(),
   scheduledTime: z.union([z.string().regex(/^\d{2}:\d{2}$/), z.literal("")]).optional(),
