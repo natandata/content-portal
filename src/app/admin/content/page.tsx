@@ -7,8 +7,8 @@ export const metadata: Metadata = { title: "Conteudos" };
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string; status?: string; professional?: string }>;
+  searchParams: Promise<{ client?: string; status?: string; professional?: string; sort?: string }>;
 }) {
-  const { client, status, professional } = await searchParams;
-  return <ContentsList clientId={client} status={status} professionalId={professional} />;
+  const { client, status, professional, sort } = await searchParams;
+  return <ContentsList clientId={client} status={status} professionalId={professional} sort={sort} />;
 }

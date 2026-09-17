@@ -24,10 +24,13 @@ export async function ContentsList({
   clientId,
   status,
   professionalId,
+  sort,
 }: {
   clientId?: string;
   status?: string;
   professionalId?: string;
+  /** "asc" (padrao, mais proximo primeiro) ou "desc" -- ordena por data prevista de postagem. */
+  sort?: string;
 }) {
   const actor = await requireStaff();
   const base = basePath(actor.role);
@@ -36,11 +39,14 @@ export async function ContentsList({
   const statusFilter = CONTENT_STATUS_ORDER.includes(status as ContentStatus)
     ? (status as ContentStatus)
     : undefined;
+  const sortDirection: "asc" | "desc" = sort === "desc" ? "desc" : "asc";
+  const ascending = sortDirection === "asc";
 
   let query = supabase
     .from("contents")
     .select("*")
-    .order("updated_at", { ascending: false })
+    .order("scheduled_date", { ascending, nullsFirst: false })
+    .order("scheduled_time", { ascending, nullsFirst: false })
     .limit(120);
 
   if (clientId) {
@@ -102,6 +108,7 @@ export async function ContentsList({
         }))}
         selectedClientId={clientId}
         selectedStatus={statusFilter}
+        selectedSort={sortDirection}
         professionalId={professionalId}
       />
 
