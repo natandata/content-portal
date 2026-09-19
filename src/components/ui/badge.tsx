@@ -12,35 +12,47 @@ import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 import type { ContentStatus, ContractStatus } from "@/types/database";
 
-// No escuro os tons pastel viram manchas claras: cada um ganha um par proprio.
+// Duas camadas (tinta suave + texto de alto contraste), com um pontinho na
+// cor "cheia" na frente -- mesmo padrao de badge de status do redesign
+// aprovado. No escuro os tons pastel viram manchas claras: cada um ganha um
+// par proprio.
 const TONES: Record<BadgeTone, string> = {
-  neutral: "bg-ink-100 text-ink-600 ring-ink-200",
-  info: "bg-accent-soft text-accent ring-accent/20",
-  warning:
-    "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-400/12 dark:text-amber-300 dark:ring-amber-400/25",
-  success:
-    "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-400/12 dark:text-emerald-300 dark:ring-emerald-400/25",
-  danger:
-    "bg-red-50 text-red-700 ring-red-200 dark:bg-red-400/12 dark:text-red-300 dark:ring-red-400/25",
+  neutral: "bg-ink-100 text-ink-600 dark:bg-ink-100 dark:text-ink-600",
+  info: "bg-accent-soft text-accent",
+  warning: "bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
+  success: "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
+  danger: "bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-300",
+};
+
+const DOTS: Record<BadgeTone, string> = {
+  neutral: "bg-ink-400",
+  info: "bg-accent",
+  warning: "bg-amber-500",
+  success: "bg-emerald-500",
+  danger: "bg-red-500",
 };
 
 export function Badge({
   tone = "neutral",
   children,
   className,
+  dot = true,
 }: {
   tone?: BadgeTone;
   children: ReactNode;
   className?: string;
+  /** Pontinho de 6px antes do texto -- desliga em badges muito pequenos/apertados. */
+  dot?: boolean;
 }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset",
+        "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium",
         TONES[tone],
         className,
       )}
     >
+      {dot ? <span className={cn("size-1.5 shrink-0 rounded-full", DOTS[tone])} aria-hidden /> : null}
       {children}
     </span>
   );

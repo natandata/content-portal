@@ -80,8 +80,8 @@ export function StatCard({
 }) {
   const accent = {
     neutral: "text-ink-900",
-    warning: "text-amber-600",
-    success: "text-emerald-600",
+    warning: "text-amber-700",
+    success: "text-emerald-700",
     info: "text-accent",
   }[tone];
 
