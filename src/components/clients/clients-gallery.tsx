@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import {
   AlertTriangle,
+  ArrowRight,
   Grid3x3,
   LayoutList,
   Pin,
@@ -220,6 +221,85 @@ function ClientCard({
   );
 }
 
+/**
+ * Card grande dos clientes fixados -- so aparece na visao "Galeria" quando
+ * ha pelo menos um fixado, em vez do card compacto do grid normal. Usa so
+ * dados que a galeria ja carrega (nada de consulta nova).
+ */
+function FeaturedClientCard({ client, href }: { client: ClientGalleryRow; href: string }) {
+  const status = displayStatus(client);
+  const meta = STATUS_META[status];
+  const isActive = client.status === "active";
+
+  return (
+    <Link
+      href={href}
+      title={attentionReason(client) || undefined}
+      className="focus-ring group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface transition hover:border-ink-300 hover:shadow-sm"
+    >
+      <div className={cn("relative h-20 w-full shrink-0 bg-gradient-to-br", coverGradientClass(client.coverColor))}>
+        <span
+          className={cn(
+            "absolute top-3 right-3 rounded-full px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm",
+            isActive ? "bg-violet-600/90" : "bg-ink-900/60",
+          )}
+        >
+          {isActive ? "Ativo" : "Inativo"}
+        </span>
+      </div>
+
+      <PinButton
+        client={client}
+        className="absolute top-3 left-3 size-7 bg-black/30 text-amber-300 backdrop-blur-sm hover:bg-black/45 hover:text-amber-200"
+      />
+
+      <div className="px-5 pb-4">
+        <div className="-mt-8 mb-3 flex items-end justify-between">
+          <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface text-lg font-semibold text-ink-600 shadow-sm ring-2 ring-surface">
+            {client.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={client.avatarUrl} alt="" loading="lazy" className="size-full object-cover" />
+            ) : (
+              initials(client.companyName)
+            )}
+          </span>
+          <span className="mb-1 rounded-full bg-ink-100 px-2.5 py-1 font-mono text-[11px] font-semibold text-ink-600">
+            {client.accessCode}
+          </span>
+        </div>
+
+        <h3 className="text-base font-semibold text-ink-900">{client.companyName}</h3>
+        <p className="text-xs text-ink-500">{client.name}</p>
+
+        {client.tag ? (
+          <span
+            className={cn(
+              "mt-2 inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset",
+              tagColorClass(client.tag),
+            )}
+          >
+            {client.tag}
+          </span>
+        ) : null}
+
+        <div className="mt-4 flex items-center gap-2.5 rounded-xl bg-ink-50 px-3 py-2.5">
+          <span className={cn("size-2 shrink-0 rounded-full", STATUS_DOT[status])} aria-hidden />
+          <span className="truncate text-sm font-medium text-ink-900">
+            {client.pendingApprovalCount > 0
+              ? `${client.pendingApprovalCount} conteudo(s) aguardando aprovacao`
+              : meta.label}
+          </span>
+        </div>
+
+        <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-accent">
+          Acessar painel
+          <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" aria-hidden />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 function Group({
   title,
   clients,
@@ -273,6 +353,8 @@ export function ClientsGallery({
     () => clients.filter((client) => displayStatus(client) === "ajuste").length,
     [clients],
   );
+
+  const pinnedInView = useMemo(() => filtered.filter((client) => client.pinned), [filtered]);
 
   const dense = view === "lista";
 
@@ -361,11 +443,27 @@ export function ClientsGallery({
           </div>
         )
       ) : (
-        <div className={dense ? "space-y-1.5" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"}>
-          {filtered.map((client) => (
-            <ClientCard key={client.id} client={client} href={href(client.id)} dense={dense} />
-          ))}
-        </div>
+        <>
+          {!dense && pinnedInView.length > 0 ? (
+            <section className="mb-6">
+              <div className="mb-2.5 flex items-center gap-2">
+                <Pin className="size-3.5 fill-current text-accent" aria-hidden />
+                <h2 className="text-xs font-semibold tracking-wide text-ink-500 uppercase">Clientes fixados</h2>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {pinnedInView.map((client) => (
+                  <FeaturedClientCard key={client.id} client={client} href={href(client.id)} />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          <div className={dense ? "space-y-1.5" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"}>
+            {(dense ? filtered : filtered.filter((client) => !client.pinned)).map((client) => (
+              <ClientCard key={client.id} client={client} href={href(client.id)} dense={dense} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

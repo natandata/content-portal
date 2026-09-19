@@ -61,11 +61,11 @@ function AudienceBars({ dimension, entries }: { dimension: string; entries: { la
 
 function StatBox({ label, value }: { label: string; value: number | null }) {
   return (
-    <div className="rounded-lg border border-line p-2.5">
-      <p className="text-base font-semibold tabular-nums text-ink-900">
+    <div className="rounded-xl border border-line bg-surface p-3.5 transition hover:border-ink-300">
+      <p className="text-xl font-bold tabular-nums tracking-tight text-ink-900">
         {value != null ? value.toLocaleString("pt-BR") : "—"}
       </p>
-      <p className="text-[11px] text-ink-500">{label}</p>
+      <p className="mt-1 text-[11px] font-semibold tracking-wide text-ink-500 uppercase">{label}</p>
     </div>
   );
 }
@@ -151,13 +151,13 @@ export function InstagramInsightsReportCard({ report }: { report: InstagramInsig
         {/* min-w-0 -- sem isso, a celula do grid cresce pra caber o conteudo
             minimo do sparkline (muitas barras) em vez de deixar ELE rolar
             por dentro, e a pagina inteira estoura pro lado. */}
-        <div className="min-w-0">
+        <div className="min-w-0 rounded-xl border border-line bg-surface p-4">
           <p className="text-xs font-semibold tracking-wide text-ink-500 uppercase">
             Alcance no periodo ({metricTotal(report.account_metrics, "reach").toLocaleString("pt-BR")})
           </p>
           <Sparkline points={reachSeries} formatLabel={instagramSparklineLabel} />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 rounded-xl border border-line bg-surface p-4">
           <p className="text-xs font-semibold tracking-wide text-ink-500 uppercase">
             Novos seguidores no periodo ({metricTotal(report.account_metrics, "follower_count").toLocaleString("pt-BR")})
           </p>

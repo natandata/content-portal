@@ -85,14 +85,27 @@ export function StatCard({
     info: "text-accent",
   }[tone];
 
+  // Circulo decorativo bem sutil no canto -- so textura, nunca compete com o numero.
+  const dot = {
+    neutral: "bg-ink-200/50",
+    warning: "bg-amber-200/40",
+    success: "bg-emerald-200/40",
+    info: "bg-accent/10",
+  }[tone];
+
   const content = (
-    <>
-      <p className="text-sm text-ink-500">{label}</p>
-      <p className={cn("mt-2 text-3xl font-semibold tabular-nums tracking-tight", accent)}>
-        {value}
-      </p>
-      {hint ? <p className="mt-1 text-xs text-ink-400">{hint}</p> : null}
-    </>
+    <div className="relative overflow-hidden">
+      <span className={cn("pointer-events-none absolute -top-5 -right-5 size-20 rounded-full", dot)} aria-hidden />
+      <div className="relative">
+        <p className="text-sm text-ink-500">{label}</p>
+        <p className={cn("mt-2 text-3xl font-semibold tabular-nums tracking-tight", accent)}>
+          {value}
+        </p>
+      </div>
+      {hint ? (
+        <p className="relative mt-3 border-t border-line pt-2.5 text-xs text-ink-500">{hint}</p>
+      ) : null}
+    </div>
   );
 
   if (href) {

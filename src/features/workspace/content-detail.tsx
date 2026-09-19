@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
-import { ContentMedia } from "@/components/content/content-media";
+import { InstagramPostPreview } from "@/components/content/instagram-post-preview";
 import { InstagramPublishCard } from "@/components/content/instagram-publish-card";
 import { SocialPublishCard } from "@/components/content/social-publish-card";
 import { FeedPreviewModal } from "@/components/feed/feed-preview-modal";
@@ -106,11 +106,16 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
         }
       />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <div className="space-y-5">
-          <ContentMedia
+      <div className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start">
+        {/* Coluna esquerda: a mesma moldura estilo Instagram que o cliente ve --
+            a equipe confere exatamente como vai ficar publicado, sem imaginar. */}
+        <div className="lg:sticky lg:top-5">
+          <InstagramPostPreview
             type={content.type}
             title={content.title}
+            caption={content.caption}
+            username={profile.username || clientName}
+            avatarUrl={profile.avatarUrl}
             files={files.map((file) => ({
               id: file.id,
               url: file.url,
@@ -119,6 +124,37 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
             }))}
           />
 
+          <dl className="mt-4 space-y-3 text-sm">
+            <div>
+              <dt className="text-ink-500">Tipo</dt>
+              <dd className="text-ink-900">{CONTENT_TYPE_LABEL[content.type]}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-500">Data prevista</dt>
+              <dd className="text-ink-900">{formatDate(content.scheduled_date)}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-500">Arquivos</dt>
+              <dd className="text-ink-900">{files.length}</dd>
+            </div>
+            {content.description ? (
+              <div>
+                <dt className="text-ink-500">Descricao</dt>
+                <dd className="whitespace-pre-wrap text-ink-900">{content.description}</dd>
+              </div>
+            ) : null}
+            {content.internal_notes ? (
+              <div>
+                <dt className="text-ink-500">Observacao interna (nao visivel ao cliente)</dt>
+                <dd className="whitespace-pre-wrap text-ink-900">{content.internal_notes}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </div>
+
+        {/* Coluna direita: acoes, publicacao e historico -- tudo que muda de
+            estado, ao lado da previa em vez de embaixo dela. */}
+        <div className="space-y-5">
           <Card>
             <CardHeader title="Acoes" />
             <StaffContentActions
@@ -188,46 +224,6 @@ export async function ContentDetail({ contentId }: { contentId: string }) {
             <CardHeader title="Historico" description="Tudo que aconteceu com este conteudo." />
             <HistoryTimeline entries={history ?? []} />
           </Card>
-        </div>
-
-        <div className="space-y-5">
-          <Card>
-            <CardHeader title="Detalhes" />
-            <dl className="space-y-3 text-sm">
-              <div>
-                <dt className="text-ink-500">Tipo</dt>
-                <dd className="text-ink-900">{CONTENT_TYPE_LABEL[content.type]}</dd>
-              </div>
-              <div>
-                <dt className="text-ink-500">Data prevista</dt>
-                <dd className="text-ink-900">{formatDate(content.scheduled_date)}</dd>
-              </div>
-              <div>
-                <dt className="text-ink-500">Arquivos</dt>
-                <dd className="text-ink-900">{files.length}</dd>
-              </div>
-              {content.description ? (
-                <div>
-                  <dt className="text-ink-500">Descricao</dt>
-                  <dd className="whitespace-pre-wrap text-ink-900">{content.description}</dd>
-                </div>
-              ) : null}
-            </dl>
-          </Card>
-
-          {content.caption ? (
-            <Card>
-              <CardHeader title="Legenda" />
-              <p className="whitespace-pre-wrap text-sm text-ink-700">{content.caption}</p>
-            </Card>
-          ) : null}
-
-          {content.internal_notes ? (
-            <Card>
-              <CardHeader title="Observacao interna" description="Nao visivel para o cliente." />
-              <p className="whitespace-pre-wrap text-sm text-ink-700">{content.internal_notes}</p>
-            </Card>
-          ) : null}
         </div>
       </div>
     </>
