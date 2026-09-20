@@ -13,6 +13,7 @@ import { signedDownloadUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, safeFileName } from "@/lib/utils";
 import { loadClientNames, loadProfessionalClientIds } from "@/server/queries";
+import type { CurrencyCode } from "@/types/database";
 
 const METHOD_ICON = { boleto: Banknote, link: Link2, pix: QrCode, stripe: CreditCard, mercadopago: QrCode };
 
@@ -45,20 +46,31 @@ export async function InvoicesList({
 
   const rows = invoices ?? [];
 
-  // Metodo stripe so aceita BRL na criacao (createInvoiceAction recusa outra
-  // moeda), entao somar direto aqui e seguro. Vem do mesmo `rows` que a
-  // pagina ja releu nesta visita -- atualiza sozinho a cada entrada na tela,
-  // sem chamada extra a Stripe.
-  const stripeRows = rows.filter((row) => row.method === "stripe");
-  const stripeReceivable = stripeRows
+  // Stripe e Mercado Pago so aceitam BRL na criacao (createInvoiceAction
+  // recusa outra moeda pros dois), entao somar direto aqui e seguro. Vem do
+  // mesmo `rows` que a pagina ja releu nesta visita -- atualiza sozinho a
+  // cada entrada na tela, sem chamada extra as APIs.
+  const onlineRows = rows.filter((row) => row.method === "stripe" || row.method === "mercadopago");
+  const onlineReceivable = onlineRows
     .filter((row) => row.status === "open")
     .reduce((sum, row) => sum + Number(row.amount), 0);
-  const stripeReceived = stripeRows
+  const onlineReceived = onlineRows
     .filter((row) => row.status === "paid")
     .reduce(
       (sum, row) => sum + (row.amount_paid_cents != null ? row.amount_paid_cents / 100 : Number(row.amount)),
       0,
     );
+
+  // Total pago de TODOS os metodos (boleto/link/pix manual entram aqui tambem,
+  // marcados a mao pela equipe) -- agrupado por moeda porque so
+  // stripe/mercadopago sao travados em BRL, os outros metodos aceitam
+  // qualquer uma.
+  const paidByCurrency = new Map<CurrencyCode, number>();
+  for (const row of rows) {
+    if (row.status !== "paid") continue;
+    const amount = row.amount_paid_cents != null ? row.amount_paid_cents / 100 : Number(row.amount);
+    paidByCurrency.set(row.currency, (paidByCurrency.get(row.currency) ?? 0) + amount);
+  }
 
   const clientOptions = (clients ?? []).map((client) => ({
     id: client.id,
@@ -88,20 +100,45 @@ export async function InvoicesList({
 
       {!clientId ? (
         <Card className="mb-6">
-          <h2 className="mb-4 text-sm font-semibold text-ink-900">Informacoes de pagamento online</h2>
+          <h2 className="mb-4 text-sm font-semibold text-ink-900">Pagamento online</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <StatCard
               label="A receber"
-              value={formatMoney(stripeReceivable, "BRL")}
-              hint="Cobrancas com pagamento online ainda em aberto"
+              value={formatMoney(onlineReceivable, "BRL")}
+              hint="Stripe ou Mercado Pago, ainda em aberto"
               tone="warning"
             />
             <StatCard
               label="Pagas"
-              value={formatMoney(stripeReceived, "BRL")}
-              hint="Ja confirmadas pela Stripe"
+              value={formatMoney(onlineReceived, "BRL")}
+              hint="Ja confirmadas pela Stripe ou Mercado Pago"
               tone="success"
             />
+          </div>
+
+          {/* Total pago de TODOS os metodos -- boleto/link/pix manual so
+              entram como "pago" quando a equipe marca na mao, entao nao da
+              pra saber sem somar aqui tambem (pedido explicito do usuario). */}
+          <div className="mt-4 border-t border-line pt-4">
+            <h3 className="mb-3 text-xs font-semibold tracking-wide text-ink-500 uppercase">
+              Total marcado como pago (todos os metodos)
+            </h3>
+            {paidByCurrency.size === 0 ? (
+              <p className="text-sm text-ink-500">Nenhuma cobranca paga ainda.</p>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {Array.from(paidByCurrency.entries()).map(([currency, amount]) => (
+                  <div key={currency} className="rounded-xl border border-line bg-surface p-3.5">
+                    <p className="text-xl font-bold tabular-nums tracking-tight text-emerald-700">
+                      {formatMoney(amount, currency)}
+                    </p>
+                    <p className="mt-1 text-[11px] font-semibold tracking-wide text-ink-500 uppercase">
+                      {currency}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </Card>
       ) : null}

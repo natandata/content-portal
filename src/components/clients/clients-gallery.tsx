@@ -237,6 +237,10 @@ function FeaturedClientCard({ client, href }: { client: ClientGalleryRow; href: 
       title={attentionReason(client) || undefined}
       className="focus-ring group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface transition hover:border-ink-300 hover:shadow-sm"
     >
+      {/* Avatar posicionado dentro da propria capa (absolute), nunca por margem
+          negativa -- margem negativa no primeiro filho de um bloco sem borda/
+          padding no topo "vaza" pro pai e some, cortado pelo overflow-hidden
+          do card (bug ja visto aqui). */}
       <div className={cn("relative h-20 w-full shrink-0 bg-gradient-to-br", coverGradientClass(client.coverColor))}>
         <span
           className={cn(
@@ -246,6 +250,15 @@ function FeaturedClientCard({ client, href }: { client: ClientGalleryRow; href: 
         >
           {isActive ? "Ativo" : "Inativo"}
         </span>
+
+        <span className="absolute -bottom-7 left-5 flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface text-lg font-semibold text-ink-600 shadow-sm ring-2 ring-surface">
+          {client.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={client.avatarUrl} alt="" loading="lazy" className="size-full object-cover" />
+          ) : (
+            initials(client.companyName)
+          )}
+        </span>
       </div>
 
       <PinButton
@@ -253,22 +266,13 @@ function FeaturedClientCard({ client, href }: { client: ClientGalleryRow; href: 
         className="absolute top-3 left-3 size-7 bg-black/30 text-amber-300 backdrop-blur-sm hover:bg-black/45 hover:text-amber-200"
       />
 
-      <div className="px-5 pb-4">
-        <div className="-mt-8 mb-3 flex items-end justify-between">
-          <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface text-lg font-semibold text-ink-600 shadow-sm ring-2 ring-surface">
-            {client.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={client.avatarUrl} alt="" loading="lazy" className="size-full object-cover" />
-            ) : (
-              initials(client.companyName)
-            )}
-          </span>
-          <span className="mb-1 rounded-full bg-ink-100 px-2.5 py-1 font-mono text-[11px] font-semibold text-ink-600">
+      <div className="px-5 pt-9 pb-4">
+        <div className="mb-1 flex items-start justify-between gap-2">
+          <h3 className="min-w-0 truncate text-base font-semibold text-ink-900">{client.companyName}</h3>
+          <span className="shrink-0 rounded-full bg-ink-100 px-2.5 py-1 font-mono text-[11px] font-semibold text-ink-600">
             {client.accessCode}
           </span>
         </div>
-
-        <h3 className="text-base font-semibold text-ink-900">{client.companyName}</h3>
         <p className="text-xs text-ink-500">{client.name}</p>
 
         {client.tag ? (
