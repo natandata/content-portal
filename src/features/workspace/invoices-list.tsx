@@ -11,11 +11,44 @@ import { formatMoney } from "@/lib/domain";
 import { BUCKETS } from "@/lib/paths";
 import { signedDownloadUrl } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, safeFileName } from "@/lib/utils";
+import { cn, formatDate, safeFileName } from "@/lib/utils";
 import { loadClientNames, loadProfessionalClientIds } from "@/server/queries";
 import type { CurrencyCode } from "@/types/database";
 
 const METHOD_ICON = { boleto: Banknote, link: Link2, pix: QrCode, stripe: CreditCard, mercadopago: QrCode };
+
+/** Um valor por moeda (a maioria dos casos so tem BRL, mas boleto/link/pix aceitam qualquer uma). */
+function CurrencyTotals({
+  title,
+  emptyLabel,
+  byCurrency,
+  valueClassName,
+}: {
+  title: string;
+  emptyLabel: string;
+  byCurrency: Map<CurrencyCode, number>;
+  valueClassName: string;
+}) {
+  return (
+    <div>
+      <h3 className="mb-3 text-xs font-semibold tracking-wide text-ink-500 uppercase">{title}</h3>
+      {byCurrency.size === 0 ? (
+        <p className="text-sm text-ink-500">{emptyLabel}</p>
+      ) : (
+        <div className="flex flex-wrap gap-3">
+          {Array.from(byCurrency.entries()).map(([currency, amount]) => (
+            <div key={currency} className="rounded-xl border border-line bg-surface p-3.5">
+              <p className={cn("text-xl font-bold tabular-nums tracking-tight", valueClassName)}>
+                {formatMoney(amount, currency)}
+              </p>
+              <p className="mt-1 text-[11px] font-semibold tracking-wide text-ink-500 uppercase">{currency}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export async function InvoicesList({
   clientId,
@@ -61,15 +94,18 @@ export async function InvoicesList({
       0,
     );
 
-  // Total pago de TODOS os metodos (boleto/link/pix manual entram aqui tambem,
-  // marcados a mao pela equipe) -- agrupado por moeda porque so
-  // stripe/mercadopago sao travados em BRL, os outros metodos aceitam
-  // qualquer uma.
+  // Total em aberto/pago de TODOS os metodos (boleto/link/pix manual entram
+  // aqui tambem) -- agrupado por moeda porque so stripe/mercadopago sao
+  // travados em BRL, os outros metodos aceitam qualquer uma.
+  const receivableByCurrency = new Map<CurrencyCode, number>();
   const paidByCurrency = new Map<CurrencyCode, number>();
   for (const row of rows) {
-    if (row.status !== "paid") continue;
-    const amount = row.amount_paid_cents != null ? row.amount_paid_cents / 100 : Number(row.amount);
-    paidByCurrency.set(row.currency, (paidByCurrency.get(row.currency) ?? 0) + amount);
+    if (row.status === "open") {
+      receivableByCurrency.set(row.currency, (receivableByCurrency.get(row.currency) ?? 0) + Number(row.amount));
+    } else if (row.status === "paid") {
+      const amount = row.amount_paid_cents != null ? row.amount_paid_cents / 100 : Number(row.amount);
+      paidByCurrency.set(row.currency, (paidByCurrency.get(row.currency) ?? 0) + amount);
+    }
   }
 
   const clientOptions = (clients ?? []).map((client) => ({
@@ -116,29 +152,23 @@ export async function InvoicesList({
             />
           </div>
 
-          {/* Total pago de TODOS os metodos -- boleto/link/pix manual so
-              entram como "pago" quando a equipe marca na mao, entao nao da
-              pra saber sem somar aqui tambem (pedido explicito do usuario). */}
-          <div className="mt-4 border-t border-line pt-4">
-            <h3 className="mb-3 text-xs font-semibold tracking-wide text-ink-500 uppercase">
-              Total marcado como pago (todos os metodos)
-            </h3>
-            {paidByCurrency.size === 0 ? (
-              <p className="text-sm text-ink-500">Nenhuma cobranca paga ainda.</p>
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {Array.from(paidByCurrency.entries()).map(([currency, amount]) => (
-                  <div key={currency} className="rounded-xl border border-line bg-surface p-3.5">
-                    <p className="text-xl font-bold tabular-nums tracking-tight text-emerald-700">
-                      {formatMoney(amount, currency)}
-                    </p>
-                    <p className="mt-1 text-[11px] font-semibold tracking-wide text-ink-500 uppercase">
-                      {currency}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* Boleto/link/pix manual nao passam por Stripe/Mercado Pago -- so
+              entram como "aberto"/"pago" quando a propria equipe cadastra ou
+              marca na mao, entao nao da pra saber sem somar aqui tambem
+              (pedido explicito do usuario). */}
+          <div className="mt-4 grid gap-5 border-t border-line pt-4 sm:grid-cols-2">
+            <CurrencyTotals
+              title="A receber (todos os metodos)"
+              emptyLabel="Nenhuma cobranca em aberto."
+              byCurrency={receivableByCurrency}
+              valueClassName="text-amber-700"
+            />
+            <CurrencyTotals
+              title="Pago (todos os metodos)"
+              emptyLabel="Nenhuma cobranca paga ainda."
+              byCurrency={paidByCurrency}
+              valueClassName="text-emerald-700"
+            />
           </div>
         </Card>
       ) : null}
